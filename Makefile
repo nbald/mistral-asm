@@ -9,7 +9,13 @@ BUILD_DIR := build
 
 ASM_SOURCES := \
 	src/entry/_start.s \
+	src/gguf/load_header.s \
+	src/sys/close.s \
 	src/sys/exit.s \
+	src/sys/fstat.s \
+	src/sys/mmap.s \
+	src/sys/munmap.s \
+	src/sys/openat.s \
 	src/sys/write.s
 
 OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)

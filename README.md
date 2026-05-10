@@ -75,9 +75,10 @@ runtime.
 
 ## Current State
 
-The pure ASM executable proof is implemented. `make` assembles the runtime with
-`as`, links it with `ld`, and `./mistral-asm --help` reaches Linux through direct
-`write` and `exit` syscalls.
+The pure ASM executable proof is implemented, and the first narrow GGUF loader
+path accepts a model path, opens it, stats it, maps it read-only, validates the
+magic, version, and count header fields, then unmaps it. `make` assembles the
+runtime with `as` and links it with `ld`.
 
 Read these first:
 

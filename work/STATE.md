@@ -6,9 +6,9 @@ Milestone 3: GGUF loader.
 
 ## Current Exact Task
 
-Implement the first narrow GGUF loader path: accept a model path argument, add
-direct `openat`, `fstat`, `mmap`, and `munmap` syscalls, then validate the GGUF
-magic/version/count fields without parsing metadata values yet.
+Add a structural GGUF metadata walker that starts after the 24-byte header,
+skips key/value entries with bounds checks, recognizes `general.alignment` when
+present, and validates the computed tensor directory start alignment.
 
 ## Known Blockers
 
@@ -19,8 +19,8 @@ None.
 - `README.md`
 - `Makefile`
 - `src/entry/_start.s`
-- `src/sys/`
-- `src/gguf/`
+- `src/sys/*.s`
+- `src/gguf/load_header.s`
 - `work/AUTONOMOUS.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
@@ -31,19 +31,24 @@ None.
 - `./mistral-asm --help`
 - `readelf` proves no dynamic dependencies/libc
 - `strace` shows direct expected syscalls for `--help`
-- loader smoke test against a tiny synthetic GGUF header fixture outside git
+- loader smoke tests against tiny synthetic GGUF fixtures outside git
 - `git diff --check`
 
 ## Last Verification
 
-- `make` passed.
-- `./mistral-asm --help` printed usage.
+- `make clean && make` passed.
+- `./mistral-asm --help` printed usage with the model-path loader form.
 - `readelf -d mistral-asm` reported no dynamic section.
 - `readelf -l mistral-asm` showed no program interpreter.
-- `strace -e trace=write,exit,exit_group ./mistral-asm --help` showed one
-  `write(1, ..., 143)` and `exit(0)`.
+- `strace -e trace=write,exit,exit_group ./mistral-asm --help` showed direct
+  `write(1, ..., 165)` and `exit(0)`.
+- A 24-byte `/tmp` GGUF v3 header fixture returned `GGUF header ok`.
+- Loader syscall trace on that fixture showed direct `openat`, `fstat`, `mmap`,
+  `munmap`, `close`, `write`, and `exit`.
+- A `/tmp` fixture with a count field above the supported signed range failed
+  with `mistral-asm: unsupported GGUF count field` and exit status 3.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Implement GGUF file open/map/header validation from a model path argument.
+Add structural metadata-entry skipping and tensor-directory alignment validation.

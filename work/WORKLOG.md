@@ -78,3 +78,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   `strace` for `--help` shows one stdout `write` followed by `exit(0)`.
 - Decision: keep syscall entry points in `src/sys/` even while they are tiny, so
   the GGUF loader can add file and memory syscalls without bloating `_start`.
+
+## 2026-05-10T12:18:46Z
+
+- First GGUF loader smoke path maps the input file read-only and validates only
+  the fixed 24-byte header fields before unmapping.
+- Decision: the early count-field guard rejects counts with the high bit set so
+  later parser arithmetic can stay in a conservative signed range.
+- Verification evidence: a synthetic `/tmp` GGUF v3 header fixture passed and a
+  high-count fixture failed with the intended loader error; loader `strace`
+  showed direct file, map, unmap, close, write, and exit syscalls.
