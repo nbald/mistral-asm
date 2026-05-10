@@ -1423,3 +1423,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   passed, help output worked, whitespace checks passed, runtime source remained
   `.s` only, the executable remained statically linked, and no tracked model or
   large artifact matched the scan.
+
+## 2026-05-10T22:15:49Z
+
+- Completed review pass 2 for the layer-1 FFN norm gate. The pass checked that
+  oracle coverage is current through the committed layer-1 post-attention
+  residual slice, that the queued FFN norm slice-publish diff only exposes
+  private static activation words behind the existing status gate, and that
+  continuation state now points back to the feature publish.
+- Verification evidence: a clean rebuild, no-libc harnesses, help output,
+  whitespace check, runtime source purity scan, static-link inspection, oracle
+  py-compile, and tracked-artifact scan all passed with the pre-existing
+  unstaged runtime diff still left out of the review commit.

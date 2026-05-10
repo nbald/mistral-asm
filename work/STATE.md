@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Complete the second consecutive review pass for the operator-requested review
-gate before resuming the layer-1 FFN norm feature publish.
+Publish and verify the existing queued `src/entry/_start.s` layer-1 FFN norm
+slice diff.
 
 ## Completed Work
 
@@ -102,12 +102,16 @@ gate before resuming the layer-1 FFN norm feature publish.
   runtime correctness issue in the committed layer-1 FFN norm status path and
   recorded the clean result in
   `work/reviews/2026-05-11-layer1-ffn-norm-review-1.md`.
+- Review pass 2 completed the operator-requested gate. It found no blocking
+  issue in the external oracle coverage state, the queued layer-1 FFN norm
+  slice-publish diff, or the continuation-state handoff, and recorded the clean
+  result in `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`.
 
 ## Known Blockers
 
-None. Review gate is in progress. The worktree currently has an unstaged
+None. The review gate is complete. The worktree currently has an unstaged
 `src/entry/_start.s` feature diff that publishes the layer-1 FFN norm slice;
-leave it unstaged until both review passes are complete.
+the next feature step should verify and commit that diff.
 
 ## Relevant Files
 
@@ -136,14 +140,16 @@ leave it unstaged until both review passes are complete.
 - `work/oracle/token0-layer1-post-attn-residual.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/reviews/2026-05-11-layer1-ffn-norm-review-1.md`
+- `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-- Review pass 1 verification passed: `make`; `make check` with `q8_0_dot: ok`,
-  `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`; `./mistral-asm --help`;
-  `git diff --check`; runtime source purity scan; static-link inspection; and
+- Review pass 2 verification passed: `make clean`; `make`; `make check` with
+  `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`;
+  `./mistral-asm --help`; `git diff --check`; runtime source purity scan;
+  static-link inspection; `python3 -m py_compile work/oracle/*.py`; and
   tracked-artifact scan.
 - Verification ran with the pre-existing unstaged `src/entry/_start.s` feature
   diff present, but only review/state/worklog files are intended for this
@@ -151,7 +157,7 @@ leave it unstaged until both review passes are complete.
 
 ## Next Exact Step
 
-Run and commit review pass 2 under `work/reviews/`, focused on oracle coverage,
-queued slice-publish risk, and continuation-state consistency. If pass 2 is
-clean, the following feature step may publish and verify the layer-1 FFN norm
-slice.
+Commit the existing `src/entry/_start.s` layer-1 FFN norm slice publish after
+verifying the real target prints four `token0_layer1_ffn_norm*_f32_hex` words
+behind status 1 and an empty valid GGUF keeps the status at 0 with no layer-1
+FFN norm word labels.
