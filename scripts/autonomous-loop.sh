@@ -28,6 +28,8 @@ if [[ ! -f "$prompt_file" ]]; then
   exit 2
 fi
 
+prompt_text="$(<"$prompt_file")"
+
 common_flags=(
   "--dangerously-bypass-approvals-and-sandbox"
   "-m" "$model"
@@ -81,7 +83,7 @@ for ((i = 1; i <= iterations; i++)); do
         --cd "$repo_root" \
         "${common_flags[@]}" \
         -o "$output_file" \
-        - < "$prompt_file"; then
+        "$prompt_text"; then
         codex_status=0
       else
         codex_status="$?"
@@ -94,7 +96,7 @@ for ((i = 1; i <= iterations; i++)); do
           --last \
           "${common_flags[@]}" \
           -o "$output_file" \
-          - < "$prompt_file"
+          "$prompt_text"
       ); then
         codex_status=0
       else

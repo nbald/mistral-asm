@@ -63,3 +63,10 @@ redundant entries. Do not treat it as the primary continuation source; use
 
 - Added root README and autonomous workflow README to make project operation
   discoverable without reading every `work/` file.
+
+## 2026-05-10T12:07:40Z
+
+- Run fix: first autonomous iteration exposed that `setsid` lost prompt stdin.
+- Follow-up: autonomous loop now passes the continuation prompt as an explicit
+  CLI argument instead of relying on stdin redirection.
+- Verification evidence: `bash -n scripts/autonomous-loop.sh` passed.
