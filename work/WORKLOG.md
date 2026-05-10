@@ -834,3 +834,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   exactly. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
   real-model smoke, cleanup tracing, oracle py-compile, and whitespace checks
   passed.
+
+## 2026-05-10T17:45:39Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.ffn_up.weight` descriptor after the FFN gate descriptor. This is
+  descriptor plumbing only; the runtime does not read FFN up payload bytes in
+  this step.
+- Verification evidence: synthetic fixtures kept `ffn_up_tensor_found: 0`; the
+  real local target printed the FFN up projection as Q8_0 with dimensions
+  `3072 x 9216` at relative offset `521441280` while preserving existing token0
+  exact-hex slices. A Python parser cross-check reported the same descriptor,
+  and cleanup tracing still showed `close(3)` before final `munmap`.

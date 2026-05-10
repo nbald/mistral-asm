@@ -12,6 +12,7 @@
 .equ GGUF_SUMMARY_ATTN_OUTPUT_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_FFN_NORM_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_FFN_GATE_TENSOR_NAME_CAP, 96
+.equ GGUF_SUMMARY_FFN_UP_TENSOR_NAME_CAP, 96
 .equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
@@ -54,7 +55,7 @@ help_text:
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
-	.ascii "and FFN gate matvec smoke.\n"
+	.ascii "FFN gate matvec smoke, and FFN up descriptor.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -424,6 +425,42 @@ ffn_gate_tensor_ggml_type_text_end:
 ffn_gate_tensor_offset_text:
 	.ascii "ffn_gate_tensor_offset: "
 ffn_gate_tensor_offset_text_end:
+
+ffn_up_tensor_found_text:
+	.ascii "ffn_up_tensor_found: "
+ffn_up_tensor_found_text_end:
+
+ffn_up_tensor_name_text:
+	.ascii "ffn_up_tensor_name: "
+ffn_up_tensor_name_text_end:
+
+ffn_up_tensor_n_dimensions_text:
+	.ascii "ffn_up_tensor_n_dimensions: "
+ffn_up_tensor_n_dimensions_text_end:
+
+ffn_up_tensor_dim0_text:
+	.ascii "ffn_up_tensor_dim0: "
+ffn_up_tensor_dim0_text_end:
+
+ffn_up_tensor_dim1_text:
+	.ascii "ffn_up_tensor_dim1: "
+ffn_up_tensor_dim1_text_end:
+
+ffn_up_tensor_dim2_text:
+	.ascii "ffn_up_tensor_dim2: "
+ffn_up_tensor_dim2_text_end:
+
+ffn_up_tensor_dim3_text:
+	.ascii "ffn_up_tensor_dim3: "
+ffn_up_tensor_dim3_text_end:
+
+ffn_up_tensor_ggml_type_text:
+	.ascii "ffn_up_tensor_ggml_type: "
+ffn_up_tensor_ggml_type_text_end:
+
+ffn_up_tensor_offset_text:
+	.ascii "ffn_up_tensor_offset: "
+ffn_up_tensor_offset_text_end:
 
 token0_embedding_dequant_text:
 	.ascii "token0_embedding_dequant: "
@@ -830,6 +867,24 @@ gguf_summary_ffn_gate_tensor_ggml_type:
 	.skip 8
 gguf_summary_ffn_gate_tensor_offset:
 	.skip 8
+gguf_summary_ffn_up_tensor_found:
+	.skip 8
+gguf_summary_ffn_up_tensor_name:
+	.skip GGUF_SUMMARY_FFN_UP_TENSOR_NAME_CAP
+gguf_summary_ffn_up_tensor_n_dimensions:
+	.skip 8
+gguf_summary_ffn_up_tensor_dim0:
+	.skip 8
+gguf_summary_ffn_up_tensor_dim1:
+	.skip 8
+gguf_summary_ffn_up_tensor_dim2:
+	.skip 8
+gguf_summary_ffn_up_tensor_dim3:
+	.skip 8
+gguf_summary_ffn_up_tensor_ggml_type:
+	.skip 8
+gguf_summary_ffn_up_tensor_offset:
+	.skip 8
 gguf_summary_attn_norm_rms_epsilon_found:
 	.skip 8
 gguf_summary_attn_norm_rms_epsilon_f32:
@@ -955,7 +1010,7 @@ token0_ffn_gate_output:
 # tensor-data base offset for non-empty tensor directories, and a retained
 # descriptor for the first-layer attention RMSNorm weights, query projection,
 # key projection, value projection, output projection, FFN RMSNorm weights, and
-# FFN gate projection.
+# FFN gate projection, and FFN up projection.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -2352,6 +2407,133 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_ffn_gate_tensor_offset]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_found_text]
+	mov rdx, ffn_up_tensor_found_text_end - ffn_up_tensor_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_name_text]
+	mov rdx, ffn_up_tensor_name_text_end - ffn_up_tensor_name_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + gguf_summary_ffn_up_tensor_name]
+	mov rdx, GGUF_SUMMARY_FFN_UP_TENSOR_NAME_CAP
+	call write_bounded_c_string
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_n_dimensions_text]
+	mov rdx, ffn_up_tensor_n_dimensions_text_end - ffn_up_tensor_n_dimensions_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_dim0_text]
+	mov rdx, ffn_up_tensor_dim0_text_end - ffn_up_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_dim1_text]
+	mov rdx, ffn_up_tensor_dim1_text_end - ffn_up_tensor_dim1_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_dim1]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_dim2_text]
+	mov rdx, ffn_up_tensor_dim2_text_end - ffn_up_tensor_dim2_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_dim2]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_dim3_text]
+	mov rdx, ffn_up_tensor_dim3_text_end - ffn_up_tensor_dim3_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_dim3]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_ggml_type_text]
+	mov rdx, ffn_up_tensor_ggml_type_text_end - ffn_up_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + ffn_up_tensor_offset_text]
+	mov rdx, ffn_up_tensor_offset_text_end - ffn_up_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_ffn_up_tensor_offset]
 	call write_u64_decimal
 
 	mov rdi, 1
