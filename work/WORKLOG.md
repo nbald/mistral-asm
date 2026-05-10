@@ -1372,3 +1372,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   kept the residual gate at 0 and emitted no layer-1 post-attention residual
   word labels; build, no-libc harnesses, oracle py-compile, runtime purity,
   static-link, tracked-artifact, help, and whitespace checks passed.
+
+## 2026-05-10T21:53:36Z
+
+- Added external layer-1 post-attention residual oracle tooling. It reuses the
+  independent layer-1 output-projection oracle path, then f32-adds the first
+  four layer-0 post-FFN residual words to the first four layer-1 attention
+  output words.
+- Verification evidence: the new oracle produced `0xbd4055c4`, `0xbf0fbbb6`,
+  `0x401af18e`, and `0xbe6a002c`, matching the current runtime labels exactly.
+  Build, no-libc harnesses, oracle py-compile, runtime purity, static-link,
+  tracked-artifact, help, and whitespace checks passed.

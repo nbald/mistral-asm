@@ -6,8 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add external oracle coverage for the published token-0 layer-1 post-attention
-residual slice.
+Add descriptor-only runtime coverage for `blk.1.ffn_norm.weight`.
 
 ## Completed Work
 
@@ -83,6 +82,10 @@ residual slice.
   target reports `0xbd4055c4`, `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`;
   an empty valid GGUF reports status 0 and emits no layer-1 post-attention
   residual word labels.
+- External oracle tooling now independently recomputes the published
+  `token0_layer1_post_attn_residual` slice from the full layer-0 post-FFN
+  residual plus the first four layer-1 attention output-projection words. The
+  oracle matches the runtime residual words exactly.
 
 ## Known Blockers
 
@@ -105,35 +108,33 @@ None.
 - `work/oracle/token0_layer1_attn_k_oracle.py`
 - `work/oracle/token0_layer1_attn_v_oracle.py`
 - `work/oracle/token0_layer1_attn_output_oracle.py`
+- `work/oracle/token0_layer1_post_attn_residual_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
 - `work/oracle/token0-layer1-attn-q-output.md`
 - `work/oracle/token0-layer1-attn-k-output.md`
 - `work/oracle/token0-layer1-attn-v-output.md`
 - `work/oracle/token0-layer1-attn-context.md`
 - `work/oracle/token0-layer1-attn-output.md`
+- `work/oracle/token0-layer1-post-attn-residual.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
+- `python3 work/oracle/token0_layer1_post_attn_residual_oracle.py` on the real
+  target GGUF printed residual words `0xbd4055c4`, `0xbf0fbbb6`,
+  `0x401af18e`, and `0xbe6a002c`.
+- `./mistral-asm` on the real target GGUF printed matching
+  `token0_post_ffn_residual*`, `token0_layer1_attn_output*`, and
+  `token0_layer1_post_attn_residual*` exact-hex words.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
-- `./mistral-asm` on the real target GGUF printed
-  `token0_post_ffn_residual: 1`, `token0_layer1_attn_output_matvec: 1`,
-  output words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`,
-  `token0_layer1_post_attn_residual: 1`, and residual words `0xbd4055c4`,
-  `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`.
-- A temporary empty valid GGUF printed `token0_layer1_attn_output_matvec: 0`
-  and `token0_layer1_post_attn_residual: 0` with no layer-1 post-attention
-  residual word labels.
-- `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
-  purity scan, static-link inspection, tracked artifact scan, and `--help`
-  smoke passed.
+- `python3 -m py_compile work/oracle/*.py`, `./mistral-asm --help`,
+  `git diff --check`, runtime source purity scan, static-link inspection, and
+  tracked artifact scan passed.
 
 ## Next Exact Step
 
-Add an external oracle script and note that independently recompute the first
-four `token0_layer1_post_attn_residual` words from the layer-0 post-FFN
-residual plus the layer-1 attention output projection, then compare them with
-the published runtime slice.
+Add a reusable `blk.1.ffn_norm.weight` descriptor slot and lookup, then print
+and verify its descriptor summary without reading the tensor payload.
