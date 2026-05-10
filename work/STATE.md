@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a scalar GGML Q8_0 row-dequantize-to-f32 primitive with no-libc verifier
-coverage, so a token embedding row can become the first activation vector before
-full forward plumbing.
+Add a checked token-embedding dequant helper that computes a Q8_0 embedding row
+from a token id, validates token bounds and row shape inputs, and calls the
+scalar row dequantizer to write the first activation buffer.
 
 ## Completed Work
 
@@ -45,10 +45,15 @@ full forward plumbing.
 - `src/math/q8_0_dot.s` exports `q8_0_matvec_f32`, a scalar row-major GGML Q8_0
   matrix times f32 activation-vector routine that writes f32 row outputs and
   writes nothing for a zero row count.
+- `src/math/q8_0_dot.s` exports `q8_0_dequant_f32_row`, a scalar GGML Q8_0 row
+  dequantizer that writes `32 * block_count` f32 activation values and writes
+  nothing for a zero block count.
 - `make check-q8_0-dot` builds a separate no-libc assembly verifier that checks
   exact f32 result bits for one-block fixtures, two-block row fixtures, row
   pointer advancement, zero-block behavior, a two-row/two-block matvec fixture,
-  and zero-row matvec no-write behavior.
+  zero-row matvec no-write behavior, one-block row dequantization including
+  signed Q8_0 range edges, two-block row dequantization with pointer
+  advancement, and zero-block dequant no-write behavior.
 - The GGUF tensor-info walker accepts one caller-specified tensor name and fills
   a caller-owned lookup descriptor slot when that name is found, while still
   walking and validating every descriptor in the directory.
@@ -79,8 +84,9 @@ None.
 
 ## Required Verification
 
-- Add no-libc assembly verifier coverage for exact f32 bit patterns from scalar
-  Q8_0 row dequantization, including at least one multi-block row.
+- Add no-libc assembly verifier coverage for a checked token-embedding dequant
+  helper, including a valid token, last-token row-stride behavior, and
+  out-of-range token rejection.
 - Rebuild with `as`/`ld`.
 - Keep `make check`, existing GGUF loader lookup/base-offset smoke checks,
   future CLI usage rejection, static-link checks, and whitespace checks passing.
@@ -88,7 +94,8 @@ None.
 
 ## Last Verification
 
-- `make clean && make && make check` passed, printing `q8_0_dot: ok`.
+- `make clean && make && make check` passed, printing `q8_0_dot: ok`; the
+  verifier now includes exact-bit scalar Q8_0 row dequantization fixtures.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary with one lookup and tensor-data base.
 - Synthetic tensor-base fixture `/tmp/mistral_asm_tensor_base_round.gguf`
@@ -122,6 +129,5 @@ None.
 
 ## Next Exact Step
 
-Add a scalar Q8_0 row dequantization routine that writes f32 activations from
-GGML Q8_0 blocks, then extend the no-libc math verifier with exact-bit fixtures
-for one-block and multi-block rows.
+Add a checked Q8_0 token embedding dequant helper with no-libc verifier fixtures
+for valid first/last token rows and out-of-range token rejection.

@@ -42,6 +42,18 @@ fail9_text:
 	.ascii "q8_0_dot: fixture 9 failed\n"
 fail9_text_end:
 
+fail10_text:
+	.ascii "q8_0_dot: fixture 10 failed\n"
+fail10_text_end:
+
+fail11_text:
+	.ascii "q8_0_dot: fixture 11 failed\n"
+fail11_text_end:
+
+fail12_text:
+	.ascii "q8_0_dot: fixture 12 failed\n"
+fail12_text_end:
+
 .balign 4
 fixture1_block:
 	# scale = 1.0, qs = 1..32, x = all 1.0.
@@ -173,6 +185,71 @@ fixture7_x:
 	.long 0x3f800000
 	.endr
 
+.balign 4
+fixture10_block:
+	# One-block dequant fixture. The scale is 1.0 so the expected f32 values
+	# prove signed byte handling for the Q8_0 range edges and powers of two.
+	.word 0x3c00
+	.byte -128, -64, -32, -16, -8, -4, -2, -1
+	.byte 0, 1, 2, 4, 8, 16, 32, 64
+	.byte 127
+	.rept 15
+	.byte 0
+	.endr
+
+.balign 4
+fixture10_expected:
+	.long 0xc3000000
+	.long 0xc2800000
+	.long 0xc2000000
+	.long 0xc1800000
+	.long 0xc1000000
+	.long 0xc0800000
+	.long 0xc0000000
+	.long 0xbf800000
+	.long 0x00000000
+	.long 0x3f800000
+	.long 0x40000000
+	.long 0x40800000
+	.long 0x41000000
+	.long 0x41800000
+	.long 0x42000000
+	.long 0x42800000
+	.long 0x42fe0000
+	.rept 15
+	.long 0x00000000
+	.endr
+
+.balign 4
+fixture11_blocks:
+	# Multi-block dequant fixture. Non-zero values in the second block catch
+	# missing advancement on either the Q8_0 input or f32 output pointer.
+	.word 0x3800
+	.byte 2, -4
+	.rept 30
+	.byte 0
+	.endr
+	.word 0x4000
+	.byte 3, -4, 5, -6
+	.rept 28
+	.byte 0
+	.endr
+
+.balign 4
+fixture11_expected:
+	.long 0x3f800000
+	.long 0xc0000000
+	.rept 30
+	.long 0x00000000
+	.endr
+	.long 0x40c00000
+	.long 0xc1000000
+	.long 0x41200000
+	.long 0xc1400000
+	.rept 28
+	.long 0x00000000
+	.endr
+
 .section .bss
 
 .balign 4
@@ -181,6 +258,14 @@ matvec_out:
 
 .balign 4
 matvec_zero_out:
+	.skip 4
+
+.balign 4
+dequant_out:
+	.skip 256
+
+.balign 4
+dequant_zero_out:
 	.skip 4
 
 .section .text
@@ -278,6 +363,48 @@ _start:
 	cmp eax, edx
 	jne .Lfail9
 
+	lea rdi, [rip + fixture10_block]
+	lea rsi, [rip + dequant_out]
+	mov edx, 1
+	call q8_0_dequant_f32_row
+	lea rsi, [rip + dequant_out]
+	lea rdi, [rip + fixture10_expected]
+	mov ecx, 32
+.Lcheck_fixture10:
+	mov eax, dword ptr [rsi]
+	cmp eax, dword ptr [rdi]
+	jne .Lfail10
+	add rsi, 4
+	add rdi, 4
+	dec ecx
+	jne .Lcheck_fixture10
+
+	lea rdi, [rip + fixture11_blocks]
+	lea rsi, [rip + dequant_out]
+	mov edx, 2
+	call q8_0_dequant_f32_row
+	lea rsi, [rip + dequant_out]
+	lea rdi, [rip + fixture11_expected]
+	mov ecx, 64
+.Lcheck_fixture11:
+	mov eax, dword ptr [rsi]
+	cmp eax, dword ptr [rdi]
+	jne .Lfail11
+	add rsi, 4
+	add rdi, 4
+	dec ecx
+	jne .Lcheck_fixture11
+
+	mov dword ptr [rip + dequant_zero_out], 0x5a5a5a5a
+	lea rdi, [rip + fixture11_blocks]
+	lea rsi, [rip + dequant_zero_out]
+	xor edx, edx
+	call q8_0_dequant_f32_row
+	mov eax, dword ptr [rip + dequant_zero_out]
+	mov edx, 0x5a5a5a5a
+	cmp eax, edx
+	jne .Lfail12
+
 	mov rdi, 1
 	lea rsi, [rip + ok_text]
 	mov rdx, ok_text_end - ok_text
@@ -356,6 +483,30 @@ _start:
 	mov rdx, fail9_text_end - fail9_text
 	call sys_write
 	mov edi, 9
+	call sys_exit
+
+.Lfail10:
+	mov rdi, 2
+	lea rsi, [rip + fail10_text]
+	mov rdx, fail10_text_end - fail10_text
+	call sys_write
+	mov edi, 10
+	call sys_exit
+
+.Lfail11:
+	mov rdi, 2
+	lea rsi, [rip + fail11_text]
+	mov rdx, fail11_text_end - fail11_text
+	call sys_write
+	mov edi, 11
+	call sys_exit
+
+.Lfail12:
+	mov rdi, 2
+	lea rsi, [rip + fail12_text]
+	mov rdx, fail12_text_end - fail12_text
+	call sys_write
+	mov edi, 12
 	call sys_exit
 
 .size _start, . - _start

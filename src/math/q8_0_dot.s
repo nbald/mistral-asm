@@ -13,6 +13,8 @@
 .type q8_0_dot_f32_row, @function
 .global q8_0_matvec_f32
 .type q8_0_matvec_f32, @function
+.global q8_0_dequant_f32_row
+.type q8_0_dequant_f32_row, @function
 
 # Contract: compute one scalar dot product between a GGML Q8_0 weight block and
 # a 32-element f32 activation span.
@@ -170,5 +172,55 @@ q8_0_matvec_f32:
 	ret
 
 .size q8_0_matvec_f32, . - q8_0_matvec_f32
+
+# Contract: dequantize a contiguous GGML Q8_0 row into caller-owned f32 storage.
+# Inputs: rdi = pointer to the first Q8_0 block; rsi = pointer to the first f32
+# output slot; rdx = number of 32-value Q8_0 blocks to consume.
+# Outputs: writes `32 * block_count` f32 values in row order, each equal to
+# `scale * signed_qs[i]`. A zero block count writes nothing.
+# Clobbers: rax, rcx, r8, r9, r10, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads `34 * block_count` bytes from the Q8_0 row and
+# writes `128 * block_count` bytes to the output span during the call; retains
+# no pointers. Output storage must not overlap unread Q8_0 input because f32
+# output is larger and is streamed immediately.
+# Error behavior: none; callers must provide valid, non-overflowing spans after
+# loader and graph setup have checked tensor bounds, types, and shapes.
+q8_0_dequant_f32_row:
+	# Stream Q8_0 blocks and f32 output independently so future embedding lookup
+	# code can pass a tensor row pointer and an activation buffer directly.
+	mov r8, rdi
+	mov r9, rsi
+	mov r10, rdx
+	test r10, r10
+	je .Ldequant_done
+
+.Ldequant_block_loop:
+	vpxor xmm0, xmm0, xmm0
+	vpinsrw xmm0, xmm0, word ptr [r8], 0
+	vcvtph2ps xmm0, xmm0
+
+	xor ecx, ecx
+
+.Ldequant_value_loop:
+	# Q8_0 quant bytes are signed. Convert each byte to f32 before applying the
+	# block scale so the stored activation exactly matches GGML dequantization.
+	movsx eax, byte ptr [r8 + Q8_0_BLOCK_QS_OFFSET + rcx]
+	vcvtsi2ss xmm1, xmm0, eax
+	vmulss xmm1, xmm1, xmm0
+	vmovss dword ptr [r9 + rcx * 4], xmm1
+
+	inc ecx
+	cmp ecx, Q8_0_BLOCK_SIZE
+	jne .Ldequant_value_loop
+
+	add r8, Q8_0_BLOCK_BYTES
+	add r9, Q8_0_F32_SPAN_BYTES
+	dec r10
+	jne .Ldequant_block_loop
+
+.Ldequant_done:
+	ret
+
+.size q8_0_dequant_f32_row, . - q8_0_dequant_f32_row
 
 .section .note.GNU-stack,"",@progbits

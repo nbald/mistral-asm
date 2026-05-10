@@ -331,3 +331,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   malformed-later fixtures preserved their prior behavior. The local target
   GGUF printed data base `7882016` and `token_embd.weight` relative offset
   `12288`.
+
+## 2026-05-10T14:28:47Z
+
+- Scalar Q8_0 math now includes a row dequantizer that streams GGML Q8_0 blocks
+  into f32 activation storage without retaining pointers. This is the primitive
+  needed for turning a token embedding row into the first activation vector.
+- Decision: verifier coverage compares complete expected output spans for the
+  one-block and two-block dequant fixtures, not just selected elements, so
+  signed byte handling and pointer advancement are both exercised exactly.
+- Verification evidence: the no-libc verifier still prints `q8_0_dot: ok` and
+  now covers one-block signed range-edge dequantization, two-block dequant
+  pointer advancement, and zero-block no-write behavior. Clean rebuild, GGUF
+  synthetic lookup/base-offset fixtures, future prompt usage rejection,
+  static-link checks, whitespace check, and real target-model GGUF summary
+  smoke passed.
