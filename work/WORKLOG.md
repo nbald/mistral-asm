@@ -448,3 +448,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   prints the epsilon as `0x3727c5ac` and still completes both token-0 payload
   smokes. `strace` continues to show the live mapping released after summary
   and smoke output.
+
+## 2026-05-10T15:20:32Z
+
+- The tensor directory summary now retains the fixed
+  `blk.0.attn_q.weight` descriptor alongside the existing embedding and
+  RMSNorm descriptors. This is descriptor plumbing only; no query payload bytes
+  are read yet.
+- Decision: keep `attn_q` as a separate fixed descriptor slot instead of
+  reusing the caller-supplied lookup slot. The embedding lookup remains the
+  guarded source for token dequantization, and the first attention projection can
+  be audited independently before matvec wiring.
+- Verification evidence: the real local target reports `blk.0.attn_q.weight` as
+  Q8_0 with dimensions 3072 by 4096 and relative offset 444555264, while the
+  existing token embedding and RMSNorm smoke statuses remain 1. Synthetic parser
+  fixtures keep the new descriptor absent and skip payload smokes; `strace`
+  still shows the read-only mapping released after summary output.

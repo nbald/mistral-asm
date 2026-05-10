@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Retain and print the first-layer attention query projection descriptor
-`blk.0.attn_q.weight`, then verify it on the real target GGUF. Leave payload
-matvec wiring for a later atomic step.
+Add a guarded token-0 query projection matvec smoke using the retained
+`blk.0.attn_q.weight` descriptor and `token0_attn_norm_activation`, write into
+static output storage, and print a status. Leave numerical oracle comparison for
+a later atomic step.
 
 ## Completed Work
 
@@ -19,7 +20,7 @@ matvec wiring for a later atomic step.
   tensor-data base, and returns a live read-only mapping descriptor to `_start`.
 - The summary captures tensor and metadata counts, architecture, context length,
   layer count, vocab size, tensor-data base, the first tensor descriptor,
-  `token_embd.weight`, `blk.0.attn_norm.weight`, and
+  `token_embd.weight`, `blk.0.attn_norm.weight`, `blk.0.attn_q.weight`, and
   `mistral3.attention.layer_norm_rms_epsilon` as a found flag plus exact f32
   bits.
 - Scalar Q8_0 helpers cover block dot, row dot, row-major matvec, row dequant,
@@ -28,7 +29,8 @@ matvec wiring for a later atomic step.
   coverage.
 - `_start` prints the retained summary fields, keeps the model mapping live
   through guarded token ID 0 embedding dequantization and first attention
-  RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, then calls
+  RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, prints the
+  retained first-layer attention query projection descriptor, then calls
   `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
   print zero smoke statuses while preserving summary behavior.
@@ -69,7 +71,8 @@ None.
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
   `attn_norm_rms_epsilon_found: 0`,
-  `attn_norm_rms_epsilon_f32_hex: 0x00000000`, and kept
+  `attn_norm_rms_epsilon_f32_hex: 0x00000000`, kept
+  `attn_q_tensor_found: 0`, and kept
   `token0_embedding_dequant: 0` plus `token0_attn_norm: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
@@ -79,15 +82,19 @@ None.
   `attn_norm_rms_epsilon_found: 1`,
   `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, retained
   `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, retained
-  `blk.0.attn_norm.weight` as f32 with dimension 3072, and printed
-  `token0_embedding_dequant: 1` plus `token0_attn_norm: 1`.
+  `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
+  `blk.0.attn_q.weight` as Q8_0 with dimensions 3072 and 4096 at relative
+  offset 444555264, and printed `token0_embedding_dequant: 1` plus
+  `token0_attn_norm: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, successful summary/smoke output, then
+  `close(3) = 0`, successful summary/smoke output including the retained
+  query projection descriptor, then
   `munmap(..., 3651679520) = 0`.
 - `git diff --check` passed after the final work-file updates.
 
 ## Next Exact Step
 
-Retain and print the first-layer attention query projection descriptor
-`blk.0.attn_q.weight`, then verify it on the real target GGUF. Leave payload
-matvec wiring for a later atomic step.
+Add a guarded token-0 query projection matvec smoke using the retained
+`blk.0.attn_q.weight` descriptor and `token0_attn_norm_activation`, write into
+static output storage, and print a status. Leave numerical oracle comparison for
+a later atomic step.
