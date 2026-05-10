@@ -1470,3 +1470,13 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: clean rebuild, no-libc harnesses, help output, current
   real-target layer-1 FFN norm smoke, oracle py-compile, runtime source purity,
   static-link, tracked-artifact, large-file, and whitespace checks passed.
+
+## 2026-05-11T00:39:54Z
+
+- Completed the required second repository-wide review pass. It independently
+  confirmed that the next risk is maintainability rather than runtime purity or
+  math correctness: `_start.s` now carries too many unrelated responsibilities
+  to keep extending safely.
+- Verification evidence: clean rebuild, no-libc harnesses, help output, current
+  real-target layer-1 FFN norm smoke, oracle py-compile, runtime source purity,
+  static-link, tracked-artifact, large-file, and whitespace checks passed.
