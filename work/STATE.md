@@ -6,8 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Print a guarded four-word exact-hex slice from `token0_ffn_up_output` after
-`token0_ffn_up_matvec_status` is 1.
+Add an external oracle comparison for the token-0 FFN up output words.
 
 ## Completed Work
 
@@ -24,16 +23,17 @@ Print a guarded four-word exact-hex slice from `token0_ffn_up_output` after
   query/key/value projections, single-token context expansion, attention output
   projection, post-attention residual, FFN RMSNorm, FFN gate projection, and FFN
   up projection.
-- Public exact-hex slices exist through the FFN gate projection. Existing
-  external oracle notes cover Q/K/V/output/context-equivalent output, residual,
-  FFN RMSNorm, and FFN gate.
+- Public exact-hex slices exist through the FFN up projection. Existing external
+  oracle notes cover Q/K/V/output/context-equivalent output, residual, FFN
+  RMSNorm, and FFN gate; the FFN up oracle comparison is next.
 - The FFN gate matvec validates `blk.0.ffn_gate.weight` as Q8_0
   `[3072 x 9216]`, bounds the full mapped payload, writes static FFN gate
   activation storage, prints `token0_ffn_gate_matvec`, and prints the first four
   output f32 bit patterns only when the status is 1.
 - The FFN up matvec validates `blk.0.ffn_up.weight` as Q8_0 `[3072 x 9216]`,
-  bounds the full mapped payload, writes static FFN up activation storage, and
-  prints status-only `token0_ffn_up_matvec`.
+  bounds the full mapped payload, writes static FFN up activation storage,
+  prints `token0_ffn_up_matvec`, and prints the first four output f32 bit
+  patterns only when the status is 1.
 
 ## Known Blockers
 
@@ -82,18 +82,18 @@ None.
   Q/K/V/output/residual/FFN RMSNorm/FFN gate exact-hex slices, printed
   `ffn_up_tensor_found: 1`, `ffn_up_tensor_name: blk.0.ffn_up.weight`,
   dimensions `3072 x 9216`, ggml type `8`, offset `521441280`,
-  `token0_ffn_gate_matvec: 1`, and `token0_ffn_up_matvec: 1`.
-- No `token0_ffn_up_output*_f32_hex` lines are printed yet.
+  `token0_ffn_gate_matvec: 1`, `token0_ffn_up_matvec: 1`, and FFN up output
+  words `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`.
 - Merged `strace -e trace=mmap,munmap,close` output on the real target returned
   status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN up
-  descriptor lines, `token0_ffn_up_matvec: 1`, and final `munmap`.
+  descriptor lines, `token0_ffn_up_matvec: 1`, the four FFN up output words,
+  and final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
-- Existing external oracle comparisons were not rerun because this step added a
-  status-only FFN up projection smoke and did not alter existing runtime math,
-  shared inputs, or public exact-hex slices.
+- Existing external oracle comparisons were not rerun because this step only
+  exposed a new FFN up slice and did not alter existing runtime math, shared
+  inputs, or already-covered public exact-hex slices.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Print a guarded four-word exact-hex slice from `token0_ffn_up_output` after
-`token0_ffn_up_matvec_status` is 1.
+Add an external oracle comparison for the token-0 FFN up output words.

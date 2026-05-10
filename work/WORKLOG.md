@@ -861,3 +861,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   FFN up exact-hex words. Existing Q/K/V/output/residual/FFN RMSNorm/FFN gate
   exact slices were preserved, and cleanup tracing still showed `close(3)`
   before the final `munmap`.
+
+## 2026-05-10T17:52:27Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_up_output` after `token0_ffn_up_matvec_status` is 1. The FFN up
+  matvec math and descriptor/bounds gates were left unchanged.
+- Verification evidence: synthetic fixtures kept `token0_ffn_up_matvec: 0`
+  with no FFN up output word labels. The real local target printed FFN up words
+  `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`; merged cleanup
+  tracing showed those lines before the final `munmap`.
