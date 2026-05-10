@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only runtime coverage for `blk.1.attn_v.weight` in a reusable
-lookup slot, without reading value projection payload bytes.
+Add a status-only `token0_layer1_attn_v_matvec` smoke using the reusable
+`blk.1.attn_v.weight` descriptor, without publishing value output words yet.
 
 ## Completed Work
 
@@ -22,10 +22,11 @@ lookup slot, without reading value projection payload bytes.
   `blk.1.attn_norm.weight` descriptor. The real target prints status 1 and
   exact words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`,
   matching the external oracle.
-- The runtime captures reusable layer-1 descriptors for `blk.1.attn_q.weight`
-  and `blk.1.attn_k.weight`. The real target reports query dimensions
-  `3072x4096`, type `8`, offset `568246272`, and key dimensions `3072x1024`,
-  type `8`, offset `551522304`.
+- The runtime captures reusable layer-1 descriptors for `blk.1.attn_q.weight`,
+  `blk.1.attn_k.weight`, and `blk.1.attn_v.weight`. The real target reports
+  query dimensions `3072x4096`, type `8`, offset `568246272`; key dimensions
+  `3072x1024`, type `8`, offset `551522304`; and value dimensions
+  `3072x1024`, type `8`, offset `581615616`.
 - The guarded `token0_layer1_attn_q_matvec` smoke writes a private output buffer
   and publishes the first four raw f32 words only when status is 1. The real
   target reports `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`,
@@ -68,20 +69,22 @@ None.
 
 ## Last Verification
 
-- `make` completed with the tree already up to date, and `make check` passed;
-  the harnesses printed `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and
-  `gguf_lookup: ok`.
-- `python3 work/oracle/token0_layer1_attn_k_oracle.py` on the real target GGUF
-  produced `0x3fb2a129`, `0x405dbdbe`, `0x3f5611d3`, and `0x3f1e325d` for the
-  four public layer-1 key output words.
+- `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
+  `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `token0_layer1_attn_k_matvec: 1` and the same four
-  `token0_layer1_attn_k_output*_f32_hex` words; the layer-1 RMSNorm public
-  words stayed `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`.
+  `layer1_attn_v_tensor_found: 1`, dimensions `3072x1024`, type `8`, and
+  offset `581615616`; an external descriptor parser reported the same
+  `blk.1.attn_v.weight` fields.
+- A temporary empty valid GGUF printed zeroed layer-1 query/key/value descriptor
+  fields and kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`, and
+  `token0_layer1_attn_k_matvec` at 0.
+- Existing layer-1 query/key public output words stayed unchanged on the real
+  target.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
-  purity scan, static-link inspection, and tracked artifact scan passed.
+  purity scan, static-link inspection, tracked artifact scan, and `--help`
+  smoke passed.
 
 ## Next Exact Step
 
-Add descriptor-only runtime coverage for `blk.1.attn_v.weight` in a reusable
-lookup slot, without reading value projection payload bytes.
+Add a status-only `token0_layer1_attn_v_matvec` smoke using the reusable
+`blk.1.attn_v.weight` descriptor, without publishing value output words yet.

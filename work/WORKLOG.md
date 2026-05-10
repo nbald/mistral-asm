@@ -1201,3 +1201,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x3f5611d3`, and `0x3f1e325d` for the public layer-1 key words, matching the
   current runtime labels exactly. The assembly harnesses, oracle py-compile,
   runtime purity, static-link, tracked-artifact, and whitespace checks passed.
+
+## 2026-05-10T20:42:42Z
+
+- Added descriptor-only runtime coverage for `blk.1.attn_v.weight` in its own
+  reusable lookup slot. The step intentionally stops before any layer-1 value
+  projection payload read.
+- Verification evidence: the real target printed the value descriptor as Q8_0
+  `3072x1024` at relative offset `581615616`, matching an external descriptor
+  parser. A temporary empty valid GGUF left the layer-1 query/key/value
+  descriptor slots zeroed and kept the existing layer-1 math gates at 0. Existing
+  layer-1 query/key output words stayed unchanged, and build, harness, oracle
+  py-compile, runtime purity, static-link, tracked-artifact, help, and whitespace
+  checks passed.
