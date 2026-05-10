@@ -13,6 +13,8 @@
 .equ GGUF_MAX_DIMS, 4
 .equ GGUF_SUMMARY_TENSOR_COUNT, 0
 .equ GGUF_SUMMARY_METADATA_COUNT, 8
+.equ GGUF_SUMMARY_ARCHITECTURE, 16
+.equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -28,6 +30,12 @@
 .equ GGUF_ERR_TENSOR_BOUNDS, 11
 .equ GGUF_ERR_TENSOR_ALIGNMENT, 12
 
+.section .rodata
+
+general_architecture_key:
+	.ascii "general.architecture"
+general_architecture_key_end:
+
 .section .text
 
 .global gguf_validate_file
@@ -36,15 +44,16 @@
 # Contract: validate the fixed GGUF header, metadata record bounds, and tensor
 # descriptor directory shape for the narrow first loader.
 # Inputs: rdi = pointer to a NUL-terminated model path; rsi = pointer to a
-# caller-owned summary buffer with room for two u64 fields: tensor_count at
-# offset 0 and metadata_kv_count at offset 8.
+# caller-owned summary buffer with room for tensor_count at offset 0,
+# metadata_kv_count at offset 8, and a 32-byte NUL-terminated architecture
+# string at offset 16.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
 # Ownership/lifetime: opens the model read-only, mmaps the whole file privately,
 # and releases any descriptor/mapping before returning. The caller never owns the
 # descriptor or mapping. The summary buffer remains caller-owned; this function
-# only writes scalar header counts into it.
+# writes header counts and bounded metadata copies into it.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -122,6 +131,12 @@ gguf_validate_file:
 	# escapes through this summary.
 	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT], rax
 	mov qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT], rdx
+	# Clear optional string fields before metadata capture so callers never see
+	# stale bytes when a key is absent or has a non-string value.
+	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 8], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 16], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 24], 0
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -131,6 +146,7 @@ gguf_validate_file:
 	mov rsi, r12
 	mov rdx, GGUF_HEADER_SIZE
 	mov rcx, qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT]
+	mov r8, r15
 	call gguf_walk_metadata
 	test rax, rax
 	jnz .Lmetadata_failed
@@ -228,16 +244,17 @@ gguf_validate_file:
 
 .type gguf_walk_metadata, @function
 
-# Contract: advance over the GGUF metadata key/value array without retaining
-# values.
+# Contract: advance over the GGUF metadata key/value array and retain selected
+# small metadata values in the caller-owned summary.
 # Inputs: rdi = mapping base, rsi = mapped file length, rdx = metadata start
-# offset, rcx = metadata key/value count.
+# offset, rcx = metadata key/value count, r8 = summary buffer.
 # Outputs: rax = GGUF_OK on success or a GGUF_ERR_METADATA_* code; rdx = tensor
 # info directory start offset on success.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
-# it uses (rbx, r12, r13, r14).
-# Ownership/lifetime: reads only from the caller-owned mapping and stores no
-# pointers into it.
+# it uses (rbx, r12, r13, r14, r15).
+# Ownership/lifetime: reads only from the caller-owned mapping. Captured strings
+# are copied into fixed-size caller-owned summary fields; no mapped-file pointer
+# is retained.
 # Error behavior: returns malformed-metadata status before any out-of-bounds
 # read; unsupported value tags return GGUF_ERR_METADATA_TYPE.
 gguf_walk_metadata:
@@ -245,26 +262,46 @@ gguf_walk_metadata:
 	push r12
 	push r13
 	push r14
+	push r15
 
 	mov r13, rdi
 	mov r14, rsi
 	mov r12, rdx
 	mov rbx, rcx
+	mov r15, r8
 
 .Lmetadata_loop:
 	test rbx, rbx
 	jz .Lmetadata_done
 
 	# Each metadata key is a GGUF string: u64 byte length followed by bytes.
-	# Values begin with a u32 type tag immediately after the key, with no padding.
-	mov rdi, r13
-	mov rsi, r14
-	mov rdx, r12
-	call gguf_skip_string
-	test rax, rax
-	jnz .Lmetadata_return
-	mov r12, rdx
+	# Parse it here instead of calling gguf_skip_string so the key bytes can be
+	# compared against names this milestone wants to retain.
+	cmp r12, r14
+	ja .Lmetadata_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Lmetadata_bad
+	mov r8, qword ptr [r13 + r12]
+	test r8, r8
+	js .Lmetadata_bad
+	add r12, 8
 
+	mov rax, r14
+	sub rax, r12
+	cmp rax, r8
+	jb .Lmetadata_bad
+	mov r10, r8
+	lea rdi, [r13 + r12]
+	mov rsi, r8
+	lea rdx, [rip + general_architecture_key]
+	mov rcx, general_architecture_key_end - general_architecture_key
+	call gguf_bytes_eq_literal
+	mov r9d, eax
+	add r12, r10
+
+	# Values begin with a u32 type tag immediately after the key, with no padding.
 	cmp r12, r14
 	ja .Lmetadata_bad
 	mov rax, r14
@@ -274,6 +311,25 @@ gguf_walk_metadata:
 	mov ecx, dword ptr [r13 + r12]
 	add r12, 4
 
+	test r9d, r9d
+	jz .Lmetadata_skip_value
+	cmp ecx, 8
+	jne .Lmetadata_skip_value
+
+	# general.architecture is a short GGUF string such as "mistral3". Copy a
+	# bounded NUL-terminated snapshot so the summary survives after munmap.
+	mov rdi, r13
+	mov rsi, r14
+	mov rdx, r12
+	lea r8, [r15 + GGUF_SUMMARY_ARCHITECTURE]
+	mov r9, GGUF_SUMMARY_ARCHITECTURE_CAP
+	call gguf_capture_string_to_fixed
+	test rax, rax
+	jnz .Lmetadata_return
+	mov r12, rdx
+	jmp .Lmetadata_next
+
+.Lmetadata_skip_value:
 	mov rdi, r13
 	mov rsi, r14
 	mov rdx, r12
@@ -282,6 +338,7 @@ gguf_walk_metadata:
 	jnz .Lmetadata_return
 	mov r12, rdx
 
+.Lmetadata_next:
 	dec rbx
 	jmp .Lmetadata_loop
 
@@ -300,6 +357,7 @@ gguf_walk_metadata:
 
 .Lmetadata_return:
 .Lmetadata_epilogue:
+	pop r15
 	pop r14
 	pop r13
 	pop r12
@@ -307,6 +365,110 @@ gguf_walk_metadata:
 	ret
 
 .size gguf_walk_metadata, . - gguf_walk_metadata
+
+.type gguf_bytes_eq_literal, @function
+
+# Contract: compare checked in-file bytes against an assembler literal.
+# Inputs: rdi = pointer to candidate bytes, rsi = candidate byte length,
+# rdx = pointer to literal bytes, rcx = literal byte length.
+# Outputs: rax = 1 when lengths and bytes match exactly, otherwise 0.
+# Clobbers: rax, r8 and flags.
+# Ownership/lifetime: reads both buffers only; does not retain pointers.
+# Error behavior: none. Callers must bounds-check candidate bytes before use.
+gguf_bytes_eq_literal:
+	xor eax, eax
+	cmp rsi, rcx
+	jne .Lbytes_eq_done
+
+.Lbytes_eq_loop:
+	cmp rax, rcx
+	je .Lbytes_eq_yes
+	mov r8b, byte ptr [rdi + rax]
+	cmp r8b, byte ptr [rdx + rax]
+	jne .Lbytes_eq_no
+	inc rax
+	jmp .Lbytes_eq_loop
+
+.Lbytes_eq_yes:
+	mov eax, 1
+	ret
+
+.Lbytes_eq_no:
+	xor eax, eax
+
+.Lbytes_eq_done:
+	ret
+
+.size gguf_bytes_eq_literal, . - gguf_bytes_eq_literal
+
+.type gguf_capture_string_to_fixed, @function
+
+# Contract: validate one GGUF string value and copy a bounded NUL-terminated
+# snapshot into caller-owned summary storage.
+# Inputs: rdi = mapping base, rsi = mapped file length, rdx = string length
+# field offset, r8 = destination buffer, r9 = destination capacity in bytes.
+# Outputs: rax = GGUF_OK on success or GGUF_ERR_METADATA_BOUNDS; rdx = offset
+# after the source string bytes on success.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: reads from the mapping and writes only to the destination
+# buffer during this call. Long source strings are truncated to capacity - 1 so
+# the destination remains NUL-terminated.
+# Error behavior: rejects missing length fields, high-bit-set lengths, and
+# source strings whose bytes would extend beyond the mapping.
+gguf_capture_string_to_fixed:
+	cmp rdx, rsi
+	ja .Lcapture_bad
+	mov rax, rsi
+	sub rax, rdx
+	cmp rax, 8
+	jb .Lcapture_bad
+
+	mov r10, qword ptr [rdi + rdx]
+	test r10, r10
+	js .Lcapture_bad
+	add rdx, 8
+
+	mov rax, rsi
+	sub rax, rdx
+	cmp rax, r10
+	jb .Lcapture_bad
+	mov r11, rdx
+	add r11, r10
+
+	# Copy at most capacity - 1 bytes, then write a terminator. The parser still
+	# advances over the full source string even if the retained summary is
+	# truncated.
+	test r9, r9
+	jz .Lcapture_advance_only
+	mov rcx, r10
+	mov rax, r9
+	dec rax
+	cmp rcx, rax
+	cmova rcx, rax
+	lea r10, [rdi + rdx]
+	xor eax, eax
+
+.Lcapture_copy_loop:
+	cmp rax, rcx
+	je .Lcapture_terminate
+	mov r9b, byte ptr [r10 + rax]
+	mov byte ptr [r8 + rax], r9b
+	inc rax
+	jmp .Lcapture_copy_loop
+
+.Lcapture_terminate:
+	mov byte ptr [r8 + rcx], 0
+
+.Lcapture_advance_only:
+	mov rdx, r11
+	xor eax, eax
+	ret
+
+.Lcapture_bad:
+	mov eax, GGUF_ERR_METADATA_BOUNDS
+	ret
+
+.size gguf_capture_string_to_fixed, . - gguf_capture_string_to_fixed
 
 .type gguf_walk_tensor_infos, @function
 

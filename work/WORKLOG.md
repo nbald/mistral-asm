@@ -155,3 +155,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   decimal count output with metadata and one tensor descriptor, high-bit count
   rejection, and truncated metadata rejection. The target model file was not
   present locally.
+
+## 2026-05-10T13:05:05Z
+
+- Metadata capture now recognizes `general.architecture` only when the value tag
+  is a GGUF string, copies it into fixed caller-owned storage, and leaves the
+  field empty when the key is absent or has another type.
+- Decision: long architecture values are truncated with a terminator instead of
+  rejected; this keeps the narrow parser permissive for otherwise valid files
+  while preserving summary-buffer bounds.
+- Verification evidence: synthetic fixtures covered empty metadata, captured
+  `mistral3`, one tensor plus two metadata entries, non-string skip, long-string
+  truncation, high-bit count rejection, and truncated metadata rejection. The
+  target GGUF model file was not present locally.

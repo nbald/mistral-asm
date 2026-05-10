@@ -1,6 +1,7 @@
 .intel_syntax noprefix
 
 .equ DECIMAL_SCRATCH_SIZE, 32
+.equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 
 .section .rodata
 
@@ -33,6 +34,10 @@ tensor_count_text_end:
 metadata_count_text:
 	.ascii "metadata_kv_count: "
 metadata_count_text_end:
+
+architecture_text:
+	.ascii "architecture: "
+architecture_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -98,6 +103,8 @@ gguf_summary_tensor_count:
 	.skip 8
 gguf_summary_metadata_count:
 	.skip 8
+gguf_summary_architecture:
+	.skip GGUF_SUMMARY_ARCHITECTURE_CAP
 
 .section .text
 
@@ -115,7 +122,7 @@ gguf_summary_metadata_count:
 # Ownership/lifetime: argv strings remain kernel-provided process memory. Any
 # model mapping is owned and released inside gguf_validate_file. The GGUF
 # summary buffer is process-owned static storage passed to the loader for scalar
-# header counts only.
+# header counts and a bounded copy of selected metadata strings.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -251,9 +258,9 @@ _start:
 
 .Lgguf_ok:
 	# This milestone validates the fixed GGUF header, metadata shapes, and
-	# tensor-info directory bounds, then exposes the two header counts that were
-	# retained in caller-owned storage. Later parser milestones will add selected
-	# named metadata fields and tensor descriptors.
+	# tensor-info directory bounds, then exposes header counts and selected
+	# metadata retained in caller-owned storage. Later parser milestones will add
+	# model-shape fields and tensor descriptors.
 	mov rdi, 1
 	lea rsi, [rip + gguf_ok_text]
 	mov rdx, gguf_ok_text_end - gguf_ok_text
@@ -281,6 +288,21 @@ _start:
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_metadata_count]
 	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + architecture_text]
+	mov rdx, architecture_text_end - architecture_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + gguf_summary_architecture]
+	mov rdx, GGUF_SUMMARY_ARCHITECTURE_CAP
+	call write_bounded_c_string
 
 	mov rdi, 1
 	lea rsi, [rip + newline_text]
@@ -390,5 +412,53 @@ write_u64_decimal:
 	ret
 
 .size write_u64_decimal, . - write_u64_decimal
+
+.type write_bounded_c_string, @function
+
+# Contract: write a NUL-terminated string whose storage has a fixed maximum
+# capacity.
+# Inputs: rdi = output file descriptor; rsi = string buffer; rdx = maximum bytes
+# available in the buffer, including any NUL terminator.
+# Outputs: returns after at most one write(2) attempt for the bytes before the
+# first NUL or the maximum bound. The raw sys_write result is intentionally
+# ignored by this milestone caller.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: reads the caller-owned buffer only during this call and
+# does not retain pointers.
+# Error behavior: write errors are not reported separately; an empty string
+# simply produces no payload write.
+write_bounded_c_string:
+	push rbx
+	push r12
+	push r13
+
+	mov rbx, rdi
+	mov r12, rsi
+	mov r13, rdx
+	xor eax, eax
+
+.Lbounded_scan:
+	cmp rax, r13
+	je .Lbounded_have_len
+	cmp byte ptr [r12 + rax], 0
+	je .Lbounded_have_len
+	inc rax
+	jmp .Lbounded_scan
+
+.Lbounded_have_len:
+	test rax, rax
+	jz .Lbounded_done
+	mov rdi, rbx
+	mov rsi, r12
+	mov rdx, rax
+	call sys_write
+
+.Lbounded_done:
+	pop r13
+	pop r12
+	pop rbx
+	ret
+
+.size write_bounded_c_string, . - write_bounded_c_string
 
 .section .note.GNU-stack,"",@progbits
