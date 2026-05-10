@@ -732,3 +732,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   residual slice. Rebuild, no-libc harnesses, CLI/static checks, synthetic
   GGUF checks, real-model smoke, cleanup tracing, oracle py-compile, and
   whitespace checks passed.
+
+## 2026-05-10T17:03:55Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.ffn_norm.weight` descriptor after the attention output descriptor.
+  This is descriptor plumbing only; the runtime does not read FFN norm payload
+  bytes in this step.
+- Decision: extend the existing fixed 160-byte descriptor-slot pattern and shift
+  the attention RMSNorm epsilon fields after the new slot, keeping the summary a
+  simple linear ABI between the loader and `_start`.
+- Verification evidence: narrow synthetic fixtures printed
+  `ffn_norm_tensor_found: 0`; the real local target printed the FFN norm as f32
+  `[3072]` at relative offset 521428992 while preserving the existing token-0
+  attention and residual exact-hex slices. Cleanup tracing still showed the
+  read-only mapping released after summary and smoke output.
