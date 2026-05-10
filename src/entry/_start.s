@@ -25,6 +25,8 @@
 .equ TOKEN0_ATTN_KV_HEADS, TOKEN0_ATTN_V_OUTPUT_VALUES / TOKEN0_ATTN_HEAD_DIM_VALUES
 .equ TOKEN0_ATTN_CONTEXT_VALUES, TOKEN0_ATTN_Q_OUTPUT_VALUES
 .equ TOKEN0_ATTN_CONTEXT_BYTES, TOKEN0_ATTN_CONTEXT_VALUES * 4
+.equ TOKEN0_ATTN_OUTPUT_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
+.equ TOKEN0_ATTN_OUTPUT_BYTES, TOKEN0_ATTN_OUTPUT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -42,7 +44,7 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
-	.ascii "RMSNorm, attention query/key/value smoke, context, and output descriptor.\n"
+	.ascii "RMSNorm, attention query/key/value smoke, context, and output projection smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -365,6 +367,10 @@ token0_attn_context_text:
 	.ascii "token0_attn_context: "
 token0_attn_context_text_end:
 
+token0_attn_output_matvec_text:
+	.ascii "token0_attn_output_matvec: "
+token0_attn_output_matvec_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -666,6 +672,10 @@ token0_attn_v_matvec_status:
 token0_attn_context_status:
 	.skip 8
 
+.balign 8
+token0_attn_output_matvec_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -690,6 +700,10 @@ token0_attn_v_output:
 token0_attn_context:
 	.skip TOKEN0_ATTN_CONTEXT_BYTES
 
+.balign 4
+token0_attn_output:
+	.skip TOKEN0_ATTN_OUTPUT_BYTES
+
 .section .text
 
 .global _start
@@ -707,8 +721,9 @@ token0_attn_context:
 # loader returns a live read-only model mapping descriptor on success; _start
 # keeps it live through the current summary path and token embedding, RMSNorm,
 # first query projection, first key projection, and first value projection
-# smokes, then derives the single-token attention context before releasing it
-# explicitly with gguf_release_mapping before exit. The
+# smokes, then derives the single-token attention context and projects it
+# through the first output projection before releasing the mapping explicitly
+# with gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
 # bounded metadata
@@ -718,7 +733,7 @@ token0_attn_context:
 # including up to four dimension sizes for each retained descriptor, the aligned
 # tensor-data base offset for non-empty tensor directories, and a retained
 # descriptor for the first-layer attention RMSNorm weights, query projection,
-# key projection, and value projection.
+# key projection, value projection, and output projection.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -1981,6 +1996,23 @@ _start:
 
 	call print_token0_attn_context_slice
 
+	call token0_attn_output_matvec_smoke
+	mov qword ptr [rip + token0_attn_output_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_attn_output_matvec_text]
+	mov rdx, token0_attn_output_matvec_text_end - token0_attn_output_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_attn_output_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -3069,5 +3101,95 @@ token0_attn_context_smoke:
 	ret
 
 .size token0_attn_context_smoke, . - token0_attn_context_smoke
+
+.type token0_attn_output_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 single-token attention context
+# through the retained blk.0.attn_output.weight matrix.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_attn_context_status, and token0_attn_context.
+# Outputs: rax = 1 when token0_attn_context is available and a two-dimensional
+# Q8_0 blk.0.attn_output.weight matrix with exact 4096-value input width,
+# exact 3072-row output shape, and bounded payload bytes fits inside the
+# mapping, after q8_0_matvec_f32 writes token0_attn_output; otherwise rax = 0
+# and no output-projection matrix payload is read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
+# q8_0_matvec_f32, reads the static attention context as the shared f32 input
+# vector, and writes exactly TOKEN0_ATTN_OUTPUT_BYTES into static output
+# storage on success. The mmap remains owned by _start and must be released
+# separately.
+# Error behavior: this is a smoke gate for the first attention output
+# projection, not final graph setup. Non-target synthetic GGUF fixtures and
+# shape mismatches are skipped with status 0.
+token0_attn_output_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_attn_context_status], 1
+	jne .Lattn_output_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_found], 1
+	jne .Lattn_output_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_n_dimensions], 2
+	jne .Lattn_output_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lattn_output_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_dim0], TOKEN0_ATTN_CONTEXT_VALUES
+	jne .Lattn_output_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_dim1], TOKEN0_ATTN_OUTPUT_VALUES
+	jne .Lattn_output_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# output projection start and prove the complete row-major Q8_0 matrix fits
+	# in the live mapping before handing any payload pointer to the math helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lattn_output_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_attn_output_tensor_offset]
+	test rdx, rdx
+	js .Lattn_output_smoke_skip
+	add rax, rdx
+	jc .Lattn_output_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lattn_output_smoke_skip
+
+	mov r8, TOKEN0_ATTN_CONTEXT_VALUES
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Lattn_output_smoke_skip
+	mov rcx, TOKEN0_ATTN_OUTPUT_VALUES
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Lattn_output_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Lattn_output_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Lattn_output_smoke_skip
+	add rdi, rax
+	jc .Lattn_output_smoke_skip
+
+	lea rsi, [rip + token0_attn_context]
+	lea rdx, [rip + token0_attn_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Lattn_output_smoke_skip:
+	xor eax, eax
+
+.Lattn_output_smoke_done:
+	ret
+
+.size token0_attn_output_matvec_smoke, . - token0_attn_output_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits

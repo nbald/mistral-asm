@@ -664,3 +664,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   the first four `token0_attn_v_output` words. Cleanup tracing showed those
   lines before the final `munmap`, and the external Q/K/V oracle words still
   matched their runtime slices.
+
+## 2026-05-10T16:37:22Z
+
+- The runtime now performs the guarded output-projection payload smoke:
+  `token0_attn_context_status` must be set, `blk.0.attn_output.weight` must be
+  the exact 4096x3072 Q8_0 matrix, and the resolved matrix bytes must fit inside
+  the live mapping before the scalar Q8_0 matvec writes `token0_attn_output`.
+- Decision: print only `token0_attn_output_matvec` in this step. Output words
+  and an external oracle comparison remain separate changes so the first payload
+  read through this tensor is reviewable on its own.
+- Verification evidence: narrow synthetic fixtures still skip with status 0,
+  the real target printed `token0_attn_output_matvec: 1`, cleanup tracing showed
+  the line before final `munmap`, and the existing Q/K/V oracle word checks
+  still matched the runtime slices.
