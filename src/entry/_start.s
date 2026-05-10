@@ -43,6 +43,10 @@ context_length_text:
 	.ascii "context_length: "
 context_length_text_end:
 
+block_count_text:
+	.ascii "block_count: "
+block_count_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -110,6 +114,8 @@ gguf_summary_metadata_count:
 gguf_summary_architecture:
 	.skip GGUF_SUMMARY_ARCHITECTURE_CAP
 gguf_summary_context_length:
+	.skip 8
+gguf_summary_block_count:
 	.skip 8
 
 .section .text
@@ -323,6 +329,20 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_context_length]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + block_count_text]
+	mov rdx, block_count_text_end - block_count_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_block_count]
 	call write_u64_decimal
 
 	mov rdi, 1

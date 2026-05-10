@@ -6,14 +6,17 @@ Milestone 5: Metadata dump.
 
 ## Current Exact Task
 
-Capture and print `mistral3.block_count`.
+Capture and print tokenizer vocabulary size from the
+`tokenizer.ggml.tokens` array length.
 
 ## Completed Work
 
 - GGUF summary prints header `tensor_count`, `metadata_kv_count`,
-  `general.architecture`, and `mistral3.context_length`.
-- `mistral3.context_length` is captured from u32 and u64 metadata scalar values
-  into caller-owned storage and defaults to zero when absent or wrong-typed.
+  `general.architecture`, `mistral3.context_length`, and
+  `mistral3.block_count`.
+- `mistral3.context_length` and `mistral3.block_count` are captured from u32
+  and u64 metadata scalar values into caller-owned storage and default to zero
+  when absent or wrong-typed.
 
 ## Known Blockers
 
@@ -40,9 +43,9 @@ None.
 - `./mistral-asm --help` returned status 0 and lists the metadata-summary
   milestone.
 - Synthetic GGUF fixtures verified successful summary output for empty metadata,
-  `general.architecture = mistral3`, `mistral3.context_length` as u32 and u64,
-  one tensor plus metadata entries, wrong-typed architecture/context skip, and
-  long architecture truncation.
+  `general.architecture = mistral3`, `mistral3.context_length` as u32/u64,
+  `mistral3.block_count` as u32/u64, a wrong-typed block count skip, and one
+  tensor plus block-count metadata.
 - Synthetic failure fixtures still reject bad high-bit counts and truncated
   metadata with status 3.
 - Invoking the future prompt generation form returned the usage error with
@@ -54,6 +57,6 @@ None.
 
 ## Next Exact Step
 
-Extend the caller-owned GGUF summary with a `block_count` u64 slot, capture
-`mistral3.block_count` when its metadata value is a u32/u64 scalar, and print it
-after `context_length`.
+Extend metadata capture to recognize `tokenizer.ggml.tokens` arrays, store the
+array element count in a caller-owned `vocab_size` u64 slot without retaining
+token strings, and print it after `block_count`.

@@ -178,3 +178,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   length encoded as u32 and u64, wrong-typed architecture/context skip, long
   architecture truncation, bad high-bit counts, and truncated metadata. The
   target GGUF model file was not present locally.
+
+## 2026-05-10T13:16:00Z
+
+- Metadata capture now recognizes `mistral3.block_count` with the same u32/u64
+  scalar rules as `mistral3.context_length`, and leaves the summary value at zero
+  when the key is absent or has a non-scalar type.
+- Verification evidence: synthetic fixtures covered empty metadata,
+  architecture plus context/block shape metadata, block count encoded as u32 and
+  u64, wrong-typed block count skip, one tensor descriptor after metadata, bad
+  high-bit counts, truncated metadata, and the still-rejected future prompt
+  generation form. The target GGUF model file was not present locally.

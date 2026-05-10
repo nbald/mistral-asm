@@ -16,6 +16,7 @@
 .equ GGUF_SUMMARY_ARCHITECTURE, 16
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 .equ GGUF_SUMMARY_CONTEXT_LENGTH, 48
+.equ GGUF_SUMMARY_BLOCK_COUNT, 56
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -41,6 +42,10 @@ mistral3_context_length_key:
 	.ascii "mistral3.context_length"
 mistral3_context_length_key_end:
 
+mistral3_block_count_key:
+	.ascii "mistral3.block_count"
+mistral3_block_count_key_end:
+
 .section .text
 
 .global gguf_validate_file
@@ -50,8 +55,9 @@ mistral3_context_length_key_end:
 # descriptor directory shape for the narrow first loader.
 # Inputs: rdi = pointer to a NUL-terminated model path; rsi = pointer to a
 # caller-owned summary buffer with room for tensor_count at offset 0,
-# metadata_kv_count at offset 8, and a 32-byte NUL-terminated architecture
-# string at offset 16, followed by context_length as a u64 at offset 48.
+# metadata_kv_count at offset 8, a 32-byte NUL-terminated architecture string
+# at offset 16, context_length as a u64 at offset 48, and block_count as a u64
+# at offset 56.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -144,6 +150,7 @@ gguf_validate_file:
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 16], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 24], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_BLOCK_COUNT], 0
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -300,18 +307,41 @@ gguf_walk_metadata:
 	cmp rax, r8
 	jb .Lmetadata_bad
 	mov r10, r8
+	# r9d is a small key-kind enum for values retained in the summary:
+	# 0 = not retained, 1 = architecture, 2 = context_length, 3 = block_count.
+	xor r9d, r9d
 	lea rdi, [r13 + r12]
 	mov rsi, r8
 	lea rdx, [rip + general_architecture_key]
 	mov rcx, general_architecture_key_end - general_architecture_key
 	call gguf_bytes_eq_literal
-	mov r9d, eax
+	test eax, eax
+	jz .Lmetadata_check_context_key
+	mov r9d, 1
+	jmp .Lmetadata_key_compared
+
+.Lmetadata_check_context_key:
 	lea rdi, [r13 + r12]
 	mov rsi, r10
 	lea rdx, [rip + mistral3_context_length_key]
 	mov rcx, mistral3_context_length_key_end - mistral3_context_length_key
 	call gguf_bytes_eq_literal
-	mov r11d, eax
+	test eax, eax
+	jz .Lmetadata_check_block_key
+	mov r9d, 2
+	jmp .Lmetadata_key_compared
+
+.Lmetadata_check_block_key:
+	lea rdi, [r13 + r12]
+	mov rsi, r10
+	lea rdx, [rip + mistral3_block_count_key]
+	mov rcx, mistral3_block_count_key_end - mistral3_block_count_key
+	call gguf_bytes_eq_literal
+	test eax, eax
+	jz .Lmetadata_key_compared
+	mov r9d, 3
+
+.Lmetadata_key_compared:
 	add r12, r10
 
 	# Values begin with a u32 type tag immediately after the key, with no padding.
@@ -324,10 +354,10 @@ gguf_walk_metadata:
 	mov ecx, dword ptr [r13 + r12]
 	add r12, 4
 
-	test r9d, r9d
-	jz .Lmetadata_check_context_length
-	cmp ecx, 8
+	cmp r9d, 1
 	jne .Lmetadata_check_context_length
+	cmp ecx, 8
+	jne .Lmetadata_skip_value
 
 	# general.architecture is a short GGUF string such as "mistral3". Copy a
 	# bounded NUL-terminated snapshot so the summary survives after munmap.
@@ -343,17 +373,26 @@ gguf_walk_metadata:
 	jmp .Lmetadata_next
 
 .Lmetadata_check_context_length:
-	test r11d, r11d
-	jz .Lmetadata_skip_value
+	cmp r9d, 2
+	jne .Lmetadata_check_block_count
+	mov r8, GGUF_SUMMARY_CONTEXT_LENGTH
+	jmp .Lmetadata_capture_unsigned_scalar
+
+.Lmetadata_check_block_count:
+	cmp r9d, 3
+	jne .Lmetadata_skip_value
+	mov r8, GGUF_SUMMARY_BLOCK_COUNT
+
+.Lmetadata_capture_unsigned_scalar:
 	cmp ecx, 4
-	je .Lmetadata_capture_context_u32
+	je .Lmetadata_capture_scalar_u32
 	cmp ecx, 10
-	je .Lmetadata_capture_context_u64
+	je .Lmetadata_capture_scalar_u64
 	jmp .Lmetadata_skip_value
 
-.Lmetadata_capture_context_u32:
-	# mistral3.context_length is an unsigned scalar in the target metadata. A
-	# u32 value is widened into the caller-owned u64 summary slot.
+.Lmetadata_capture_scalar_u32:
+	# Selected mistral3 shape metadata are unsigned scalars in the target file.
+	# A u32 value is widened into the caller-owned u64 summary slot chosen above.
 	cmp r12, r14
 	ja .Lmetadata_bad
 	mov rax, r14
@@ -361,11 +400,11 @@ gguf_walk_metadata:
 	cmp rax, 4
 	jb .Lmetadata_bad
 	mov eax, dword ptr [r13 + r12]
-	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], rax
+	mov qword ptr [r15 + r8], rax
 	add r12, 4
 	jmp .Lmetadata_next
 
-.Lmetadata_capture_context_u64:
+.Lmetadata_capture_scalar_u64:
 	# Keep the full u64 value; the summary printer already handles unsigned
 	# decimal output.
 	cmp r12, r14
@@ -375,7 +414,7 @@ gguf_walk_metadata:
 	cmp rax, 8
 	jb .Lmetadata_bad
 	mov rax, qword ptr [r13 + r12]
-	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], rax
+	mov qword ptr [r15 + r8], rax
 	add r12, 8
 	jmp .Lmetadata_next
 
