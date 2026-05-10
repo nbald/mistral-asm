@@ -256,3 +256,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   fixture with one payload byte still prints the retained tensor summary.
 - The usual rebuild, help, future prompt-form rejection, static-link, and
   whitespace checks passed. The target model file was still absent locally.
+
+## 2026-05-10T13:54:12Z
+
+- Scalar Q8_0 math now has a one-block primitive that reads the GGML half scale,
+  signed quant bytes, and 32 f32 inputs, applying the scale per element to match
+  the literal dequantization rule before accumulation.
+- Decision: the first verifier is a separate assembly executable, not a runtime
+  CLI mode, so math fixtures can stay focused while the user-facing runtime
+  remains on the GGUF summary milestone.
+- Verification evidence: the no-libc verifier checked exact f32 bits for 528.0,
+  -16.0, and -20.0 fixtures; the main runtime rebuilt; help, future prompt-form
+  rejection, valid/malformed synthetic GGUF fixtures, static-link checks, and
+  whitespace checks passed. The target model file was still absent locally.
