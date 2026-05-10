@@ -5,6 +5,7 @@
 .equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_ATTN_NORM_TENSOR_NAME_CAP, 96
+.equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
 .equ TOKEN_EMBEDDING_ACTIVATION_BYTES, TOKEN_EMBEDDING_ACTIVATION_VALUES * 4
@@ -24,7 +25,7 @@ help_text:
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF tensor summary with token embedding and RMSNorm descriptors.\n"
+	.ascii "Current milestone: GGUF tensor summary with token embedding and RMSNorm smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -175,9 +176,19 @@ token0_embedding_dequant_text:
 	.ascii "token0_embedding_dequant: "
 token0_embedding_dequant_text_end:
 
+token0_attn_norm_text:
+	.ascii "token0_attn_norm: "
+token0_attn_norm_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
+
+.balign 4
+rmsnorm_smoke_epsilon_f32:
+	# Temporary graph-setup smoke epsilon; metadata capture can replace this
+	# constant before numerical oracle comparison becomes the active milestone.
+	.long 0x3727c5ac
 
 gguf_open_error_text:
 	.ascii "mistral-asm: could not open model\n"
@@ -313,8 +324,16 @@ gguf_mapping_size:
 token0_embedding_dequant_status:
 	.skip 8
 
+.balign 8
+token0_attn_norm_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
+	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
+
+.balign 4
+token0_attn_norm_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
 
 .section .text
@@ -332,16 +351,15 @@ token_embedding_activation:
 # Clobbers: all general-purpose registers may be clobbered; no caller exists.
 # Ownership/lifetime: argv strings remain kernel-provided process memory. The
 # loader returns a live read-only model mapping descriptor on success; _start
-# keeps it live through the current summary path and token embedding smoke, then
-# releases it explicitly with gguf_release_mapping before exit. The GGUF summary
-# buffer is
-# process-owned static storage passed to the loader for scalar header counts, a
-# bounded copy of selected metadata strings, and selected scalar and
-# array-length metadata values, plus a bounded snapshot of the first tensor
-# descriptor and the first requested tensor-name lookup, including up to four
-# dimension sizes for each retained descriptor, the aligned tensor-data base
-# offset for non-empty tensor directories, and a retained descriptor for the
-# first-layer attention RMSNorm weights.
+# keeps it live through the current summary path and token embedding plus
+# RMSNorm smokes, then releases it explicitly with gguf_release_mapping before
+# exit. The GGUF summary buffer is process-owned static storage passed to the
+# loader for scalar header counts, a bounded copy of selected metadata strings,
+# and selected scalar and array-length metadata values, plus a bounded snapshot
+# of the first tensor descriptor and the first requested tensor-name lookup,
+# including up to four dimension sizes for each retained descriptor, the aligned
+# tensor-data base offset for non-empty tensor directories, and a retained
+# descriptor for the first-layer attention RMSNorm weights.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -975,6 +993,23 @@ _start:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call token0_attn_norm_smoke
+	mov qword ptr [rip + token0_attn_norm_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_attn_norm_text]
+	mov rdx, token0_attn_norm_text_end - token0_attn_norm_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_attn_norm_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served both parser summary and guarded tensor
 	# payload smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -1228,5 +1263,94 @@ dequant_token0_embedding_smoke:
 	ret
 
 .size dequant_token0_embedding_smoke, . - dequant_token0_embedding_smoke
+
+.type token0_attn_norm_smoke, @function
+
+# Contract: opportunistically apply the retained first-layer attention RMSNorm
+# weights to the token-0 embedding activation produced by
+# dequant_token0_embedding_smoke.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_embedding_dequant_status, and token_embedding_activation.
+# Outputs: rax = 1 when token 0 was dequantized and a one-dimensional f32
+# blk.0.attn_norm.weight span with matching width fits in the mapping, after
+# rmsnorm_f32 writes token0_attn_norm_activation; otherwise rax = 0 and no
+# RMSNorm payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2, xmm3 and flags.
+# Ownership/lifetime: reads mapped weight bytes only during rmsnorm_f32, reads
+# the static token embedding activation twice through that helper, and writes at
+# most TOKEN_EMBEDDING_ACTIVATION_BYTES into separate static output storage. The
+# mmap remains owned by _start and must be released separately.
+# Error behavior: this is a smoke gate for the first normalized activation, not
+# final graph setup. Non-target synthetic GGUF fixtures and shape mismatches are
+# skipped with status 0.
+token0_attn_norm_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_embedding_dequant_status], 1
+	jne .Lattn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_tensor_found], 1
+	jne .Lattn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_tensor_n_dimensions], 1
+	jne .Lattn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_tensor_ggml_type], GGML_TYPE_F32
+	jne .Lattn_norm_smoke_done
+
+	mov r8, qword ptr [rip + gguf_summary_attn_norm_tensor_dim0]
+	test r8, r8
+	jz .Lattn_norm_smoke_done
+	js .Lattn_norm_smoke_done
+	cmp r8, TOKEN_EMBEDDING_ACTIVATION_VALUES
+	ja .Lattn_norm_smoke_done
+
+	# RMSNorm consumes the full activation row produced from token_embd.weight.
+	# Require the retained embedding and norm descriptors to agree on width so a
+	# malformed synthetic file cannot normalize an uninitialized tail.
+	cmp r8, qword ptr [rip + gguf_summary_lookup_tensor_dim0]
+	jne .Lattn_norm_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve and
+	# bound the f32 weight span before giving the math helper any mmap pointer.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lattn_norm_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_attn_norm_tensor_offset]
+	test rdx, rdx
+	js .Lattn_norm_smoke_skip
+	add rax, rdx
+	jc .Lattn_norm_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lattn_norm_smoke_skip
+
+	# The static width cap above makes count * sizeof(f32) overflow impossible.
+	mov r9, r8
+	shl r9, 2
+	mov r11, r10
+	sub r11, rax
+	cmp r11, r9
+	jb .Lattn_norm_smoke_skip
+
+	mov rsi, qword ptr [rip + gguf_mapping_base]
+	test rsi, rsi
+	jz .Lattn_norm_smoke_skip
+	add rsi, rax
+	jc .Lattn_norm_smoke_skip
+
+	lea rdi, [rip + token_embedding_activation]
+	lea rdx, [rip + token0_attn_norm_activation]
+	mov rcx, r8
+	vmovss xmm0, dword ptr [rip + rmsnorm_smoke_epsilon_f32]
+	call rmsnorm_f32
+
+	mov eax, 1
+	ret
+
+.Lattn_norm_smoke_skip:
+	xor eax, eax
+
+.Lattn_norm_smoke_done:
+	ret
+
+.size token0_attn_norm_smoke, . - token0_attn_norm_smoke
 
 .section .note.GNU-stack,"",@progbits

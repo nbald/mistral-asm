@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Use the retained `blk.0.attn_norm.weight` descriptor to add a guarded RMSNorm
-payload smoke for token ID 0. Validate the f32 one-dimensional weight shape and
-mapping bounds before calling `rmsnorm_f32`, and print a status line.
+Capture `mistral3.attention.layer_norm_rms_epsilon` as f32 metadata, print it
+in the summary, and make `token0_attn_norm_smoke` load epsilon from the summary
+instead of the temporary 1e-5 constant.
 
 ## Completed Work
 
@@ -28,11 +28,13 @@ mapping bounds before calling `rmsnorm_f32`, and print a status line.
   checked token-embedding dequantization, with no-libc assembly fixtures in
   `make check-q8_0-dot`.
 - Scalar f32 RMSNorm exists as a documented assembly primitive, is linked into
-  the runtime object set, and is covered by a no-libc harness in
-  `make check-rmsnorm`; `_start` does not call it yet.
+  the runtime object set, is covered by a no-libc harness in `make
+  check-rmsnorm`, and is now called by `_start` through a guarded token-0
+  attention-norm smoke.
 - `_start` keeps the validated model mapping live through summary output, runs a
   guarded token ID 0 `token_embd.weight` dequant smoke into static f32 activation
-  storage, prints `token0_embedding_dequant: 1` when the smoke runs, then calls
+  storage, runs a guarded `blk.0.attn_norm.weight` RMSNorm smoke into separate
+  static f32 storage, prints both smoke status lines, then calls
   `gguf_release_mapping`.
 - `_start` prints the retained `blk.0.attn_norm.weight` descriptor when found;
   the real target resolves it as a one-dimensional f32 vector of width 3072.
@@ -40,9 +42,15 @@ mapping bounds before calling `rmsnorm_f32`, and print a status line.
   nonzero 32-multiple embedding width no larger than the static 3072-f32 buffer,
   a nonzero row count, non-overflowing tensor-data-base plus relative offset,
   and one complete Q8_0 row inside the mmap before calling the math helper.
+- The token-0 attention RMSNorm smoke requires successful token embedding
+  dequantization, a retained one-dimensional f32 `blk.0.attn_norm.weight`
+  descriptor whose width matches the embedding row, non-overflowing tensor-data
+  base plus relative offset, and a complete f32 weight span inside the mmap
+  before calling `rmsnorm_f32`.
 - Narrow synthetic GGUF fixtures that are useful for parser smoke checks but are
-  not target-shaped skip the payload smoke and print a zero
-  `token0_embedding_dequant` status while preserving their summary behavior.
+  not target-shaped skip the payload smokes and print zero
+  `token0_embedding_dequant` and `token0_attn_norm` statuses while preserving
+  their summary behavior.
 
 ## Known Blockers
 
@@ -71,32 +79,37 @@ None.
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed after adding the
-  `blk.0.attn_norm.weight` retained descriptor; the harnesses printed
-  `q8_0_dot: ok` and `rmsnorm: ok`.
+- `make clean`, `make`, and `make check` passed after wiring the guarded
+  token-0 attention RMSNorm smoke; the harnesses printed `q8_0_dot: ok` and
+  `rmsnorm: ok`.
 - `./mistral-asm --help` returned status 0 with the updated milestone text.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0 and printed
-  `attn_norm_tensor_found: 0` plus `token0_embedding_dequant: 0`.
+  `attn_norm_tensor_found: 0`, `token0_embedding_dequant: 0`, and
+  `token0_attn_norm: 0`.
 - Synthetic fixtures `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with the expected
   tensor-directory diagnostics.
 - The real target model under `models/` returned status 0, retained
   `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, retained
   `blk.0.attn_norm.weight` as f32 with dimension 3072 and relative payload
-  offset 431173632, and printed `token0_embedding_dequant: 1`.
+  offset 431173632, and printed `token0_embedding_dequant: 1` and
+  `token0_attn_norm: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, the summary plus retained RMSNorm descriptor and successful
-  dequant smoke, then `munmap(..., 3651679520) = 0`.
+  `close(3) = 0`, the summary plus successful embedding and RMSNorm smokes, then
+  `munmap(..., 3651679520) = 0`.
 - `readelf -d` reported no dynamic section; `readelf -l` reported no interpreter
   or dynamic program headers.
+- `strings` on the local target GGUF found the metadata key
+  `mistral3.attention.layer_norm_rms_epsilon` for the next epsilon-capture
+  step.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Use the retained `blk.0.attn_norm.weight` descriptor to add a guarded RMSNorm
-payload smoke for token ID 0. Validate the f32 one-dimensional weight shape and
-mapping bounds before calling `rmsnorm_f32`, and print a status line.
+Capture `mistral3.attention.layer_norm_rms_epsilon` as f32 metadata, print it
+in the summary, and make `token0_attn_norm_smoke` load epsilon from the summary
+instead of the temporary 1e-5 constant.

@@ -417,3 +417,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   one-dimensional f32 tensor with width 3072 and relative offset 431173632; the
   token-0 embedding dequant smoke still reports success, and `strace` still
   shows the mmap released after summary output.
+
+## 2026-05-10T15:06:39Z
+
+- The runtime now performs a second guarded payload smoke: after token 0 is
+  dequantized, `_start` validates the retained `blk.0.attn_norm.weight` as a
+  one-dimensional f32 span with matching width and in-mapping bounds, then calls
+  `rmsnorm_f32` into separate static output storage.
+- Decision: the RMSNorm smoke depends on the embedding smoke status and width
+  match, so parser-focused synthetic fixtures continue to report zero payload
+  statuses instead of normalizing partial or uninitialized activation storage.
+  The epsilon is temporarily fixed at 1e-5; the target GGUF contains
+  `mistral3.attention.layer_norm_rms_epsilon`, which should replace the constant
+  before numerical oracle comparison.
+- Verification evidence: clean rebuild and `make check` passed; synthetic
+  lookup/base fixtures printed `token0_attn_norm: 0`; the real local target
+  printed `token0_embedding_dequant: 1` and `token0_attn_norm: 1`; `strace`
+  still showed close-before-output and final `munmap`.
