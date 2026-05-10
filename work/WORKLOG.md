@@ -1105,3 +1105,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   no-libc harnesses, CLI/static checks, synthetic GGUF checks, real-model
   cleanup tracing, oracle py-compile, runtime purity, and exact runtime
   extraction passed.
+
+## 2026-05-10T19:57:28Z
+
+- Added a second reusable later-layer descriptor smoke for
+  `blk.1.attn_q.weight`. It deliberately stops at descriptor capture and
+  printed summary fields; no layer-1 query projection payload bytes are read by
+  this step.
+- Verification evidence: empty synthetic GGUF input printed zeroed layer-1 query
+  descriptor fields while keeping later math statuses at 0. The real local
+  target printed a Q8_0 descriptor with dimensions `3072x4096` and relative
+  offset `568246272`, matching the external GGUF parser. Existing post-FFN and
+  layer-1 attention RMSNorm exact words stayed unchanged, and cleanup tracing
+  still showed `close(3)` before the final `munmap`.

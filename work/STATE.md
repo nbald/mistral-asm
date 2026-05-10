@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Retain and print the `blk.1.attn_q.weight` descriptor through reusable GGUF
-lookup plumbing, without reading its payload bytes or extending layer-1 math.
+Add a status-only `token0_layer1_attn_q_matvec` smoke using the already
+confirmed `blk.1.attn_q.weight` descriptor, without publishing output words yet.
 
 ## Completed Work
 
@@ -15,28 +15,19 @@ lookup plumbing, without reading its payload bytes or extending layer-1 math.
   with `ld`; `_start` uses Linux syscalls directly and no libc.
 - The GGUF loader validates the narrow v3 little-endian target shape, records
   tensor-info and tensor-data offsets, keeps fixed layer-0 descriptor summaries,
-  and exposes reusable tensor lookup for later descriptors.
-- Token-0 layer-0 smokes now cover embedding dequantization, attention RMSNorm,
-  Q/K/V projections, single-token context expansion, attention output
-  projection, post-attention residual, FFN RMSNorm, FFN gate/up projections,
-  SwiGLU, FFN down projection, and post-FFN residual.
-- Public exact-hex slices and external oracle notes exist through the
-  post-FFN residual. The recorded post-FFN residual words remain
-  `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`.
-- `gguf_lookup_tensor_info` captures `blk.1.attn_norm.weight` into a generic
-  160-byte scratch descriptor; the real target reports one f32 dimension
-  `3072` at relative offset `554864640`.
-- The runtime now uses `token0_post_ffn_residual` plus the reusable
-  `blk.1.attn_norm.weight` descriptor for a status-only layer-1 attention
-  RMSNorm smoke, writing `token0_layer1_attn_norm_activation` and printing
-  `token0_layer1_attn_norm: 1` on the real target.
-- The layer-1 attention RMSNorm smoke now prints a guarded four-word exact-hex
-  activation slice after status 1. The real target printed
-  `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`.
-- External oracle tooling now recomputes the full token-0 layer-0 post-FFN
-  residual, applies `blk.1.attn_norm.weight`, and confirms the layer-1
-  attention RMSNorm words exactly: `0xc05ae197`, `0xc1210d34`, `0x426154e8`,
-  and `0xc0a7934a`.
+  and exposes reusable descriptor lookup through `gguf_lookup_tensor_info`.
+- Token-0 layer-0 smokes run through embedding dequantization, attention, FFN,
+  post-FFN residual, and exact public slices matched by external oracle notes.
+  The post-FFN residual words remain `0xbe256913`, `0xbf15734b`,
+  `0x40402562`, and `0xbe4c5582`.
+- Layer-1 attention RMSNorm uses `token0_post_ffn_residual` plus the reusable
+  `blk.1.attn_norm.weight` descriptor. The real target prints status 1 and
+  exact words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`,
+  matching the external oracle.
+- The runtime now also captures `blk.1.attn_q.weight` in a separate reusable
+  160-byte scratch descriptor and prints descriptor-only fields. The real target
+  reports dimensions `3072x4096`, GGML type `8` (`Q8_0`), and relative offset
+  `568246272`; empty synthetic GGUFs print zeroed layer-1 query fields.
 
 ## Known Blockers
 
@@ -54,8 +45,8 @@ None.
 - `tests/swiglu_harness.s`
 - `tests/gguf_lookup_harness.s`
 - `Makefile`
+- `work/oracle/token0_attn_q_oracle.py`
 - `work/oracle/token0_post_ffn_residual_oracle.py`
-- `work/oracle/token0-post-ffn-residual.md`
 - `work/oracle/token0_layer1_attn_norm_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
@@ -72,21 +63,18 @@ None.
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with `tensor_infos_offset: 24`,
-  `tensor_data_offset: 0`, zeroed layer-1 lookup fields,
+  `tensor_data_offset: 0`, zeroed layer-1 norm and query lookup fields,
   `token0_post_ffn_residual: 0`, `token0_layer1_attn_norm: 0`, and no layer-1
   exact-hex labels; bad magic returned status 3; a truncated tensor directory
   returned status 3.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed the expected layer-1 descriptor fields, preserved Q/K/V
-  status 1 and the recorded post-FFN residual words, printed
-  `token0_layer1_attn_norm: 1`, printed layer-1 attention RMSNorm words
-  `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`, and cleanup
-  showed successful `close(3)` and final `munmap`.
-- `python3 work/oracle/token0_post_ffn_residual_oracle.py ...` preserved its
-  public four-word output while the helper now supports full-row callers.
-- `python3 work/oracle/token0_layer1_attn_norm_oracle.py ...` printed
-  oracle layer-1 attention RMSNorm words `0xc05ae197`, `0xc1210d34`,
-  `0x426154e8`, and `0xc0a7934a`, matching the runtime exact-hex slice.
+  status 0, printed `layer1_attn_q_tensor_found: 1`,
+  `layer1_attn_q_tensor_n_dimensions: 2`, dimensions `3072` and `4096`, type
+  `8`, offset `568246272`, preserved the recorded post-FFN residual and
+  layer-1 attention RMSNorm words, and cleanup showed successful `close(3)` and
+  final `munmap`.
+- The external GGUF parser in `work/oracle/token0_attn_q_oracle.py` reported
+  the same `blk.1.attn_q.weight` type, dimensions, and relative offset.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -96,6 +84,7 @@ None.
 
 ## Next Exact Step
 
-Retain and print a separate reusable lookup descriptor for
-`blk.1.attn_q.weight`, keeping it descriptor-only so synthetic fixtures still
-skip layer-1 query math until the descriptor is externally confirmed.
+Add a status-only `token0_layer1_attn_q_matvec` smoke that consumes
+`token0_layer1_attn_norm_activation` and the reusable `blk.1.attn_q.weight`
+descriptor, verifies exact target dimensions and mapping bounds, writes a
+private static output buffer, and prints only the status flag.
