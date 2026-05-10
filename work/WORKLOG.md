@@ -883,3 +883,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   matched each one exactly. Rebuild, no-libc harnesses, CLI/static checks,
   synthetic GGUF checks, real-model smoke, cleanup tracing, oracle py-compile,
   and whitespace checks passed.
+
+## 2026-05-10T18:06:19Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.ffn_down.weight` descriptor after the FFN up descriptor. This is still
+  descriptor plumbing only; the runtime does not read FFN down payload bytes in
+  this step.
+- Verification evidence: synthetic fixtures kept `ffn_down_tensor_found: 0`;
+  the real local target printed the FFN down projection as Q8_0 with dimensions
+  `9216 x 3072` at relative offset `461266944`. A Python parser cross-check
+  reported the same descriptor, and cleanup tracing still showed `close(3)`
+  before final `munmap`.

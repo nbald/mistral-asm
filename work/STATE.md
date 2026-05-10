@@ -6,7 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Retain and print the `blk.0.ffn_down.weight` tensor descriptor.
+Add a guarded token-0 FFN SwiGLU activation smoke that computes
+`silu(token0_ffn_gate_output) * token0_ffn_up_output` into static f32 storage
+and prints status only.
 
 ## Completed Work
 
@@ -18,24 +20,17 @@ Retain and print the `blk.0.ffn_down.weight` tensor descriptor.
 - The summary captures selected Mistral metadata, tensor-data base offset, the
   first tensor, `token_embd.weight`, first-layer attention norm/Q/K/V/output
   descriptors, `blk.0.ffn_norm.weight`, `blk.0.ffn_gate.weight`,
-  `blk.0.ffn_up.weight`, and attention RMSNorm epsilon bits.
-- Token-0 smokes now cover embedding dequantization, attention RMSNorm,
-  query/key/value projections, single-token context expansion, attention output
-  projection, post-attention residual, FFN RMSNorm, FFN gate projection, and FFN
-  up projection.
+  `blk.0.ffn_up.weight`, `blk.0.ffn_down.weight`, and attention RMSNorm epsilon
+  bits.
+- Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
+  projections, single-token context expansion, attention output projection,
+  post-attention residual, FFN RMSNorm, FFN gate projection, and FFN up
+  projection.
 - Public exact-hex slices and external oracle notes exist through the FFN up
   projection.
-- The FFN gate matvec validates `blk.0.ffn_gate.weight` as Q8_0
-  `[3072 x 9216]`, bounds the full mapped payload, writes static FFN gate
-  activation storage, prints `token0_ffn_gate_matvec`, and prints the first four
-  output f32 bit patterns only when the status is 1.
-- The FFN up matvec validates `blk.0.ffn_up.weight` as Q8_0 `[3072 x 9216]`,
-  bounds the full mapped payload, writes static FFN up activation storage,
-  prints `token0_ffn_up_matvec`, and prints the first four output f32 bit
-  patterns only when the status is 1.
-- The external FFN up oracle recomputes token-0 through FFN RMSNorm, dots the
-  activation with the first four `blk.0.ffn_up.weight` rows, and matches the
-  runtime FFN up exact-hex words.
+- This step retained and prints the `blk.0.ffn_down.weight` descriptor. The real
+  target reports Q8_0 dimensions `9216 x 3072` at relative offset `461266944`.
+  No FFN down payload bytes are read yet.
 
 ## Known Blockers
 
@@ -75,29 +70,26 @@ None.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, kept
-  `ffn_gate_tensor_found: 0` and `ffn_up_tensor_found: 0`, and printed both
-  `token0_ffn_gate_matvec: 0` and `token0_ffn_up_matvec: 0`.
+  `ffn_gate_tensor_found: 0`, `ffn_up_tensor_found: 0`, and
+  `ffn_down_tensor_found: 0`, and printed both FFN matvec statuses as 0.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
-  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with
-  `misaligned GGUF tensor data` and `malformed GGUF tensor directory`
-  diagnostics.
+  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with the expected
+  tensor alignment/directory diagnostics.
 - The real target model under `models/` returned status 0, preserved existing
-  Q/K/V/output/residual/FFN RMSNorm/FFN gate exact-hex slices, printed
-  `ffn_up_tensor_found: 1`, `ffn_up_tensor_name: blk.0.ffn_up.weight`,
-  dimensions `3072 x 9216`, ggml type `8`, offset `521441280`,
-  `token0_ffn_gate_matvec: 1`, `token0_ffn_up_matvec: 1`, and FFN up output
-  words `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`.
-- Merged `strace -e trace=mmap,munmap,close` output on the real target returned
-  status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN up
-  descriptor lines, `token0_ffn_up_matvec: 1`, the four FFN up output words,
-  and final `munmap`.
-- `python3 work/oracle/token0_ffn_up_oracle.py` matched the runtime FFN up
-  output words `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`
-  exactly.
+  token-0 exact-hex slices through FFN up, printed `ffn_down_tensor_found: 1`,
+  `ffn_down_tensor_name: blk.0.ffn_down.weight`, dimensions `9216 x 3072`,
+  ggml type `8`, and offset `461266944`.
+- `strace -e trace=mmap,munmap,close` on the real target returned status 0,
+  showed the full-file read-only `mmap`, `close(3) = 0`, the FFN down descriptor
+  lines, FFN up output words, and final `munmap`.
+- A Python parser cross-check reported `blk.0.ffn_down.weight: type 8 dims
+  9216x3072 offset 461266944`.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Retain and print the `blk.0.ffn_down.weight` tensor descriptor.
+Add a guarded token-0 FFN SwiGLU activation smoke that computes
+`silu(token0_ffn_gate_output) * token0_ffn_up_output` into static f32 storage
+and prints status only.
