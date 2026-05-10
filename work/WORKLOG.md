@@ -1447,3 +1447,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   24-byte empty valid GGUF kept the gate at 0 and emitted no layer-1 FFN norm
   word labels; build, no-libc harnesses, help, oracle py-compile, runtime
   purity, static-link, tracked-artifact, and whitespace checks passed.
+
+## 2026-05-10T22:30:55Z
+
+- Added external layer-1 FFN RMSNorm oracle tooling. The key audit constraint is
+  that RMSNorm cannot be checked from the four published residual words alone;
+  the script recomputes the full 3072-word layer-1 attention output and
+  post-attention residual before applying `blk.1.ffn_norm.weight`.
+- Verification evidence: the new oracle produced the four published layer-1
+  FFN norm words exactly, while the prerequisite layer-1 attention RMSNorm,
+  value, context, output, and residual public slices still matched the assembled
+  runtime. Build, no-libc harnesses, help, oracle py-compile, runtime purity,
+  static-link, tracked-artifact, large-file, and whitespace checks passed.

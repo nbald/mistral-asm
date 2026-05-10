@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add external oracle coverage for the published token-0 layer-1 FFN norm slice.
+Add descriptor-only runtime coverage for the layer-1 FFN gate and up tensors.
 
 ## Completed Work
 
@@ -110,11 +110,17 @@ Add external oracle coverage for the published token-0 layer-1 FFN norm slice.
   issue in the external oracle coverage state, the queued layer-1 FFN norm
   slice-publish diff, or the continuation-state handoff, and recorded the clean
   result in `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`.
+- External oracle tooling now independently recomputes the published
+  `token0_layer1_ffn_norm` slice from the full layer-1 post-attention
+  residual and `blk.1.ffn_norm.weight`. Because RMSNorm depends on the full
+  hidden-width denominator, the oracle recomputes all 3072 layer-1 attention
+  output and residual words before comparing the first four public words. It
+  matches the runtime words exactly.
 
 ## Known Blockers
 
-None. The review gate is complete and the layer-1 FFN norm slice publish has
-been verified.
+None. The review gate is complete, and the layer-1 FFN norm slice publish plus
+external oracle coverage have been verified.
 
 ## Relevant Files
 
@@ -134,6 +140,7 @@ been verified.
 - `work/oracle/token0_layer1_attn_v_oracle.py`
 - `work/oracle/token0_layer1_attn_output_oracle.py`
 - `work/oracle/token0_layer1_post_attn_residual_oracle.py`
+- `work/oracle/token0_layer1_ffn_norm_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
 - `work/oracle/token0-layer1-attn-q-output.md`
 - `work/oracle/token0-layer1-attn-k-output.md`
@@ -141,6 +148,7 @@ been verified.
 - `work/oracle/token0-layer1-attn-context.md`
 - `work/oracle/token0-layer1-attn-output.md`
 - `work/oracle/token0-layer1-post-attn-residual.md`
+- `work/oracle/token0-layer1-ffn-norm.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/reviews/2026-05-11-layer1-ffn-norm-review-1.md`
 - `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`
@@ -149,17 +157,19 @@ been verified.
 
 ## Last Verification
 
-- Layer-1 FFN norm slice publish verification passed: `make clean`; `make`;
-  `make check` with `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and
-  `gguf_lookup: ok`; `./mistral-asm --help`; real target run showing
-  `token0_layer1_ffn_norm: 1` and the four published words above; a 24-byte
-  empty valid GGUF showing `token0_layer1_ffn_norm: 0` and no FFN norm word
-  labels; runtime source purity scan; static-link inspection;
-  `python3 -m py_compile work/oracle/*.py`; tracked-artifact scan; and
+- Layer-1 FFN norm oracle verification passed: `make clean && make &&
+  make check` with `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and
+  `gguf_lookup: ok`; `./mistral-asm --help`;
+  `python3 work/oracle/token0_layer1_ffn_norm_oracle.py` on the real target,
+  producing `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and `0xbfe2ec8e`;
+  real runtime comparison showing the same four `token0_layer1_ffn_norm`
+  words and unchanged prerequisite layer-1 public slices;
+  `python3 -m py_compile work/oracle/*.py`; runtime source purity scan;
+  static-link inspection; tracked-artifact and large tracked-file scans; and
   `git diff --check`.
 
 ## Next Exact Step
 
-Add an external oracle script and short note that independently recompute the
-published `token0_layer1_ffn_norm*_f32_hex` words from the layer-1
-post-attention residual and `blk.1.ffn_norm.weight`.
+Add descriptor-only runtime coverage for `blk.1.ffn_gate.weight` and
+`blk.1.ffn_up.weight`, storing process-owned descriptor slots and printing
+their found, dimension, type, and offset summaries without reading payloads.
