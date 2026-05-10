@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add independent oracle coverage for the first four raw f32 words of the
-layer-1 attention output-projection smoke.
+Add a guarded status-only smoke for the token-0 layer-1 post-attention
+residual.
 
 ## Completed Work
 
@@ -71,6 +71,10 @@ layer-1 attention output-projection smoke.
   `3072`-f32 output buffer, and publishes the first four raw f32 words only when
   status is 1. The real target reports `0x3deaa744`, `0x3cb6f294`,
   `0xbf14cf4f`, and `0xbced5550`.
+- External oracle tooling now independently recomputes the published
+  `token0_layer1_attn_output` slice from the full layer-1 value projection,
+  one-token grouped-query context, and `blk.1.attn_output.weight`. The oracle
+  matches the runtime output-projection words exactly.
 
 ## Known Blockers
 
@@ -92,11 +96,13 @@ None.
 - `work/oracle/token0_layer1_attn_q_oracle.py`
 - `work/oracle/token0_layer1_attn_k_oracle.py`
 - `work/oracle/token0_layer1_attn_v_oracle.py`
+- `work/oracle/token0_layer1_attn_output_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
 - `work/oracle/token0-layer1-attn-q-output.md`
 - `work/oracle/token0-layer1-attn-k-output.md`
 - `work/oracle/token0-layer1-attn-v-output.md`
 - `work/oracle/token0-layer1-attn-context.md`
+- `work/oracle/token0-layer1-attn-output.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
@@ -107,21 +113,18 @@ None.
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
   `token0_layer1_attn_output_matvec: 1` and output words `0x3deaa744`,
-  `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`. Existing layer-1
-  norm/query/key/value and context status plus public exact-hex slices stayed
-  unchanged.
-- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields
-  and kept `token0_layer1_attn_output_matvec: 0` without emitting any
-  `token0_layer1_attn_output*_f32_hex` labels.
-- `strace -qq -e trace=close,munmap` on the real target showed `close(3)` before
-  the final `munmap`.
+  `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`; the prerequisite post-FFN
+  residual, layer-1 RMSNorm, and layer-1 context slices matched the new oracle
+  values exactly.
+- `python3 work/oracle/token0_layer1_attn_output_oracle.py` on the real target
+  GGUF printed oracle output words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`,
+  and `0xbced5550`.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add an external oracle script/note for `token0_layer1_attn_output` that
-independently recomputes the first four output-projection words from the
-layer-1 context and `blk.1.attn_output.weight`, then compare it with the runtime
-labels.
+Add a guarded `token0_layer1_post_attn_residual` status-only smoke that adds the
+private `token0_post_ffn_residual` buffer and private
+`token0_layer1_attn_output` buffer into a private 3072-f32 residual buffer.

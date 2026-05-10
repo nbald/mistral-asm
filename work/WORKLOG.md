@@ -1335,3 +1335,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   synthetic GGUF kept the output gate at 0 and emitted no layer-1 output labels;
   build, no-libc harnesses, cleanup tracing, oracle py-compile, runtime purity,
   static-link, tracked-artifact, help, and whitespace checks passed.
+
+## 2026-05-10T21:36:13Z
+
+- Added external layer-1 attention output-projection oracle tooling. It
+  recomputes the full layer-1 value projection from the layer-1 attention
+  RMSNorm activation, expands the one-token grouped-query context, then dots
+  that context against the first four rows of `blk.1.attn_output.weight`.
+- Verification evidence: the new oracle produced `0x3deaa744`, `0x3cb6f294`,
+  `0xbf14cf4f`, and `0xbced5550`, matching the current runtime labels exactly.
+  The prerequisite post-FFN residual, layer-1 RMSNorm, and layer-1 context
+  public slices also matched the oracle output; build, no-libc harnesses,
+  oracle py-compile, runtime purity, static-link, tracked-artifact, help, and
+  whitespace checks passed.
