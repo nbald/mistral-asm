@@ -1118,3 +1118,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   offset `568246272`, matching the external GGUF parser. Existing post-FFN and
   layer-1 attention RMSNorm exact words stayed unchanged, and cleanup tracing
   still showed `close(3)` before the final `munmap`.
+
+## 2026-05-10T20:01:20Z
+
+- Added the status-only layer-1 query projection smoke. It consumes the private
+  layer-1 attention RMSNorm activation, checks the reusable
+  `blk.1.attn_q.weight` descriptor for exact `3072x4096` Q8_0 shape, bounds the
+  full mapped payload, and writes a private output buffer without publishing
+  output words yet.
+- Verification evidence: the empty synthetic GGUF printed
+  `token0_layer1_attn_q_matvec: 0`, while the real local target printed
+  `token0_layer1_attn_q_matvec: 1`. The recorded post-FFN residual and layer-1
+  attention RMSNorm exact words stayed unchanged, and cleanup tracing still
+  showed `close(3)` before the final `munmap`.

@@ -49,6 +49,8 @@
 .equ TOKEN0_POST_FFN_RESIDUAL_BYTES, TOKEN0_POST_FFN_RESIDUAL_VALUES * 4
 .equ TOKEN0_LAYER1_ATTN_NORM_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
 .equ TOKEN0_LAYER1_ATTN_NORM_BYTES, TOKEN0_LAYER1_ATTN_NORM_VALUES * 4
+.equ TOKEN0_LAYER1_ATTN_Q_OUTPUT_VALUES, TOKEN0_ATTN_Q_OUTPUT_VALUES
+.equ TOKEN0_LAYER1_ATTN_Q_OUTPUT_BYTES, TOKEN0_LAYER1_ATTN_Q_OUTPUT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -71,7 +73,7 @@ help_text:
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
 	.ascii "FFN down matvec smoke, post-FFN residual smoke, "
 	.ascii "reusable descriptor lookup smoke, "
-	.ascii "and layer-1 attention RMSNorm smoke.\n"
+	.ascii "and layer-1 attention RMSNorm/query smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -629,6 +631,10 @@ token0_post_ffn_residual_text_end:
 token0_layer1_attn_norm_text:
 	.ascii "token0_layer1_attn_norm: "
 token0_layer1_attn_norm_text_end:
+
+token0_layer1_attn_q_matvec_text:
+	.ascii "token0_layer1_attn_q_matvec: "
+token0_layer1_attn_q_matvec_text_end:
 
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
@@ -1228,6 +1234,10 @@ token0_post_ffn_residual_status:
 token0_layer1_attn_norm_status:
 	.skip 8
 
+.balign 8
+token0_layer1_attn_q_matvec_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1288,6 +1298,10 @@ token0_post_ffn_residual:
 token0_layer1_attn_norm_activation:
 	.skip TOKEN0_LAYER1_ATTN_NORM_BYTES
 
+.balign 4
+token0_layer1_attn_q_output:
+	.skip TOKEN0_LAYER1_ATTN_Q_OUTPUT_BYTES
+
 .section .text
 
 .global _start
@@ -1310,14 +1324,14 @@ token0_layer1_attn_norm_activation:
 # from process-owned static buffers, applies the FFN RMSNorm smoke through
 # retained FFN norm weights, and projects that activation through the retained
 # FFN gate and up matrices before deriving the first FFN SwiGLU activation,
-# projecting it through the retained FFN down matrix, and adding the guarded
-# post-FFN residual from process-owned static buffers, then applies a status-only
-# layer-1 attention RMSNorm smoke through the reusable `blk.1.attn_norm.weight`
-# descriptor. It also performs a non-math reusable descriptor lookup for
-# `blk.1.attn_norm.weight` into a separate process-owned scratch slot before the
-# token-0 math path. The mapping is released explicitly with gguf_release_mapping
-# before exit. The GGUF summary buffer is process-owned static storage passed to
-# the loader for scalar header
+# projecting it through the retained FFN down matrix, adding the guarded post-FFN
+# residual from process-owned static buffers, then applying status-only layer-1
+# attention RMSNorm and query projection smokes through reusable layer-1
+# descriptors. It also performs non-math reusable descriptor lookups for
+# `blk.1.attn_norm.weight` and `blk.1.attn_q.weight` into separate process-owned
+# scratch slots before the token-0 math path. The mapping is released explicitly
+# with gguf_release_mapping before exit. The GGUF summary buffer is process-owned
+# static storage passed to the loader for scalar header
 # counts, bounded metadata string copies, and selected scalar and array-length
 # metadata values, plus a bounded snapshot of the first tensor descriptor and
 # the first requested tensor-name lookup, including up to four dimension sizes
@@ -1487,8 +1501,9 @@ _start:
 	jmp .Llookup_unknown_error
 
 .Llookup_layer1_attn_q_tensor:
-	# Keep the next layer query projection as descriptor-only evidence. Layer-1
-	# query math waits for a separate oracle-confirmed step.
+	# Keep the next layer query projection descriptor separate from the fixed
+	# first-layer summary slots. The status-only math smoke below consumes this
+	# generic slot after the layer-1 RMSNorm activation exists.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
@@ -3347,6 +3362,23 @@ _start:
 	call sys_write
 
 	call print_token0_layer1_attn_norm_slice
+
+	call token0_layer1_attn_q_matvec_smoke
+	mov qword ptr [rip + token0_layer1_attn_q_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_q_matvec_text]
+	mov rdx, token0_layer1_attn_q_matvec_text_end - token0_layer1_attn_q_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer1_attn_q_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -6019,5 +6051,96 @@ token0_layer1_attn_norm_smoke:
 	ret
 
 .size token0_layer1_attn_norm_smoke, . - token0_layer1_attn_norm_smoke
+
+.type token0_layer1_attn_q_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 layer-1 attention-normalized
+# activation through the reusable blk.1.attn_q.weight matrix.
+# Inputs: no register inputs. Reads the process-owned layer1_attn_q tensor slot,
+# live mapping descriptor, token0_layer1_attn_norm_status, and
+# token0_layer1_attn_norm_activation.
+# Outputs: rax = 1 when the layer-1 normalized activation is available and
+# blk.1.attn_q.weight is exactly a two-dimensional Q8_0 [3072 x 4096] matrix
+# whose complete payload span fits inside the mapping, after q8_0_matvec_f32
+# writes token0_layer1_attn_q_output; otherwise rax = 0 and no layer-1 query
+# matrix payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
+# q8_0_matvec_f32, reads the static layer-1 RMSNorm activation as the shared f32
+# input vector, and writes exactly TOKEN0_LAYER1_ATTN_Q_OUTPUT_BYTES into private
+# static output storage on success. The mmap remains owned by _start and must be
+# released separately.
+# Error behavior: this is a status-only smoke gate for the next layer query
+# projection, not final graph setup. Non-target synthetic GGUF fixtures and
+# shape or bounds mismatches are skipped with status 0.
+token0_layer1_attn_q_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer1_attn_norm_status], 1
+	jne .Llayer1_attn_q_smoke_done
+	cmp qword ptr [rip + layer1_attn_q_tensor_found], 1
+	jne .Llayer1_attn_q_smoke_done
+	cmp qword ptr [rip + layer1_attn_q_tensor_n_dimensions], 2
+	jne .Llayer1_attn_q_smoke_done
+	cmp qword ptr [rip + layer1_attn_q_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer1_attn_q_smoke_done
+	cmp qword ptr [rip + layer1_attn_q_tensor_dim0], TOKEN0_LAYER1_ATTN_NORM_VALUES
+	jne .Llayer1_attn_q_smoke_done
+	cmp qword ptr [rip + layer1_attn_q_tensor_dim1], TOKEN0_LAYER1_ATTN_Q_OUTPUT_VALUES
+	jne .Llayer1_attn_q_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# layer-1 query matrix start and prove the complete row-major Q8_0 payload fits
+	# inside the live mapping before passing any mmap pointer to the math helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Llayer1_attn_q_smoke_skip
+	mov rdx, qword ptr [rip + layer1_attn_q_tensor_offset]
+	test rdx, rdx
+	js .Llayer1_attn_q_smoke_skip
+	add rax, rdx
+	jc .Llayer1_attn_q_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Llayer1_attn_q_smoke_skip
+
+	mov r8, TOKEN0_LAYER1_ATTN_NORM_VALUES
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Llayer1_attn_q_smoke_skip
+	mov rcx, TOKEN0_LAYER1_ATTN_Q_OUTPUT_VALUES
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Llayer1_attn_q_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Llayer1_attn_q_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Llayer1_attn_q_smoke_skip
+	add rdi, rax
+	jc .Llayer1_attn_q_smoke_skip
+
+	lea rsi, [rip + token0_layer1_attn_norm_activation]
+	lea rdx, [rip + token0_layer1_attn_q_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Llayer1_attn_q_smoke_skip:
+	xor eax, eax
+
+.Llayer1_attn_q_smoke_done:
+	ret
+
+.size token0_layer1_attn_q_matvec_smoke, . - token0_layer1_attn_q_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits

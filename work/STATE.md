@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a status-only `token0_layer1_attn_q_matvec` smoke using the already
-confirmed `blk.1.attn_q.weight` descriptor, without publishing output words yet.
+Publish the first four raw f32 words of `token0_layer1_attn_q_output`, guarded
+by the existing `token0_layer1_attn_q_matvec` status, without adding the
+external oracle comparison yet.
 
 ## Completed Work
 
@@ -28,6 +29,12 @@ confirmed `blk.1.attn_q.weight` descriptor, without publishing output words yet.
   160-byte scratch descriptor and prints descriptor-only fields. The real target
   reports dimensions `3072x4096`, GGML type `8` (`Q8_0`), and relative offset
   `568246272`; empty synthetic GGUFs print zeroed layer-1 query fields.
+- A status-only `token0_layer1_attn_q_matvec` smoke now consumes the layer-1
+  attention RMSNorm activation and the reusable `blk.1.attn_q.weight`
+  descriptor. It requires exact `3072x4096` Q8_0 shape, bounds the full mapped
+  matrix payload, writes a private static output buffer, and prints only the
+  status flag. The real target reports status 1; empty synthetic GGUFs report
+  status 0 and publish no layer-1 query output words.
 
 ## Known Blockers
 
@@ -70,9 +77,9 @@ None.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
   status 0, printed `layer1_attn_q_tensor_found: 1`,
   `layer1_attn_q_tensor_n_dimensions: 2`, dimensions `3072` and `4096`, type
-  `8`, offset `568246272`, preserved the recorded post-FFN residual and
-  layer-1 attention RMSNorm words, and cleanup showed successful `close(3)` and
-  final `munmap`.
+  `8`, offset `568246272`, printed `token0_layer1_attn_q_matvec: 1`, preserved
+  the recorded post-FFN residual and layer-1 attention RMSNorm words, and
+  cleanup showed successful `close(3)` and final `munmap`.
 - The external GGUF parser in `work/oracle/token0_attn_q_oracle.py` reported
   the same `blk.1.attn_q.weight` type, dimensions, and relative offset.
 - `python3 -m py_compile work/oracle/*.py` passed.
@@ -84,7 +91,6 @@ None.
 
 ## Next Exact Step
 
-Add a status-only `token0_layer1_attn_q_matvec` smoke that consumes
-`token0_layer1_attn_norm_activation` and the reusable `blk.1.attn_q.weight`
-descriptor, verifies exact target dimensions and mapping bounds, writes a
-private static output buffer, and prints only the status flag.
+Add a guarded exact-hex print helper for `token0_layer1_attn_q_output[0..3]`,
+wire it after the status-only layer-1 query matvec, and verify that synthetic
+fixtures still omit the labels while the real target prints four words.
