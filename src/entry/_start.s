@@ -12,7 +12,6 @@ help_text:
 	.ascii "Usage:\n"
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
-	.ascii "  mistral-asm <model.gguf> <prompt> --max-tokens <n>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor directory validation.\n"
 help_text_end:

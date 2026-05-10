@@ -2,11 +2,11 @@
 
 ## Current Milestone
 
-Milestone 4: Review pass follow-up.
+Milestone 5: Metadata dump.
 
 ## Current Exact Task
 
-Fix the review text drift before expanding parser scope.
+Begin metadata dump output from the validated GGUF header and selected metadata.
 
 ## Known Blockers
 
@@ -14,35 +14,32 @@ None.
 
 ## Relevant Files
 
-- `README.md`
 - `Makefile`
 - `src/entry/_start.s`
 - `src/gguf/load_header.s`
 - `work/STATE.md`
 - `work/WORKLOG.md`
-- `work/reviews/2026-05-10-gguf-loader-review.md`
 
 ## Required Verification
 
 - `make clean && make`
-- `./mistral-asm --help` shows only commands supported by the current milestone
-  or clearly marks future prompt generation as not implemented.
-- The stale metadata-walker comment no longer says tensor-info walking is a
-  future slice.
+- `./mistral-asm --help`
+- Synthetic GGUF fixtures still pass/fail the relevant loader paths.
 - `git diff --check`
 
 ## Last Verification
 
-- Milestone 4 review completed.
 - `make clean && make` passed.
-- `./mistral-asm --help` returned status 0 and currently advertises the future
-  prompt generation form.
-- Invoking the advertised prompt form returned the usage error with status 2.
-- No tracked runtime purity violation was found: tracked runtime sources under
-  `src/` are `.s` files, and the Makefile uses `as`/`ld`.
+- `./mistral-asm --help` returned status 0 and now lists only supported current
+  invocations.
+- Invoking the future prompt generation form returned the usage error with
+  status 2.
+- Runtime source search found no stale comment claiming tensor-info walking is a
+  future slice.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Update `_start` help text and the stale GGUF metadata comment so audit-facing
-text matches the current runtime behavior, then rebuild and check behavior.
+Introduce a small caller-owned GGUF summary buffer, store the header tensor and
+metadata counts during validation, and print those counts as decimal text after
+a successful load.

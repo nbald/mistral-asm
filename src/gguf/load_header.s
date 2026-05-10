@@ -273,9 +273,9 @@ gguf_walk_metadata:
 	jmp .Lmetadata_loop
 
 .Lmetadata_done:
-	# The tensor-info directory starts at this cursor. This step only proves the
-	# start is inside the mapping; walking tensor infos is the next milestone
-	# slice.
+	# The tensor-info directory starts at this cursor. Return the handoff offset
+	# so the caller can run the dedicated tensor-info walker with the same
+	# mapping bounds.
 	cmp r12, r14
 	ja .Lmetadata_bad
 	mov rdx, r12

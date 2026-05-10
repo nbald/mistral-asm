@@ -135,3 +135,12 @@ redundant entries. Do not treat it as the primary continuation source; use
   walking as future work even though it is now implemented.
 - Verification evidence: rebuild passed; help returned status 0; the advertised
   prompt form returned the usage error with status 2; `git diff --check` passed.
+
+## 2026-05-10T12:52:52Z
+
+- Review follow-up resolved the audit-facing drift: help now lists only the
+  currently accepted invocations, and the metadata walker comment now describes
+  the handoff to the tensor-info walker instead of calling it future work.
+- Verification evidence: rebuild passed; help returned status 0; the future
+  prompt form remained a usage error with status 2; runtime source search found
+  no stale future-slice wording.
