@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only runtime coverage for `blk.1.attn_output.weight`.
+Add a status-only layer-1 attention context smoke.
 
 ## Completed Work
 
@@ -22,10 +22,12 @@ Add descriptor-only runtime coverage for `blk.1.attn_output.weight`.
   exact words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`,
   matching the external oracle.
 - The runtime captures reusable layer-1 descriptors for `blk.1.attn_q.weight`,
-  `blk.1.attn_k.weight`, and `blk.1.attn_v.weight`. The real target reports
-  query dimensions `3072x4096`, type `8`, offset `568246272`; key dimensions
-  `3072x1024`, type `8`, offset `551522304`; and value dimensions
-  `3072x1024`, type `8`, offset `581615616`.
+  `blk.1.attn_k.weight`, `blk.1.attn_v.weight`, and
+  `blk.1.attn_output.weight`. The real target reports query dimensions
+  `3072x4096`, type `8`, offset `568246272`; key dimensions `3072x1024`,
+  type `8`, offset `551522304`; value dimensions `3072x1024`, type `8`,
+  offset `581615616`; and output dimensions `4096x3072`, type `8`, offset
+  `554876928`.
 - The guarded `token0_layer1_attn_q_matvec` smoke writes a private output buffer
   and publishes the first four raw f32 words only when status is 1. The real
   target reports `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`,
@@ -81,19 +83,24 @@ None.
 
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
-- `python3 work/oracle/token0_layer1_attn_v_oracle.py` on the real target GGUF
-  produced `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6` for the
-  first four layer-1 value projection words.
 - `./mistral-asm` on the real target GGUF printed
-  `layer1_attn_v_tensor_found: 1`, dimensions `3072x1024`, type `8`, offset
-  `581615616`, `token0_layer1_attn_v_matvec: 1`, and value words
-  `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`.
+  `layer1_attn_output_tensor_found: 1`, dimensions `4096x3072`, type `8`,
+  offset `554876928`. Existing layer-1 norm/query/key/value status and public
+  exact-hex slices stayed unchanged.
+- An external descriptor parser confirmed `blk.1.attn_output.weight` as Q8_0
+  dimensions `4096x3072` at relative offset `554876928` without reading tensor
+  payload bytes.
+- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields,
+  kept layer-1 norm/query/key/value gates at 0, and emitted no
+  `token0_layer1_attn_output*` labels.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add descriptor-only runtime coverage for `blk.1.attn_output.weight` in a
-reusable lookup slot, print found/dim/type/offset fields, and verify the real
-target plus an empty valid GGUF without reading projection payload bytes.
+Add a guarded `token0_layer1_attn_context_smoke` that expands the layer-1 value
+projection into grouped-query attention context using the
+`blk.1.attn_output.weight` descriptor as a shape guard, print status only, and
+verify the real target plus an empty valid GGUF without reading output
+projection payload bytes.

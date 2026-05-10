@@ -18,6 +18,7 @@
 .equ LAYER1_ATTN_Q_TENSOR_NAME_CAP, 96
 .equ LAYER1_ATTN_K_TENSOR_NAME_CAP, 96
 .equ LAYER1_ATTN_V_TENSOR_NAME_CAP, 96
+.equ LAYER1_ATTN_OUTPUT_TENSOR_NAME_CAP, 96
 .equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
@@ -79,7 +80,8 @@ help_text:
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
 	.ascii "FFN down matvec smoke, post-FFN residual smoke, "
 	.ascii "reusable descriptor lookup smoke, "
-	.ascii "and layer-1 attention RMSNorm/query/key/value smoke.\n"
+	.ascii "and layer-1 attention RMSNorm/query/key/value smoke "
+	.ascii "plus output descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -101,6 +103,10 @@ layer1_attn_k_tensor_request_end:
 layer1_attn_v_tensor_request:
 	.ascii "blk.1.attn_v.weight"
 layer1_attn_v_tensor_request_end:
+
+layer1_attn_output_tensor_request:
+	.ascii "blk.1.attn_output.weight"
+layer1_attn_output_tensor_request_end:
 
 usage_error_text:
 	.ascii "mistral-asm: use --help or provide a GGUF file\n"
@@ -309,6 +315,30 @@ layer1_attn_v_tensor_ggml_type_text_end:
 layer1_attn_v_tensor_offset_text:
 	.ascii "layer1_attn_v_tensor_offset: "
 layer1_attn_v_tensor_offset_text_end:
+
+layer1_attn_output_tensor_found_text:
+	.ascii "layer1_attn_output_tensor_found: "
+layer1_attn_output_tensor_found_text_end:
+
+layer1_attn_output_tensor_n_dims_text:
+	.ascii "layer1_attn_output_tensor_n_dimensions: "
+layer1_attn_output_tensor_n_dims_text_end:
+
+layer1_attn_output_tensor_dim0_text:
+	.ascii "layer1_attn_output_tensor_dim0: "
+layer1_attn_output_tensor_dim0_text_end:
+
+layer1_attn_output_tensor_dim1_text:
+	.ascii "layer1_attn_output_tensor_dim1: "
+layer1_attn_output_tensor_dim1_text_end:
+
+layer1_attn_output_tensor_ggml_type_text:
+	.ascii "layer1_attn_output_tensor_ggml_type: "
+layer1_attn_output_tensor_ggml_type_text_end:
+
+layer1_attn_output_tensor_offset_text:
+	.ascii "layer1_attn_output_tensor_offset: "
+layer1_attn_output_tensor_offset_text_end:
 
 attn_norm_tensor_found_text:
 	.ascii "attn_norm_tensor_found: "
@@ -1335,6 +1365,27 @@ layer1_attn_v_tensor_offset:
 	.skip 8
 
 .balign 8
+layer1_attn_output_tensor_slot:
+layer1_attn_output_tensor_found:
+	.skip 8
+layer1_attn_output_tensor_name:
+	.skip LAYER1_ATTN_OUTPUT_TENSOR_NAME_CAP
+layer1_attn_output_tensor_n_dimensions:
+	.skip 8
+layer1_attn_output_tensor_dim0:
+	.skip 8
+layer1_attn_output_tensor_dim1:
+	.skip 8
+layer1_attn_output_tensor_dim2:
+	.skip 8
+layer1_attn_output_tensor_dim3:
+	.skip 8
+layer1_attn_output_tensor_ggml_type:
+	.skip 8
+layer1_attn_output_tensor_offset:
+	.skip 8
+
+.balign 8
 token0_embedding_dequant_status:
 	.skip 8
 
@@ -1502,12 +1553,13 @@ token0_layer1_attn_v_output:
 # FFN gate and up matrices before deriving the first FFN SwiGLU activation,
 # projecting it through the retained FFN down matrix, adding the guarded post-FFN
 # residual from process-owned static buffers, then applying guarded layer-1
-# attention RMSNorm, query projection, and key projection smokes through reusable
+# attention RMSNorm and query/key/value projection smokes through reusable
 # layer-1 descriptors and publishing status-gated exact-hex slices from their
 # output buffers. It also performs non-math reusable descriptor lookups for
-# `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`, and
-# `blk.1.attn_v.weight` into separate process-owned scratch slots before the
-# token-0 math path. The mapping is released explicitly
+# `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
+# `blk.1.attn_v.weight`, and `blk.1.attn_output.weight` into separate
+# process-owned scratch slots before the token-0 math path. The mapping is
+# released explicitly
 # with gguf_release_mapping before exit. The GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header
 # counts, bounded metadata string copies, and selected scalar and array-length
@@ -1732,6 +1784,26 @@ _start:
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
+	jz .Llookup_layer1_attn_output_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer1_attn_output_tensor:
+	# Capture the next-layer output projection descriptor for descriptor-only
+	# coverage. The layer-1 output projection payload remains unread.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer1_attn_output_tensor_request]
+	mov r9, layer1_attn_output_tensor_request_end - layer1_attn_output_tensor_request
+	lea r10, [rip + layer1_attn_output_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
 	jz .Lsummary_print
 	cmp rax, 12
 	je .Llookup_tensor_alignment_error
@@ -1915,6 +1987,7 @@ _start:
 	call print_layer1_attn_q_lookup_summary
 	call print_layer1_attn_k_lookup_summary
 	call print_layer1_attn_v_lookup_summary
+	call print_layer1_attn_output_lookup_summary
 
 	mov rdi, 1
 	lea rsi, [rip + first_tensor_name_text]
@@ -4245,6 +4318,109 @@ print_layer1_attn_v_lookup_summary:
 	ret
 
 .size print_layer1_attn_v_lookup_summary, . - print_layer1_attn_v_lookup_summary
+
+.type print_layer1_attn_output_lookup_summary, @function
+
+# Contract: print the reusable descriptor-lookup smoke slot for
+# `blk.1.attn_output.weight`.
+# Inputs: no register inputs. Reads the process-owned generic descriptor slot
+# filled by gguf_lookup_tensor_info after model validation.
+# Outputs: writes found flag, dimension count, first two dimensions, ggml_type,
+# and relative payload offset to stdout.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u64_decimal.
+# Ownership/lifetime: reads static scratch storage only during this call and
+# does not retain mapped-file pointers or inspect tensor payload bytes.
+# Error behavior: this is diagnostic summary output; write failures are not
+# surfaced separately.
+print_layer1_attn_output_lookup_summary:
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_found_text]
+	mov rdx, layer1_attn_output_tensor_found_text_end - layer1_attn_output_tensor_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_n_dims_text]
+	mov rdx, layer1_attn_output_tensor_n_dims_text_end - layer1_attn_output_tensor_n_dims_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_dim0_text]
+	mov rdx, layer1_attn_output_tensor_dim0_text_end - layer1_attn_output_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_dim1_text]
+	mov rdx, layer1_attn_output_tensor_dim1_text_end - layer1_attn_output_tensor_dim1_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_dim1]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_ggml_type_text]
+	mov rdx, layer1_attn_output_tensor_ggml_type_text_end - layer1_attn_output_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_output_tensor_offset_text]
+	mov rdx, layer1_attn_output_tensor_offset_text_end - layer1_attn_output_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_output_tensor_offset]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size print_layer1_attn_output_lookup_summary, . - print_layer1_attn_output_lookup_summary
 
 .type print_token0_attn_q_output_slice, @function
 

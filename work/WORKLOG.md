@@ -1253,3 +1253,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   the current runtime labels exactly. The assembly harnesses, oracle
   py-compile, runtime purity, static-link, tracked-artifact, help, and
   whitespace checks passed.
+
+## 2026-05-10T21:04:10Z
+
+- Added descriptor-only runtime coverage for `blk.1.attn_output.weight` in its
+  own reusable lookup slot. The step intentionally stops before any layer-1
+  output projection payload read.
+- Verification evidence: the real target printed the output descriptor as Q8_0
+  `4096x3072` at relative offset `554876928`, matching an external descriptor
+  parser. A temporary empty valid GGUF left the layer-1 output descriptor slot
+  zeroed, kept the layer-1 norm/query/key/value gates at 0, and emitted no
+  `token0_layer1_attn_output*` labels. Build, harness, oracle py-compile,
+  runtime purity, static-link, tracked-artifact, help, and whitespace checks
+  passed.
