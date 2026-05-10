@@ -373,3 +373,19 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: the usual rebuild/check and GGUF smoke fixtures passed.
   `strace` on a synthetic valid model showed the expected success ordering:
   `mmap`, `close`, then an explicit `munmap` from `_start`.
+
+## 2026-05-10T14:45:37Z
+
+- `_start` now consumes the live mapping before release for a guarded token ID 0
+  embedding dequant smoke. The guard checks the retained descriptor type/shape,
+  static activation-buffer capacity, offset arithmetic, and one-row mmap bounds
+  before calling the checked Q8_0 token embedding helper.
+- Decision: parser-focused synthetic fixtures that are not target-shaped skip
+  the payload smoke and report `token0_embedding_dequant: 0`; the real target
+  path reports `1`. This keeps existing loader smoke checks useful while making
+  the first payload read visible in normal output.
+- Verification evidence: clean rebuild and `make check` passed; lookup/base
+  synthetic fixtures kept their expected statuses; the real local target printed
+  the retained `token_embd.weight` dimensions 3072 by 131072 and
+  `token0_embedding_dequant: 1`; `strace` showed the success path still closes
+  the fd before summary output completes and releases the mmap afterward.

@@ -4,6 +4,11 @@
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 .equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP, 96
+.equ GGML_TYPE_Q8_0, 8
+.equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
+.equ TOKEN_EMBEDDING_ACTIVATION_BYTES, TOKEN_EMBEDDING_ACTIVATION_VALUES * 4
+.equ Q8_0_BLOCK_SIZE, 32
+.equ Q8_0_BLOCK_BYTES, 34
 
 .section .rodata
 
@@ -18,7 +23,7 @@ help_text:
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF tensor directory summary with one lookup and tensor-data base.\n"
+	.ascii "Current milestone: GGUF tensor directory summary with token-embedding dequant smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -128,6 +133,10 @@ lookup_tensor_ggml_type_text_end:
 lookup_tensor_offset_text:
 	.ascii "lookup_tensor_offset: "
 lookup_tensor_offset_text_end:
+
+token0_embedding_dequant_text:
+	.ascii "token0_embedding_dequant: "
+token0_embedding_dequant_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -245,6 +254,14 @@ gguf_mapping_base:
 gguf_mapping_size:
 	.skip 8
 
+.balign 8
+token0_embedding_dequant_status:
+	.skip 8
+
+.balign 4
+token_embedding_activation:
+	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
+
 .section .text
 
 .global _start
@@ -255,13 +272,14 @@ gguf_mapping_size:
 # the System V AMD64 process-start layout. This function currently accepts
 # either "--help" or one GGUF model path.
 # Outputs: does not return. Writes help, success, or diagnostic text, then exits
-# with status 0 for help/valid header, 2 for CLI usage errors, or 3 for GGUF
-# validation errors.
+# with status 0 for help/valid GGUF summary and smoke handling, 2 for CLI usage
+# errors, or 3 for GGUF validation errors.
 # Clobbers: all general-purpose registers may be clobbered; no caller exists.
 # Ownership/lifetime: argv strings remain kernel-provided process memory. The
 # loader returns a live read-only model mapping descriptor on success; _start
-# keeps it live through the current summary path, then releases it explicitly
-# with gguf_release_mapping before exit. The GGUF summary buffer is
+# keeps it live through the current summary path and token embedding smoke, then
+# releases it explicitly with gguf_release_mapping before exit. The GGUF summary
+# buffer is
 # process-owned static storage passed to the loader for scalar header counts, a
 # bounded copy of selected metadata strings, and selected scalar and
 # array-length metadata values, plus a bounded snapshot of the first tensor
@@ -754,8 +772,28 @@ _start:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
-	# The current milestone does not read tensor payload bytes yet, but ownership
-	# of the live mapping is now explicit and must be released before exit.
+	# The token-0 embedding smoke is deliberately after the summary print so the
+	# retained descriptor remains visible even when a narrow synthetic GGUF is not
+	# target-shaped enough to dequantize.
+	call dequant_token0_embedding_smoke
+	mov qword ptr [rip + token0_embedding_dequant_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_embedding_dequant_text]
+	mov rdx, token0_embedding_dequant_text_end - token0_embedding_dequant_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_embedding_dequant_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	# The live mapping has now served both parser summary and guarded tensor
+	# payload smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
 	call gguf_release_mapping
 	test rax, rax
@@ -917,5 +955,95 @@ write_bounded_c_string:
 	ret
 
 .size write_bounded_c_string, . - write_bounded_c_string
+
+.type dequant_token0_embedding_smoke, @function
+
+# Contract: opportunistically dequantize token ID 0 from the retained
+# token_embd.weight descriptor into static f32 activation storage.
+# Inputs: no register inputs. Reads the process-owned GGUF summary and live
+# mapping descriptor populated by gguf_validate_file.
+# Outputs: rax = 1 when a Q8_0 two-dimensional token_embd.weight descriptor is
+# target-shaped enough to dequantize token 0 into token_embedding_activation;
+# rax = 0 when the descriptor is absent, not Q8_0, not a whole Q8_0 row shape,
+# too wide for the static activation buffer, or does not leave one full row
+# inside the mapping.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads the mapped tensor payload only during the helper
+# call and writes at most TOKEN_EMBEDDING_ACTIVATION_BYTES into static process
+# storage. The mmap remains owned by _start and must be released separately.
+# Error behavior: this is a smoke gate, not the final graph setup validator.
+# Non-target synthetic GGUF fixtures are skipped with status 0; a successful
+# return proves q8_0_dequant_token_embedding accepted the guarded token-0 row.
+dequant_token0_embedding_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + gguf_summary_lookup_tensor_found], 1
+	jne .Lembedding_smoke_done
+	cmp qword ptr [rip + gguf_summary_lookup_tensor_n_dimensions], 2
+	jne .Lembedding_smoke_done
+	cmp qword ptr [rip + gguf_summary_lookup_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lembedding_smoke_done
+
+	mov r8, qword ptr [rip + gguf_summary_lookup_tensor_dim0]
+	test r8, r8
+	jz .Lembedding_smoke_done
+	js .Lembedding_smoke_done
+	test r8, Q8_0_BLOCK_SIZE - 1
+	jne .Lembedding_smoke_done
+	cmp r8, TOKEN_EMBEDDING_ACTIVATION_VALUES
+	ja .Lembedding_smoke_done
+
+	mov rcx, qword ptr [rip + gguf_summary_lookup_tensor_dim1]
+	test rcx, rcx
+	jz .Lembedding_smoke_done
+	js .Lembedding_smoke_done
+
+	# Tensor offsets are file-relative only after adding the aligned tensor-data
+	# base. Reject wraparound before converting that file offset into an mmap
+	# pointer.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lembedding_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_lookup_tensor_offset]
+	test rdx, rdx
+	js .Lembedding_smoke_skip
+	add rax, rdx
+	jc .Lembedding_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lembedding_smoke_skip
+
+	# One token row must fit inside the mapping before the math helper may touch
+	# payload bytes. The helper still owns row-shape and token-id validation.
+	mov r9, r8
+	shr r9, 5
+	imul r9, r9, Q8_0_BLOCK_BYTES
+	jo .Lembedding_smoke_skip
+	mov r11, r10
+	sub r11, rax
+	cmp r11, r9
+	jb .Lembedding_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Lembedding_smoke_skip
+	add rdi, rax
+	jc .Lembedding_smoke_skip
+	lea rsi, [rip + token_embedding_activation]
+	xor edx, edx
+	call q8_0_dequant_token_embedding
+	test eax, eax
+	jnz .Lembedding_smoke_skip
+
+	mov eax, 1
+	ret
+
+.Lembedding_smoke_skip:
+	xor eax, eax
+
+.Lembedding_smoke_done:
+	ret
+
+.size dequant_token0_embedding_smoke, . - dequant_token0_embedding_smoke
 
 .section .note.GNU-stack,"",@progbits
