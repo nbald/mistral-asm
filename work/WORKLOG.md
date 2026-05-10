@@ -772,3 +772,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   with no FFN norm word slice. The real local target printed FFN norm words
   `0xc01a392c`, `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`; merged cleanup
   tracing showed those lines before the final `munmap`.
+
+## 2026-05-10T17:17:45Z
+
+- Added external FFN RMSNorm oracle tooling and a comparison note. The oracle
+  recomputes the full 3072-word post-attention residual before RMSNorm, because
+  the FFN norm scale cannot be checked from a four-word slice alone.
+- Verification evidence: the oracle matched the runtime FFN norm words
+  `0xc01a392c`, `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`, and also matched
+  the residual intermediate words. Rebuild, no-libc harnesses, CLI/static
+  checks, synthetic GGUF checks, real-model smoke, cleanup tracing, oracle
+  py-compile, and whitespace checks passed.

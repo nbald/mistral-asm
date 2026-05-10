@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add verification-only external oracle tooling and a comparison note for the
-first four `token0_ffn_norm_activation` exact-hex words, without changing the
-runtime.
+Add fixed `blk.0.ffn_gate.weight` descriptor plumbing to the GGUF summary and
+runtime output, with synthetic fixtures keeping it absent and the real target
+printing its type, dimensions, and relative offset.
 
 ## Completed Work
 
@@ -23,12 +23,16 @@ runtime.
 - Token-0 smokes currently cover embedding dequantization, attention RMSNorm,
   query/key/value projections, single-token context expansion, attention output
   projection, post-attention residual, and FFN RMSNorm. The
-  query/key/value/output/residual exact-hex slices have external oracle notes.
+  query/key/value/output/residual/FFN RMSNorm exact-hex slices have external
+  oracle notes.
 - The FFN RMSNorm smoke consumes `blk.0.ffn_norm.weight` only after
   `token0_post_attn_residual` is available, validates the retained descriptor as
   f32 `[3072]`, proves the mapped payload span is in bounds, writes
   `token0_ffn_norm_activation`, and now prints a guarded four-word exact-hex
   slice when `token0_ffn_norm_status` is 1.
+- The external FFN RMSNorm oracle recomputes token 0 through the full
+  3072-word post-attention residual before applying `blk.0.ffn_norm.weight`,
+  because the RMSNorm scale depends on every residual element.
 
 ## Known Blockers
 
@@ -55,6 +59,8 @@ None.
 - `work/oracle/token0-attn-output.md`
 - `work/oracle/token0_post_attn_residual_oracle.py`
 - `work/oracle/token0-post-attn-residual.md`
+- `work/oracle/token0_ffn_norm_oracle.py`
+- `work/oracle/token0-ffn-norm.md`
 
 ## Required Verification
 
@@ -68,6 +74,9 @@ None.
   context expansion, output projection math, or shared token-0 inputs change.
 - Rerun the external residual oracle comparison when residual math or shared
   token-0 inputs change.
+- Rerun the external FFN RMSNorm oracle comparison when residual math, FFN
+  RMSNorm math, `blk.0.ffn_norm.weight` handling, or shared token-0 inputs
+  change.
 
 ## Last Verification
 
@@ -95,12 +104,18 @@ None.
 - Merged `strace -e trace=mmap,munmap,close` output on the real target returned
   status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN norm
   status and four-word slice, then final `munmap`.
-- The external projection/residual oracles were not rerun because this step
-  only exposed already-computed FFN norm output words.
+- `python3 -m py_compile` passed for all oracle scripts, including
+  `work/oracle/token0_ffn_norm_oracle.py`.
+- `work/oracle/token0_ffn_norm_oracle.py` matched the runtime FFN RMSNorm words
+  `0xc01a392c`, `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`; its intermediate
+  residual words also matched the runtime residual slice.
+- The older external projection/output/residual oracle scripts were not rerun
+  because this verification-only step did not change runtime math, projection
+  inputs, residual math, or shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add verification-only external oracle tooling and a comparison note for the
-first four `token0_ffn_norm_activation` exact-hex words, without changing the
-runtime.
+Add fixed `blk.0.ffn_gate.weight` descriptor plumbing to the GGUF summary and
+runtime output, with synthetic fixtures keeping it absent and the real target
+printing its type, dimensions, and relative offset.
