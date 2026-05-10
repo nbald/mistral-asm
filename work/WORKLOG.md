@@ -523,3 +523,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   oracle words still match. Synthetic parser fixtures keep the key descriptor
   absent and skip payload smokes; cleanup tracing still shows the read-only mmap
   released after summary output.
+
+## 2026-05-10T15:48:38Z
+
+- The runtime now performs a fourth guarded payload smoke: after token 0 is
+  dequantized and attention-normalized, `_start` validates
+  `blk.0.attn_k.weight` as a two-dimensional Q8_0 matrix whose input width
+  matches the normalized activation and whose 1024 output rows fit static
+  storage, then calls the scalar Q8_0 matvec.
+- Decision: this step prints only `token0_attn_k_matvec`. Key output words and
+  oracle comparison should follow as separate reviewable changes, mirroring the
+  query projection sequence.
+- Verification evidence: clean rebuild and no-libc harnesses passed; synthetic
+  parser fixtures printed `token0_attn_k_matvec: 0`; the real local target
+  printed `token0_attn_k_matvec: 1`; the query projection oracle still matched
+  the runtime query slice; cleanup tracing still showed the read-only mmap
+  released after smoke output.

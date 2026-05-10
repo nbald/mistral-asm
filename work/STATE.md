@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Wire a guarded token-0 attention key projection matvec from the retained
-`blk.0.attn_k.weight` descriptor and print its smoke status.
+Print a guarded four-word f32 hex slice from the token-0 attention key
+projection output.
 
 ## Completed Work
 
@@ -25,9 +25,9 @@ Wire a guarded token-0 attention key projection matvec from the retained
 - Scalar f32 RMSNorm exists as a documented primitive with no-libc verifier
   coverage.
 - `_start` prints retained summary fields, keeps the model mapping live through
-  guarded token ID 0 embedding dequantization, attention RMSNorm, and query
-  projection smokes, prints the first four query output f32 words as exact hex
-  bits on success, then calls `gguf_release_mapping`.
+  guarded token ID 0 embedding dequantization, attention RMSNorm, query
+  projection, and key projection smokes, prints the first four query output f32
+  words as exact hex bits on success, then calls `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
   print zero smoke statuses while preserving summary behavior.
 - External oracle tooling under `work/oracle/` independently reproduces the
@@ -59,22 +59,24 @@ None.
   checks, cleanup tracing, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Rerun the external `token0_attn_q_oracle.py` comparison when query-projection
-  math or its inputs change.
+  math or its inputs change. Add a key-projection oracle after key output words
+  are exposed.
 
 ## Last Verification
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and showed the key descriptor
-  summary milestone text; the future prompt generation form returned status 2
-  with the usage diagnostic.
+- `./mistral-asm --help` returned status 0 and showed the query/key smoke
+  milestone text; the future prompt generation form returned status 2 with the
+  usage diagnostic.
 - `readelf -d` reported no dynamic section, and `readelf -l` reported no
   interpreter or dynamic program headers.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
   `attn_k_tensor_found: 0`, and kept `token0_embedding_dequant: 0`,
-  `token0_attn_norm: 0`, and `token0_attn_q_matvec: 0`.
+  `token0_attn_norm: 0`, `token0_attn_q_matvec: 0`, and
+  `token0_attn_k_matvec: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
@@ -82,16 +84,17 @@ None.
 - The real target model under `models/` returned status 0, printed
   `blk.0.attn_k.weight` as Q8_0 with dimensions 3072 and 1024 at relative
   offset 427831296, kept `token0_embedding_dequant: 1`,
-  `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, and printed query output
-  slice words `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
+  `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, and
+  `token0_attn_k_matvec: 1`, and printed query output slice words
+  `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed `close(3) = 0`, successful summary output including the key descriptor,
-  and `munmap(..., 3651679520) = 0`.
+  showed `close(3) = 0`, successful summary output including
+  `token0_attn_k_matvec: 1`, and `munmap(..., 3651679520) = 0`.
 - `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
   and matched the runtime query output words above.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Wire a guarded token-0 attention key projection matvec from the retained
-`blk.0.attn_k.weight` descriptor and print its smoke status.
+Print a guarded four-word f32 hex slice from `token0_attn_k_output` when
+`token0_attn_k_matvec_status` is 1.
