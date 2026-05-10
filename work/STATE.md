@@ -6,7 +6,14 @@ Milestone 5: Metadata dump.
 
 ## Current Exact Task
 
-Capture and print `mistral3.context_length`.
+Capture and print `mistral3.block_count`.
+
+## Completed Work
+
+- GGUF summary prints header `tensor_count`, `metadata_kv_count`,
+  `general.architecture`, and `mistral3.context_length`.
+- `mistral3.context_length` is captured from u32 and u64 metadata scalar values
+  into caller-owned storage and defaults to zero when absent or wrong-typed.
 
 ## Known Blockers
 
@@ -33,8 +40,9 @@ None.
 - `./mistral-asm --help` returned status 0 and lists the metadata-summary
   milestone.
 - Synthetic GGUF fixtures verified successful summary output for empty metadata,
-  `general.architecture = mistral3`, one tensor plus two metadata entries,
-  non-string `general.architecture` skip, and long architecture truncation.
+  `general.architecture = mistral3`, `mistral3.context_length` as u32 and u64,
+  one tensor plus metadata entries, wrong-typed architecture/context skip, and
+  long architecture truncation.
 - Synthetic failure fixtures still reject bad high-bit counts and truncated
   metadata with status 3.
 - Invoking the future prompt generation form returned the usage error with
@@ -46,6 +54,6 @@ None.
 
 ## Next Exact Step
 
-Extend the caller-owned GGUF summary with a `context_length` u64 slot, capture
-`mistral3.context_length` when its metadata value is a u32/u64 scalar, and print
-it after `architecture`.
+Extend the caller-owned GGUF summary with a `block_count` u64 slot, capture
+`mistral3.block_count` when its metadata value is a u32/u64 scalar, and print it
+after `context_length`.

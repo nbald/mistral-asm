@@ -15,6 +15,7 @@
 .equ GGUF_SUMMARY_METADATA_COUNT, 8
 .equ GGUF_SUMMARY_ARCHITECTURE, 16
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
+.equ GGUF_SUMMARY_CONTEXT_LENGTH, 48
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -36,6 +37,10 @@ general_architecture_key:
 	.ascii "general.architecture"
 general_architecture_key_end:
 
+mistral3_context_length_key:
+	.ascii "mistral3.context_length"
+mistral3_context_length_key_end:
+
 .section .text
 
 .global gguf_validate_file
@@ -46,14 +51,15 @@ general_architecture_key_end:
 # Inputs: rdi = pointer to a NUL-terminated model path; rsi = pointer to a
 # caller-owned summary buffer with room for tensor_count at offset 0,
 # metadata_kv_count at offset 8, and a 32-byte NUL-terminated architecture
-# string at offset 16.
+# string at offset 16, followed by context_length as a u64 at offset 48.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
 # Ownership/lifetime: opens the model read-only, mmaps the whole file privately,
 # and releases any descriptor/mapping before returning. The caller never owns the
 # descriptor or mapping. The summary buffer remains caller-owned; this function
-# writes header counts and bounded metadata copies into it.
+# writes header counts, bounded metadata copies, and selected scalar metadata
+# values into it.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -131,12 +137,13 @@ gguf_validate_file:
 	# escapes through this summary.
 	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT], rax
 	mov qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT], rdx
-	# Clear optional string fields before metadata capture so callers never see
-	# stale bytes when a key is absent or has a non-string value.
+	# Clear optional metadata fields before capture so callers never see stale
+	# bytes or scalar values when a key is absent or has the wrong value type.
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 8], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 16], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 24], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], 0
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -299,6 +306,12 @@ gguf_walk_metadata:
 	mov rcx, general_architecture_key_end - general_architecture_key
 	call gguf_bytes_eq_literal
 	mov r9d, eax
+	lea rdi, [r13 + r12]
+	mov rsi, r10
+	lea rdx, [rip + mistral3_context_length_key]
+	mov rcx, mistral3_context_length_key_end - mistral3_context_length_key
+	call gguf_bytes_eq_literal
+	mov r11d, eax
 	add r12, r10
 
 	# Values begin with a u32 type tag immediately after the key, with no padding.
@@ -312,9 +325,9 @@ gguf_walk_metadata:
 	add r12, 4
 
 	test r9d, r9d
-	jz .Lmetadata_skip_value
+	jz .Lmetadata_check_context_length
 	cmp ecx, 8
-	jne .Lmetadata_skip_value
+	jne .Lmetadata_check_context_length
 
 	# general.architecture is a short GGUF string such as "mistral3". Copy a
 	# bounded NUL-terminated snapshot so the summary survives after munmap.
@@ -327,6 +340,43 @@ gguf_walk_metadata:
 	test rax, rax
 	jnz .Lmetadata_return
 	mov r12, rdx
+	jmp .Lmetadata_next
+
+.Lmetadata_check_context_length:
+	test r11d, r11d
+	jz .Lmetadata_skip_value
+	cmp ecx, 4
+	je .Lmetadata_capture_context_u32
+	cmp ecx, 10
+	je .Lmetadata_capture_context_u64
+	jmp .Lmetadata_skip_value
+
+.Lmetadata_capture_context_u32:
+	# mistral3.context_length is an unsigned scalar in the target metadata. A
+	# u32 value is widened into the caller-owned u64 summary slot.
+	cmp r12, r14
+	ja .Lmetadata_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Lmetadata_bad
+	mov eax, dword ptr [r13 + r12]
+	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], rax
+	add r12, 4
+	jmp .Lmetadata_next
+
+.Lmetadata_capture_context_u64:
+	# Keep the full u64 value; the summary printer already handles unsigned
+	# decimal output.
+	cmp r12, r14
+	ja .Lmetadata_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Lmetadata_bad
+	mov rax, qword ptr [r13 + r12]
+	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], rax
+	add r12, 8
 	jmp .Lmetadata_next
 
 .Lmetadata_skip_value:

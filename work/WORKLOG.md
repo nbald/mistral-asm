@@ -168,3 +168,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   `mistral3`, one tensor plus two metadata entries, non-string skip, long-string
   truncation, high-bit count rejection, and truncated metadata rejection. The
   target GGUF model file was not present locally.
+
+## 2026-05-10T13:10:29Z
+
+- Metadata capture now recognizes `mistral3.context_length` when the value tag is
+  a u32 or u64 scalar, widens u32 into the caller-owned u64 summary slot, and
+  leaves the field at zero when the key is absent or wrong-typed.
+- Verification evidence: synthetic fixtures covered empty metadata, context
+  length encoded as u32 and u64, wrong-typed architecture/context skip, long
+  architecture truncation, bad high-bit counts, and truncated metadata. The
+  target GGUF model file was not present locally.

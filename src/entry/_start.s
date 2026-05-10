@@ -39,6 +39,10 @@ architecture_text:
 	.ascii "architecture: "
 architecture_text_end:
 
+context_length_text:
+	.ascii "context_length: "
+context_length_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -105,6 +109,8 @@ gguf_summary_metadata_count:
 	.skip 8
 gguf_summary_architecture:
 	.skip GGUF_SUMMARY_ARCHITECTURE_CAP
+gguf_summary_context_length:
+	.skip 8
 
 .section .text
 
@@ -122,7 +128,8 @@ gguf_summary_architecture:
 # Ownership/lifetime: argv strings remain kernel-provided process memory. Any
 # model mapping is owned and released inside gguf_validate_file. The GGUF
 # summary buffer is process-owned static storage passed to the loader for scalar
-# header counts and a bounded copy of selected metadata strings.
+# header counts, a bounded copy of selected metadata strings, and selected
+# scalar metadata values.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -303,6 +310,20 @@ _start:
 	lea rsi, [rip + gguf_summary_architecture]
 	mov rdx, GGUF_SUMMARY_ARCHITECTURE_CAP
 	call write_bounded_c_string
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + context_length_text]
+	mov rdx, context_length_text_end - context_length_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_context_length]
+	call write_u64_decimal
 
 	mov rdi, 1
 	lea rsi, [rip + newline_text]
