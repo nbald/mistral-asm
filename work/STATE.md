@@ -15,9 +15,11 @@ None.
 
 ## Relevant Files
 
+- `README.md`
 - `Makefile`
 - `src/entry/_start.s`
 - `src/sys/`
+- `work/AUTONOMOUS.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 

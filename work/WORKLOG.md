@@ -58,3 +58,8 @@ redundant entries. Do not treat it as the primary continuation source; use
   passed; fake stale PID metadata was refused; run metadata files are ignored;
   fake `codex` tests confirmed fail-fast without inbox and continue-with-inbox
   behavior.
+
+## 2026-05-10T12:00:46Z
+
+- Added root README and autonomous workflow README to make project operation
+  discoverable without reading every `work/` file.
