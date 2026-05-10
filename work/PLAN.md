@@ -5,6 +5,8 @@
 - Runtime source is only `.s`.
 - Syntax is GNU `as` Intel.
 - Build uses `as` and `ld` through `Makefile`.
+- Autonomous runs use `gpt-5.5` with `model_reasoning_effort = "xhigh"` unless
+  explicitly overridden by environment variables.
 - CPU target is AMD Zen 2 x86-64 with AVX2/FMA available.
 - No NUMA or dual-socket logic in the first milestones.
 - Model target is Unsloth Ministral 3 3B Instruct Q8_0 GGUF.
@@ -38,8 +40,22 @@
 - `work/STATE.md` is the compact source of truth for continuation.
 - `work/WORKLOG.md` is append-only history and may become large.
 - Agents must not read the whole worklog once it grows; read only its tail.
+- `work/control/INSTRUCTIONS.md` is the operator channel for new instructions
+  between autonomous iterations.
 - `work/oracle/` stores small oracle notes, hashes, commands, and excerpts.
 - Large model files, binaries, traces, dumps, logs, and perf output are ignored.
+
+## Operator Control Policy
+
+- Use `scripts/control.sh instruction "..."` to inject instructions for the
+  next iteration without interrupting the current run.
+- Use `scripts/control.sh pause` to prevent the next iteration from starting,
+  then `scripts/control.sh resume` to continue.
+- Use `scripts/control.sh interrupt` to send SIGINT to the current Codex process.
+- Use `scripts/control.sh stop` to request loop stop and interrupt the current
+  Codex process.
+- `work/runs/current.pid`, `work/control/PAUSE`, and `work/control/STOP` are
+  transient control files and are not committed.
 
 ## Review Policy
 

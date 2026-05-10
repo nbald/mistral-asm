@@ -10,7 +10,8 @@ First inspect, in this order:
 3. `work/GOAL.md`
 4. `work/PLAN.md`
 5. `work/STATE.md`
-6. `tail -120 work/WORKLOG.md` if the file exists
+6. `work/control/INSTRUCTIONS.md` if it exists
+7. `tail -120 work/WORKLOG.md` if the file exists
 
 Do not read the whole worklog unless `work/STATE.md` explicitly says it is
 needed. `work/STATE.md` is the compact continuation state; keep it current and
@@ -32,6 +33,8 @@ Project contract:
   into the runtime.
 - Do not rewrite git history.
 - Do not revert user changes unless explicitly instructed.
+- Honor `work/control/INSTRUCTIONS.md`; newer operator instructions override
+  older conflicting instructions.
 
 Work loop:
 
@@ -44,7 +47,9 @@ Work loop:
    status, blockers, relevant files, and the next exact step.
 6. Append a short entry to `work/WORKLOG.md` with date, change, verification,
    commit message, and next step. Keep entries concise.
-7. Commit the completed step with a short narrative commit message.
+7. If an operator instruction was handled, record that fact in `work/STATE.md`
+   and `work/WORKLOG.md` without deleting the instruction.
+8. Commit the completed step with a short narrative commit message.
 
 Review loop:
 

@@ -7,4 +7,8 @@ models/
 *.dump
 *.trace
 work/oracle/large/
+work/runs/
+work/control/PAUSE
+work/control/STOP
+work/control/*.tmp
 

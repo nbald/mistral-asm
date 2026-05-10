@@ -20,3 +20,22 @@ the recent tail of this file when resuming.
 - Verification: `git diff --check` passed.
 - Commit message: `work: add review and happiness loop policy`.
 - Next: implement the minimal pure ASM binary for Milestone 2.
+
+## 2026-05-10T11:41:00Z
+
+- Change: added external status/watch scripts and ignored transient
+  `work/runs/` outputs.
+- Verification: `bash -n scripts/status.sh` and
+  `bash -n scripts/watch-status.sh` passed; both scripts marked executable.
+- Commit message: `work: add autonomous loop controls`.
+- Next: implement the minimal pure ASM binary for Milestone 2.
+
+## 2026-05-10T11:42:00Z
+
+- Change: set autonomous loop defaults to `gpt-5.5` with xhigh reasoning, added
+  operator instruction channel, pause/stop files, and current-process interrupt
+  helper.
+- Verification: `bash -n` passed for autonomous loop, control, status, and
+  watch scripts; `git diff --check` passed.
+- Commit message: `work: add autonomous loop controls`.
+- Next: implement the minimal pure ASM binary for Milestone 2.
