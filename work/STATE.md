@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Print a guarded four-word f32 hex slice from the token-0 attention key
-projection output.
+Add an external oracle comparison for the token-0 attention key projection
+output slice.
 
 ## Completed Work
 
@@ -26,8 +26,9 @@ projection output.
   coverage.
 - `_start` prints retained summary fields, keeps the model mapping live through
   guarded token ID 0 embedding dequantization, attention RMSNorm, query
-  projection, and key projection smokes, prints the first four query output f32
-  words as exact hex bits on success, then calls `gguf_release_mapping`.
+  projection, and key projection smokes, prints the first four query and key
+  output f32 words as exact hex bits on success, then calls
+  `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
   print zero smoke statuses while preserving summary behavior.
 - External oracle tooling under `work/oracle/` independently reproduces the
@@ -86,15 +87,16 @@ None.
   offset 427831296, kept `token0_embedding_dequant: 1`,
   `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, and
   `token0_attn_k_matvec: 1`, and printed query output slice words
-  `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
+  `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`, plus key output
+  slice words `0xc028a3e3`, `0x3daaeb62`, `0xbe8a8c69`, and `0xc01d0994`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
   showed `close(3) = 0`, successful summary output including
-  `token0_attn_k_matvec: 1`, and `munmap(..., 3651679520) = 0`.
+  the guarded key output slice, and `munmap(..., 3651679520) = 0`.
 - `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
   and matched the runtime query output words above.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Print a guarded four-word f32 hex slice from `token0_attn_k_output` when
-`token0_attn_k_matvec_status` is 1.
+Add verification-only oracle tooling for `token0_attn_k_output0_f32_hex`
+through `token0_attn_k_output3_f32_hex` and record the comparison.
