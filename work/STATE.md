@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle comparison for the token-0 post-attention residual first
-four exact-hex words, using only verification tooling outside the assembly
-runtime.
+Retain and print the `blk.0.ffn_norm.weight` descriptor in the GGUF summary,
+without reading its payload bytes.
 
 ## Completed Work
 
@@ -48,6 +47,10 @@ runtime.
   externally, recomputes token 0 attention RMSNorm, all 1024 value rows, the
   repeated 4096-f32 single-token context, and the first four output projection
   rows. Its context and output words match the runtime exact-hex slices.
+- The verification-only post-attention residual oracle recomputes token 0
+  through the current attention-output smoke path externally, adds the matching
+  token embedding activation words with f32 rounding, and matches the runtime
+  first four residual exact-hex words.
 
 ## Known Blockers
 
@@ -72,6 +75,8 @@ None.
 - `work/oracle/token0-attn-v-output.md`
 - `work/oracle/token0_attn_output_oracle.py`
 - `work/oracle/token0-attn-output.md`
+- `work/oracle/token0_post_attn_residual_oracle.py`
+- `work/oracle/token0-post-attn-residual.md`
 
 ## Required Verification
 
@@ -83,8 +88,8 @@ None.
   projection math or shared token-0 inputs change.
 - Rerun the external output projection oracle comparison when value projection,
   context expansion, output projection math, or shared token-0 inputs change.
-- Add and rerun an external residual oracle comparison when residual math or
-  shared token-0 inputs change.
+- Rerun the external residual oracle comparison when residual math or shared
+  token-0 inputs change.
 
 ## Last Verification
 
@@ -118,16 +123,17 @@ None.
   showed `mmap(..., 3651679520, PROT_READ, MAP_PRIVATE, 3, 0)`, `close(3) = 0`,
   printed the guarded residual words before final cleanup, and showed
   `munmap(..., 3651679520) = 0`.
-- `python3 work/oracle/token0_attn_output_oracle.py <target-model>` printed the
-  previously matched context and output words. There is not yet a committed
-  residual oracle.
-- The external query/key/value projection oracles were not rerun because this
-  step added only a static residual add after existing output-projection math,
-  not projection math or shared token-0 inputs.
+- `python3 work/oracle/token0_post_attn_residual_oracle.py <target-model>`
+  printed attention output words `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`,
+  and `0x3d799d1a`, plus residual words `0xbd41a6d5`, `0xbe4a334d`,
+  `0x3f822e41`, and `0x3d7fcd1a`, matching the runtime exact-hex slices.
+- `python3 -m py_compile` passed for all committed oracle scripts.
+- The external query/key/value/output projection oracles were not rerun because
+  this step added only a residual oracle and did not change runtime math or
+  shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add an external oracle comparison for the token-0 post-attention residual first
-four exact-hex words, using only verification tooling outside the assembly
-runtime.
+Retain and print the `blk.0.ffn_norm.weight` descriptor in the GGUF summary,
+without reading its payload bytes.

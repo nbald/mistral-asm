@@ -717,3 +717,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   with no residual word slice, while the real local target printed status 1 and
   residual words `0xbd41a6d5`, `0xbe4a334d`, `0x3f822e41`, and `0x3d7fcd1a`.
   Cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T16:58:22Z
+
+- Added verification-only oracle tooling for the token-0 post-attention
+  residual. It recomputes token 0 through the existing attention output path
+  outside the runtime, then applies the same f32 add between token embedding
+  activation and attention output that the assembly smoke uses.
+- Decision: keep the residual oracle separate from the attention-output oracle
+  because it checks a new graph boundary while sharing the lower-level parser
+  and scalar arithmetic helpers.
+- Verification evidence: the residual oracle printed `0xbd41a6d5`,
+  `0xbe4a334d`, `0x3f822e41`, and `0x3d7fcd1a`, exactly matching the runtime
+  residual slice. Rebuild, no-libc harnesses, CLI/static checks, synthetic
+  GGUF checks, real-model smoke, cleanup tracing, oracle py-compile, and
+  whitespace checks passed.
