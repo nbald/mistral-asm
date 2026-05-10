@@ -1,0 +1,10 @@
+build/
+models/
+*.o
+*.log
+*.gguf
+*.bin
+*.dump
+*.trace
+work/oracle/large/
+
