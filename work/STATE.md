@@ -6,10 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Continue the independent `_start.s` split by moving the layer-1 FFN norm status
-printing and exact-hex slice printer into `src/infer/token0_layer1_ffn.s`,
-preserving output order and all current labels before adding new runtime
-behavior.
+Add status-only token-0 layer-1 FFN up matvec coverage in
+`src/infer/token0_layer1_ffn.s`, exporting only the needed
+`blk.1.ffn_up.weight` descriptor handoff slots from `_start.s` and preserving
+the existing output order.
 
 ## Completed Work
 
@@ -49,10 +49,14 @@ behavior.
   iteration by moving the existing token-0 layer-1 FFN RMSNorm smoke routine
   into `src/infer/token0_layer1_ffn.s`. `_start.s` now exports the handoff slots
   that the focused inference code already consumed logically.
+- The layer-1 FFN norm status printer and four-word exact-hex slice printer now
+  live beside the FFN norm smoke in `src/infer/token0_layer1_ffn.s`. `_start.s`
+  preserves the same output position through a single focused wrapper call, and
+  all public diagnostic labels and values are unchanged.
 
 ## Known Blockers
 
-- No current blocker for the next behavior-preserving `_start.s` split.
+- No current blocker for the next focused layer-1 FFN up matvec smoke step.
 - Residual maintainability risk remains: `src/entry/_start.s` still owns entry
   dispatch, descriptor lookup sequencing, descriptor/slice printing, static
   runtime buffers, and token-0 smoke orchestration. Keep new subsystem-specific
@@ -79,7 +83,7 @@ behavior.
 
 ## Last Verification
 
-- Behavior-preserving layer-1 FFN norm smoke extraction verification passed:
+- Behavior-preserving layer-1 FFN norm status/slice printer relocation passed:
   `make clean && make`; `make check`; `./mistral-asm --help`; real target smoke
   still showed `token0_layer1_ffn_norm: 1` with unchanged FFN norm words
   `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, followed by
@@ -93,7 +97,7 @@ behavior.
 
 ## Next Exact Step
 
-Continue the independent `_start.s` split by moving the layer-1 FFN norm status
-printing and exact-hex slice printer into `src/infer/token0_layer1_ffn.s`,
-preserving output order and all current labels before adding new runtime
-behavior.
+Add status-only token-0 layer-1 FFN up matvec coverage in
+`src/infer/token0_layer1_ffn.s`, exporting only the needed
+`blk.1.ffn_up.weight` descriptor handoff slots from `_start.s` and preserving
+the existing output order.

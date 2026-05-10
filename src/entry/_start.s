@@ -839,10 +839,6 @@ token0_layer1_post_attn_residual_text:
 	.ascii "token0_layer1_post_attn_residual: "
 token0_layer1_post_attn_residual_text_end:
 
-token0_layer1_ffn_norm_text:
-	.ascii "token0_layer1_ffn_norm: "
-token0_layer1_ffn_norm_text_end:
-
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -1146,22 +1142,6 @@ token0_layer1_post_attn_residual2_f32_text_end:
 token0_layer1_post_attn_residual3_f32_text:
 	.ascii "token0_layer1_post_attn_residual3_f32_hex: "
 token0_layer1_post_attn_residual3_f32_text_end:
-
-token0_layer1_ffn_norm0_f32_text:
-	.ascii "token0_layer1_ffn_norm0_f32_hex: "
-token0_layer1_ffn_norm0_f32_text_end:
-
-token0_layer1_ffn_norm1_f32_text:
-	.ascii "token0_layer1_ffn_norm1_f32_hex: "
-token0_layer1_ffn_norm1_f32_text_end:
-
-token0_layer1_ffn_norm2_f32_text:
-	.ascii "token0_layer1_ffn_norm2_f32_hex: "
-token0_layer1_ffn_norm2_f32_text_end:
-
-token0_layer1_ffn_norm3_f32_text:
-	.ascii "token0_layer1_ffn_norm3_f32_hex: "
-token0_layer1_ffn_norm3_f32_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -4128,24 +4108,7 @@ _start:
 
 	call print_token0_layer1_post_attn_residual_slice
 
-	call token0_layer1_ffn_norm_smoke
-	mov qword ptr [rip + token0_layer1_ffn_norm_status], rax
-
-	mov rdi, 1
-	lea rsi, [rip + token0_layer1_ffn_norm_text]
-	mov rdx, token0_layer1_ffn_norm_text_end - token0_layer1_ffn_norm_text
-	call sys_write
-
-	mov rdi, 1
-	mov rsi, qword ptr [rip + token0_layer1_ffn_norm_status]
-	call write_u64_decimal
-
-	mov rdi, 1
-	lea rsi, [rip + newline_text]
-	mov rdx, newline_text_end - newline_text
-	call sys_write
-
-	call print_token0_layer1_ffn_norm_slice
+	call run_token0_layer1_ffn_norm_status
 
 	call run_token0_layer1_ffn_gate_matvec_status
 
@@ -6472,85 +6435,6 @@ print_token0_layer1_post_attn_residual_slice:
 	ret
 
 .size print_token0_layer1_post_attn_residual_slice, . - print_token0_layer1_post_attn_residual_slice
-
-.type print_token0_layer1_ffn_norm_slice, @function
-
-# Contract: print a fixed exact-hex slice from the token-0 layer-1
-# FFN-normalized activation when that RMSNorm smoke path succeeded.
-# Inputs: no register inputs. Reads token0_layer1_ffn_norm_status and the
-# first four f32 words of token0_layer1_ffn_norm_activation.
-# Outputs: writes four labeled raw f32 bit patterns to stdout when
-# token0_layer1_ffn_norm_status is 1; writes nothing otherwise.
-# Clobbers: caller-saved registers and flags through sys_write and
-# write_u32_hex.
-# Ownership/lifetime: reads process-owned static layer-1 FFN norm activation
-# storage only during this call and does not retain pointers.
-# Error behavior: this is summary output for oracle comparison; write failures
-# are intentionally not surfaced separately.
-print_token0_layer1_ffn_norm_slice:
-	cmp qword ptr [rip + token0_layer1_ffn_norm_status], 1
-	jne .Lprint_layer1_ffn_norm_slice_done
-
-	mov rdi, 1
-	lea rsi, [rip + token0_layer1_ffn_norm0_f32_text]
-	mov rdx, token0_layer1_ffn_norm0_f32_text_end - token0_layer1_ffn_norm0_f32_text
-	call sys_write
-
-	mov rdi, 1
-	mov esi, dword ptr [rip + token0_layer1_ffn_norm_activation]
-	call write_u32_hex
-
-	mov rdi, 1
-	lea rsi, [rip + newline_text]
-	mov rdx, newline_text_end - newline_text
-	call sys_write
-
-	mov rdi, 1
-	lea rsi, [rip + token0_layer1_ffn_norm1_f32_text]
-	mov rdx, token0_layer1_ffn_norm1_f32_text_end - token0_layer1_ffn_norm1_f32_text
-	call sys_write
-
-	mov rdi, 1
-	mov esi, dword ptr [rip + token0_layer1_ffn_norm_activation + 4]
-	call write_u32_hex
-
-	mov rdi, 1
-	lea rsi, [rip + newline_text]
-	mov rdx, newline_text_end - newline_text
-	call sys_write
-
-	mov rdi, 1
-	lea rsi, [rip + token0_layer1_ffn_norm2_f32_text]
-	mov rdx, token0_layer1_ffn_norm2_f32_text_end - token0_layer1_ffn_norm2_f32_text
-	call sys_write
-
-	mov rdi, 1
-	mov esi, dword ptr [rip + token0_layer1_ffn_norm_activation + 8]
-	call write_u32_hex
-
-	mov rdi, 1
-	lea rsi, [rip + newline_text]
-	mov rdx, newline_text_end - newline_text
-	call sys_write
-
-	mov rdi, 1
-	lea rsi, [rip + token0_layer1_ffn_norm3_f32_text]
-	mov rdx, token0_layer1_ffn_norm3_f32_text_end - token0_layer1_ffn_norm3_f32_text
-	call sys_write
-
-	mov rdi, 1
-	mov esi, dword ptr [rip + token0_layer1_ffn_norm_activation + 12]
-	call write_u32_hex
-
-	mov rdi, 1
-	lea rsi, [rip + newline_text]
-	mov rdx, newline_text_end - newline_text
-	call sys_write
-
-.Lprint_layer1_ffn_norm_slice_done:
-	ret
-
-.size print_token0_layer1_ffn_norm_slice, . - print_token0_layer1_ffn_norm_slice
 
 .type dequant_token0_embedding_smoke, @function
 

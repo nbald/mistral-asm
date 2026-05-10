@@ -1536,3 +1536,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime purity, static-link,
   undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
   checks passed.
+
+## 2026-05-11T01:06:49+02:00
+
+- Finished the behavior-preserving layer-1 FFN norm print relocation. The norm
+  status write and exact-hex slice now share the focused FFN wrapper, which
+  keeps `_start.s` as an orchestration caller while preserving the diagnostic
+  order before the gate matvec status.
+- Verification evidence: the real target still printed the same layer-1 FFN
+  norm status and words `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and
+  `0xbfe2ec8e`, followed by gate matvec status `1`. A temporary empty valid
+  GGUF printed only the norm and gate statuses at `0` for this region. Build,
+  no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.
