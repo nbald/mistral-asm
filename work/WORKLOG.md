@@ -678,3 +678,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   the real target printed `token0_attn_output_matvec: 1`, cleanup tracing showed
   the line before final `munmap`, and the existing Q/K/V oracle word checks
   still matched the runtime slices.
+
+## 2026-05-10T16:40:35Z
+
+- The output-projection smoke now exposes a guarded four-word f32 bit slice from
+  `token0_attn_output`, printed only when `token0_attn_output_matvec_status` is
+  1. Synthetic parser fixtures still skip the slice when the output projection
+  is unavailable.
+- Verification evidence: the real local target printed output words
+  `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`; cleanup tracing
+  showed those words before the final `munmap`. The next durable comparison
+  should be an external oracle note for these words.

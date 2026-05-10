@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Expose a guarded four-word exact-hex slice from `token0_attn_output` after the
-output-projection smoke succeeds. Keep oracle tooling and comparison notes for a
-later atomic step.
+Add verification-only oracle tooling and comparison notes for the token-0
+attention output-projection slice. Keep runtime changes out of that step unless
+the oracle exposes a concrete mismatch.
 
 ## Completed Work
 
@@ -35,8 +35,9 @@ later atomic step.
 - The guarded output-projection smoke validates `token0_attn_context_status`
   and the retained `blk.0.attn_output.weight` descriptor as exact 4096x3072
   Q8_0, proves the full matrix payload fits in the live mapping, multiplies the
-  static 4096-f32 context into a 3072-f32 static buffer, and prints only
-  `token0_attn_output_matvec`.
+  static 4096-f32 context into a 3072-f32 static buffer, and prints
+  `token0_attn_output_matvec` plus guarded `token0_attn_output0..3_f32_hex`
+  words.
 
 ## Known Blockers
 
@@ -82,7 +83,7 @@ None.
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
   `attn_output_tensor_found: 0`, and kept `token0_attn_context: 0` and
-  `token0_attn_output_matvec: 0` with no context word slice.
+  `token0_attn_output_matvec: 0` with no context or output word slices.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
@@ -91,18 +92,20 @@ None.
   `blk.0.attn_output.weight` as Q8_0 with dimensions 4096 and 3072 at relative
   offset 431185920, kept `token0_attn_context: 1`, printed context words
   `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, matching the
-  first four value-projection words exactly, and printed
-  `token0_attn_output_matvec: 1`.
+  first four value-projection words exactly, printed
+  `token0_attn_output_matvec: 1`, and printed output words `0xbd553ed5`,
+  `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed `close(3) = 0`, printed the guarded value and context words plus
-  `token0_attn_output_matvec: 1` before final cleanup, and showed
+  showed `close(3) = 0`, printed the guarded value, context, and output words
+  plus `token0_attn_output_matvec: 1` before final cleanup, and showed
   `munmap(..., 3651679520) = 0`.
-- The external query/key/value projection oracles still matched the runtime
-  Q/K/V slices exactly.
+- The external query/key/value projection oracles were not rerun because this
+  step changed only guarded printing of an already-computed output buffer, not
+  projection math or shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Expose a guarded four-word exact-hex slice from `token0_attn_output` after the
-output-projection smoke succeeds. Keep oracle tooling and comparison notes for a
-later atomic step.
+Add verification-only oracle tooling and comparison notes for the token-0
+attention output-projection slice. Keep runtime changes out of that step unless
+the oracle exposes a concrete mismatch.
