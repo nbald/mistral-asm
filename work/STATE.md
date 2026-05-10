@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 FFN gate matvec smoke using `blk.0.ffn_gate.weight` and
-`token0_ffn_norm_activation`, validate Q8_0 `[3072 x 9216]` shape and mapped
-payload bounds, write static FFN gate activation storage, and print only a
-`token0_ffn_gate_matvec` status line.
+Print a guarded four-word exact-hex slice from `token0_ffn_gate_output` after
+`token0_ffn_gate_matvec_status` is 1, preserving status-only skip behavior for
+synthetic fixtures.
 
 ## Completed Work
 
@@ -24,12 +23,12 @@ payload bounds, write static FFN gate activation storage, and print only a
   RMSNorm epsilon bits.
 - Token-0 smokes currently cover embedding dequantization, attention RMSNorm,
   query/key/value projections, single-token context expansion, attention output
-  projection, post-attention residual, and FFN RMSNorm. The
+  projection, post-attention residual, FFN RMSNorm, and FFN gate projection. The
   query/key/value/output/residual/FFN RMSNorm exact-hex slices have external
-  oracle notes.
-- The FFN gate descriptor step is descriptor-only: synthetic fixtures keep it
-  absent, while the real target prints Q8_0 dimensions `3072 x 9216` at relative
-  offset `491347968`.
+  oracle notes; the FFN gate projection is status-only for now.
+- The FFN gate matvec step validates the retained `blk.0.ffn_gate.weight`
+  descriptor as Q8_0 `[3072 x 9216]`, bounds the full mapped payload, writes
+  static FFN gate activation storage, and prints `token0_ffn_gate_matvec`.
 
 ## Known Blockers
 
@@ -74,42 +73,41 @@ None.
 - Rerun the external FFN RMSNorm oracle comparison when residual math, FFN
   RMSNorm math, `blk.0.ffn_norm.weight` handling, or shared token-0 inputs
   change.
+- Add and rerun an external FFN gate oracle after exposing a public FFN gate
+  exact-hex slice; until then the gate smoke is status-only.
 
 ## Last Verification
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and reported the FFN gate descriptor
+- `./mistral-asm --help` returned status 0 and reported the FFN gate matvec
   milestone; the unsupported prompt generation form returned status 2 with the
   usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
-  `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
-  `ffn_norm_tensor_found: 0` and `ffn_gate_tensor_found: 0`, and kept
-  `token0_post_attn_residual: 0` and `token0_ffn_norm: 0`.
+  `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, kept
+  `ffn_gate_tensor_found: 0`, and printed `token0_ffn_gate_matvec: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
   alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
   `blk.0.ffn_gate.weight` as Q8_0 with dimensions `3072 x 9216` at relative
-  offset `491347968`, kept the existing token-0 attention/residual exact-hex
-  slices, and kept FFN norm words `0xc01a392c`, `0xc116e478`, `0x416e11b8`,
-  and `0x3fe0d866`.
+  offset `491347968`, kept the existing token-0 attention/residual/FFN norm
+  exact-hex slices, and printed `token0_ffn_gate_matvec: 1`.
 - Merged `strace -e trace=mmap,munmap,close` output on the real target returned
   status 0, showed the full-file read-only `mmap`, `close(3) = 0`, and final
   `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
-- The external projection/output/residual/FFN RMSNorm oracle scripts were not
-  rerun because this descriptor-only step did not change runtime math, token-0
-  inputs, or existing tensor payload handling.
+- Existing external projection/output/residual/FFN RMSNorm oracle scripts were
+  not rerun because this downstream status-only gate step did not alter their
+  math, shared inputs, or public exact-hex slices.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a guarded token-0 FFN gate matvec smoke using `blk.0.ffn_gate.weight` and
-`token0_ffn_norm_activation`, validate Q8_0 `[3072 x 9216]` shape and mapped
-payload bounds, write static FFN gate activation storage, and print only a
-`token0_ffn_gate_matvec` status line.
+Print a guarded four-word exact-hex slice from `token0_ffn_gate_output` after
+`token0_ffn_gate_matvec_status` is 1, preserving status-only skip behavior for
+synthetic fixtures.

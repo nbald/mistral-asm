@@ -795,3 +795,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `3072 x 9216` at relative offset `491347968` while preserving the existing
   FFN RMSNorm exact-hex slice. Cleanup tracing still shows the read-only mapping
   released after summary and smoke output.
+
+## 2026-05-10T17:28:33Z
+
+- The runtime now runs a guarded token-0 FFN gate matvec from
+  `token0_ffn_norm_activation` through `blk.0.ffn_gate.weight`, requiring the
+  exact Q8_0 `[3072 x 9216]` shape and a bounded full matrix span before writing
+  static gate activation storage.
+- Decision: keep the new public output status-only. A guarded exact-hex slice
+  and oracle comparison remain separate reviewable steps, matching the previous
+  projection workflow.
+- Verification evidence: synthetic fixtures skipped the new gate with
+  `token0_ffn_gate_matvec: 0`; the real local target printed
+  `token0_ffn_gate_matvec: 1` while preserving the existing Q/K/V/output,
+  residual, and FFN RMSNorm exact-hex slices. Cleanup tracing still showed
+  `close(3)` before the final `munmap`.
