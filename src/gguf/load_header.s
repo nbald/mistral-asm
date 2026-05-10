@@ -18,6 +18,12 @@
 .equ GGUF_SUMMARY_CONTEXT_LENGTH, 48
 .equ GGUF_SUMMARY_BLOCK_COUNT, 56
 .equ GGUF_SUMMARY_VOCAB_SIZE, 64
+.equ GGUF_SUMMARY_FIRST_TENSOR_NAME, 72
+.equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
+.equ GGUF_SUMMARY_FIRST_TENSOR_N_DIMS, 168
+.equ GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE, 176
+.equ GGUF_SUMMARY_FIRST_TENSOR_OFFSET, 184
+.equ GGUF_SUMMARY_SIZE, 192
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -62,7 +68,10 @@ tokenizer_tokens_key_end:
 # caller-owned summary buffer with room for tensor_count at offset 0,
 # metadata_kv_count at offset 8, a 32-byte NUL-terminated architecture string
 # at offset 16, context_length as a u64 at offset 48, and block_count as a u64
-# at offset 56, and vocab_size as a u64 at offset 64.
+# at offset 56, vocab_size as a u64 at offset 64, a 96-byte NUL-terminated
+# first tensor name at offset 72, and the first tensor's dimension count,
+# ggml_type, and relative payload offset as u64 values at offsets 168, 176, and
+# 184.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -70,7 +79,8 @@ tokenizer_tokens_key_end:
 # and releases any descriptor/mapping before returning. The caller never owns the
 # descriptor or mapping. The summary buffer remains caller-owned; this function
 # writes header counts, bounded metadata copies, selected scalar metadata, and
-# selected array lengths into it.
+# selected array lengths into it, plus a bounded first tensor descriptor
+# snapshot.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -148,15 +158,17 @@ gguf_validate_file:
 	# escapes through this summary.
 	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT], rax
 	mov qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT], rdx
-	# Clear optional metadata fields before capture so callers never see stale
-	# bytes or scalar values when a key is absent or has the wrong value type.
-	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 8], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 16], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 24], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_BLOCK_COUNT], 0
-	mov qword ptr [r15 + GGUF_SUMMARY_VOCAB_SIZE], 0
+	# Clear optional summary fields before capture so callers never see stale
+	# bytes or scalar values when metadata keys are absent, wrong-typed, or when
+	# the tensor directory is empty.
+	lea rdi, [r15 + GGUF_SUMMARY_ARCHITECTURE]
+	mov ecx, (GGUF_SUMMARY_SIZE - GGUF_SUMMARY_ARCHITECTURE) / 8
+	xor eax, eax
+.Lclear_optional_summary:
+	mov qword ptr [rdi], rax
+	add rdi, 8
+	dec ecx
+	jnz .Lclear_optional_summary
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -172,12 +184,12 @@ gguf_validate_file:
 	jnz .Lmetadata_failed
 
 	# Tensor infos are also variable-width because names and dimension counts
-	# vary per tensor. This pass only validates descriptor layout and the default
-	# 32-byte tensor-data alignment used by the target model family; it does not
-	# retain names, shapes, types, or offsets yet.
+	# vary per tensor. Retain the first descriptor in caller-owned storage, then
+	# keep walking the rest with the same bounds and alignment checks.
 	mov rdi, r13
 	mov rsi, r12
 	mov rcx, qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT]
+	mov r8, r15
 	call gguf_walk_tensor_infos
 	test rax, rax
 	jnz .Ltensor_failed
@@ -609,17 +621,18 @@ gguf_capture_string_to_fixed:
 
 .type gguf_walk_tensor_infos, @function
 
-# Contract: advance over the GGUF tensor-info directory without retaining
-# descriptor fields.
+# Contract: advance over the GGUF tensor-info directory and retain a bounded
+# snapshot of only the first descriptor.
 # Inputs: rdi = mapping base, rsi = mapped file length, rdx = tensor-info start
-# offset, rcx = tensor count from the GGUF header.
+# offset, rcx = tensor count from the GGUF header, r8 = summary buffer.
 # Outputs: rax = GGUF_OK on success or a GGUF_ERR_TENSOR_* code; rdx = aligned
 # tensor-data start offset on success when tensors exist, or the unchanged cursor
 # when tensor_count is zero.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15).
-# Ownership/lifetime: reads only from the caller-owned mapping and stores no
-# pointers into it.
+# Ownership/lifetime: reads only from the caller-owned mapping. The first tensor
+# name is copied into fixed-size caller-owned summary storage; no mapped-file
+# pointer is retained.
 # Error behavior: returns malformed-tensor status before any out-of-bounds read.
 # Tensor payload offsets with the high bit set or not divisible by the current
 # default alignment are rejected in this narrow parser.
@@ -634,11 +647,84 @@ gguf_walk_tensor_infos:
 	mov r14, rsi
 	mov r12, rdx
 	mov rbx, rcx
+	mov r15, r8
 
 	# A no-tensor synthetic fixture has no tensor-data section to align. It is
 	# still useful for header/metadata smoke tests, so leave the cursor unchanged.
 	test rbx, rbx
 	jz .Ltensor_empty_success
+
+.Ltensor_first:
+	# Retain only the first descriptor. Later descriptors are still walked below
+	# so malformed names, shapes, type tags, or offsets cannot hide behind the
+	# first successful capture.
+	mov rdi, r13
+	mov rsi, r14
+	mov rdx, r12
+	lea r8, [r15 + GGUF_SUMMARY_FIRST_TENSOR_NAME]
+	mov r9, GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
+	call gguf_capture_string_to_fixed
+	test rax, rax
+	jnz .Ltensor_bad
+	mov r12, rdx
+
+	# n_dimensions is recorded as a u64 in the summary, but its in-file encoding
+	# is a u32 followed by that many u64 dimension sizes.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Ltensor_bad
+	mov eax, dword ptr [r13 + r12]
+	add r12, 4
+	test eax, eax
+	jz .Ltensor_bad
+	cmp eax, GGUF_MAX_DIMS
+	ja .Ltensor_bad
+	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_N_DIMS], rax
+
+	# Dimension values are not retained in this step; the next tensor-directory
+	# slice will copy the validated first-tensor shape.
+	mov r8, rax
+	shl r8, 3
+	mov rsi, r14
+	mov rdx, r12
+	call gguf_skip_fixed_bytes
+	test rax, rax
+	jnz .Ltensor_bad
+	mov r12, rdx
+
+	# ggml_type is a u32 enum in GGUF. Keep the raw value for the first tensor so
+	# later type validation can be audited against the original directory entry.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Ltensor_bad
+	mov eax, dword ptr [r13 + r12]
+	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE], rax
+	add r12, 4
+
+	# Tensor offsets are relative to the aligned tensor-data section, not the
+	# start of the file. Retain the raw relative offset for the first descriptor.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Ltensor_bad
+	mov rax, qword ptr [r13 + r12]
+	test rax, rax
+	js .Ltensor_bad
+	test al, GGUF_DEFAULT_ALIGNMENT - 1
+	jnz .Ltensor_bad_alignment
+	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_OFFSET], rax
+	add r12, 8
+
+	dec rbx
+	jz .Ltensor_align_data_start
 
 .Ltensor_loop:
 	# Tensor names use the same GGUF string encoding as metadata keys: u64 byte
@@ -659,14 +745,14 @@ gguf_walk_tensor_infos:
 	sub rax, r12
 	cmp rax, 4
 	jb .Ltensor_bad
-	mov r15d, dword ptr [r13 + r12]
+	mov eax, dword ptr [r13 + r12]
 	add r12, 4
-	test r15d, r15d
+	test eax, eax
 	jz .Ltensor_bad
-	cmp r15d, GGUF_MAX_DIMS
+	cmp eax, GGUF_MAX_DIMS
 	ja .Ltensor_bad
 
-	mov r8, r15
+	mov r8, rax
 	shl r8, 3
 	mov rsi, r14
 	mov rdx, r12
@@ -675,8 +761,8 @@ gguf_walk_tensor_infos:
 	jnz .Ltensor_bad
 	mov r12, rdx
 
-	# The u32 ggml_type tag is consumed but not interpreted in this milestone.
-	# Later tensor-directory work will record and validate supported tensor types.
+	# Remaining tensor type tags are consumed but not retained in this step; they
+	# are still bounds-checked so the descriptor cursor remains trustworthy.
 	cmp r12, r14
 	ja .Ltensor_bad
 	mov rax, r14
@@ -703,6 +789,7 @@ gguf_walk_tensor_infos:
 	dec rbx
 	jnz .Ltensor_loop
 
+.Ltensor_align_data_start:
 	# Tensor payload bytes start after padding the descriptor cursor to the GGUF
 	# default alignment. This validates the data-section start without reading or
 	# sizing tensor payloads yet.

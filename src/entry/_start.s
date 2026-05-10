@@ -2,6 +2,7 @@
 
 .equ DECIMAL_SCRATCH_SIZE, 32
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
+.equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
 
 .section .rodata
 
@@ -16,7 +17,7 @@ help_text:
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF metadata summary.\n"
+	.ascii "Current milestone: GGUF tensor directory summary.\n"
 help_text_end:
 
 usage_error_text:
@@ -50,6 +51,22 @@ block_count_text_end:
 vocab_size_text:
 	.ascii "vocab_size: "
 vocab_size_text_end:
+
+first_tensor_name_text:
+	.ascii "first_tensor_name: "
+first_tensor_name_text_end:
+
+first_tensor_n_dimensions_text:
+	.ascii "first_tensor_n_dimensions: "
+first_tensor_n_dimensions_text_end:
+
+first_tensor_ggml_type_text:
+	.ascii "first_tensor_ggml_type: "
+first_tensor_ggml_type_text_end:
+
+first_tensor_offset_text:
+	.ascii "first_tensor_offset: "
+first_tensor_offset_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -123,6 +140,14 @@ gguf_summary_block_count:
 	.skip 8
 gguf_summary_vocab_size:
 	.skip 8
+gguf_summary_first_tensor_name:
+	.skip GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
+gguf_summary_first_tensor_n_dimensions:
+	.skip 8
+gguf_summary_first_tensor_ggml_type:
+	.skip 8
+gguf_summary_first_tensor_offset:
+	.skip 8
 
 .section .text
 
@@ -141,7 +166,8 @@ gguf_summary_vocab_size:
 # model mapping is owned and released inside gguf_validate_file. The GGUF
 # summary buffer is process-owned static storage passed to the loader for scalar
 # header counts, a bounded copy of selected metadata strings, and selected
-# scalar and array-length metadata values.
+# scalar and array-length metadata values, plus a bounded snapshot of the first
+# tensor descriptor.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -277,9 +303,8 @@ _start:
 
 .Lgguf_ok:
 	# This milestone validates the fixed GGUF header, metadata shapes, and
-	# tensor-info directory bounds, then exposes header counts and selected
-	# metadata retained in caller-owned storage. Later parser milestones will add
-	# model-shape fields and tensor descriptors.
+	# tensor-info directory bounds, then exposes header counts, selected metadata,
+	# and the first tensor descriptor retained in caller-owned storage.
 	mov rdi, 1
 	lea rsi, [rip + gguf_ok_text]
 	mov rdx, gguf_ok_text_end - gguf_ok_text
@@ -363,6 +388,63 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_vocab_size]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_name_text]
+	mov rdx, first_tensor_name_text_end - first_tensor_name_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + gguf_summary_first_tensor_name]
+	mov rdx, GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
+	call write_bounded_c_string
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_n_dimensions_text]
+	mov rdx, first_tensor_n_dimensions_text_end - first_tensor_n_dimensions_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_ggml_type_text]
+	mov rdx, first_tensor_ggml_type_text_end - first_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_offset_text]
+	mov rdx, first_tensor_offset_text_end - first_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_offset]
 	call write_u64_decimal
 
 	mov rdi, 1

@@ -203,3 +203,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   skip, token metadata before a tensor descriptor, malformed token arrays, bad
   high-bit counts, truncated metadata, the still-rejected future prompt form,
   and static-link checks. The target GGUF model file was not present locally.
+
+## 2026-05-10T13:30:43Z
+
+- Tensor-info walking now snapshots only the first descriptor into caller-owned
+  storage: bounded name, dimension count, ggml type, and relative payload
+  offset. Remaining descriptors are still walked so later malformed entries
+  cannot be hidden by a valid first descriptor.
+- Decision: long first tensor names are truncated to a 95-byte payload plus NUL
+  terminator, matching the fixed 96-byte summary slot instead of rejecting an
+  otherwise valid descriptor.
+- Verification evidence: synthetic fixtures covered empty tensor directories,
+  a full two-tensor metadata summary, wrong-typed token metadata with first
+  tensor capture, long-name truncation, a misaligned second tensor offset,
+  truncated tensor descriptors, bad high-bit counts, malformed token arrays,
+  future prompt-form rejection, and static-link checks. The target model file
+  was not present locally.
