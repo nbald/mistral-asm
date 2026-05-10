@@ -47,6 +47,10 @@ block_count_text:
 	.ascii "block_count: "
 block_count_text_end:
 
+vocab_size_text:
+	.ascii "vocab_size: "
+vocab_size_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -117,6 +121,8 @@ gguf_summary_context_length:
 	.skip 8
 gguf_summary_block_count:
 	.skip 8
+gguf_summary_vocab_size:
+	.skip 8
 
 .section .text
 
@@ -135,7 +141,7 @@ gguf_summary_block_count:
 # model mapping is owned and released inside gguf_validate_file. The GGUF
 # summary buffer is process-owned static storage passed to the loader for scalar
 # header counts, a bounded copy of selected metadata strings, and selected
-# scalar metadata values.
+# scalar and array-length metadata values.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -343,6 +349,20 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_block_count]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + vocab_size_text]
+	mov rdx, vocab_size_text_end - vocab_size_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_vocab_size]
 	call write_u64_decimal
 
 	mov rdi, 1

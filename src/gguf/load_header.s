@@ -17,6 +17,7 @@
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 .equ GGUF_SUMMARY_CONTEXT_LENGTH, 48
 .equ GGUF_SUMMARY_BLOCK_COUNT, 56
+.equ GGUF_SUMMARY_VOCAB_SIZE, 64
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -46,6 +47,10 @@ mistral3_block_count_key:
 	.ascii "mistral3.block_count"
 mistral3_block_count_key_end:
 
+tokenizer_tokens_key:
+	.ascii "tokenizer.ggml.tokens"
+tokenizer_tokens_key_end:
+
 .section .text
 
 .global gguf_validate_file
@@ -57,15 +62,15 @@ mistral3_block_count_key_end:
 # caller-owned summary buffer with room for tensor_count at offset 0,
 # metadata_kv_count at offset 8, a 32-byte NUL-terminated architecture string
 # at offset 16, context_length as a u64 at offset 48, and block_count as a u64
-# at offset 56.
+# at offset 56, and vocab_size as a u64 at offset 64.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
 # Ownership/lifetime: opens the model read-only, mmaps the whole file privately,
 # and releases any descriptor/mapping before returning. The caller never owns the
 # descriptor or mapping. The summary buffer remains caller-owned; this function
-# writes header counts, bounded metadata copies, and selected scalar metadata
-# values into it.
+# writes header counts, bounded metadata copies, selected scalar metadata, and
+# selected array lengths into it.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -151,6 +156,7 @@ gguf_validate_file:
 	mov qword ptr [r15 + GGUF_SUMMARY_ARCHITECTURE + 24], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_CONTEXT_LENGTH], 0
 	mov qword ptr [r15 + GGUF_SUMMARY_BLOCK_COUNT], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_VOCAB_SIZE], 0
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -267,8 +273,8 @@ gguf_validate_file:
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15).
 # Ownership/lifetime: reads only from the caller-owned mapping. Captured strings
-# are copied into fixed-size caller-owned summary fields; no mapped-file pointer
-# is retained.
+# are copied into fixed-size caller-owned summary fields; captured array
+# metadata keeps only the element count, so no mapped-file pointer is retained.
 # Error behavior: returns malformed-metadata status before any out-of-bounds
 # read; unsupported value tags return GGUF_ERR_METADATA_TYPE.
 gguf_walk_metadata:
@@ -308,7 +314,8 @@ gguf_walk_metadata:
 	jb .Lmetadata_bad
 	mov r10, r8
 	# r9d is a small key-kind enum for values retained in the summary:
-	# 0 = not retained, 1 = architecture, 2 = context_length, 3 = block_count.
+	# 0 = not retained, 1 = architecture, 2 = context_length, 3 = block_count,
+	# 4 = vocab_size from tokenizer.ggml.tokens.
 	xor r9d, r9d
 	lea rdi, [r13 + r12]
 	mov rsi, r8
@@ -338,8 +345,19 @@ gguf_walk_metadata:
 	mov rcx, mistral3_block_count_key_end - mistral3_block_count_key
 	call gguf_bytes_eq_literal
 	test eax, eax
-	jz .Lmetadata_key_compared
+	jz .Lmetadata_check_tokens_key
 	mov r9d, 3
+	jmp .Lmetadata_key_compared
+
+.Lmetadata_check_tokens_key:
+	lea rdi, [r13 + r12]
+	mov rsi, r10
+	lea rdx, [rip + tokenizer_tokens_key]
+	mov rcx, tokenizer_tokens_key_end - tokenizer_tokens_key
+	call gguf_bytes_eq_literal
+	test eax, eax
+	jz .Lmetadata_key_compared
+	mov r9d, 4
 
 .Lmetadata_key_compared:
 	add r12, r10
@@ -380,7 +398,7 @@ gguf_walk_metadata:
 
 .Lmetadata_check_block_count:
 	cmp r9d, 3
-	jne .Lmetadata_skip_value
+	jne .Lmetadata_check_vocab_size
 	mov r8, GGUF_SUMMARY_BLOCK_COUNT
 
 .Lmetadata_capture_unsigned_scalar:
@@ -416,6 +434,36 @@ gguf_walk_metadata:
 	mov rax, qword ptr [r13 + r12]
 	mov qword ptr [r15 + r8], rax
 	add r12, 8
+	jmp .Lmetadata_next
+
+.Lmetadata_check_vocab_size:
+	cmp r9d, 4
+	jne .Lmetadata_skip_value
+	cmp ecx, 9
+	jne .Lmetadata_skip_value
+
+	# tokenizer.ggml.tokens is the vocabulary string array in the target GGUF.
+	# Other array element types are structurally skipped but do not define the
+	# tokenizer vocabulary size.
+	cmp r12, r14
+	ja .Lmetadata_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Lmetadata_bad
+	cmp dword ptr [r13 + r12], 8
+	jne .Lmetadata_skip_value
+
+	# Retain only the array element count; token string bytes are merely walked
+	# for bounds validation and remain owned by the mapped file.
+	mov rdi, r13
+	mov rsi, r14
+	mov rdx, r12
+	call gguf_skip_array
+	test rax, rax
+	jnz .Lmetadata_return
+	mov qword ptr [r15 + GGUF_SUMMARY_VOCAB_SIZE], r8
+	mov r12, rdx
 	jmp .Lmetadata_next
 
 .Lmetadata_skip_value:
@@ -858,7 +906,7 @@ gguf_skip_string:
 # Inputs: rdi = mapping base, rsi = mapped file length, rdx = array payload
 # offset, where the array element type and element count begin.
 # Outputs: rax = GGUF_OK on success or a metadata error; rdx = offset after the
-# array on success.
+# array on success; r8 = element count on success.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15).
 # Ownership/lifetime: reads only from the caller-owned mapping and keeps no
@@ -942,6 +990,7 @@ gguf_skip_array:
 
 .Larray_success:
 	mov rdx, r12
+	mov r8, r15
 	xor eax, eax
 	jmp .Larray_epilogue
 

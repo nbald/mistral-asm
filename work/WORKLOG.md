@@ -189,3 +189,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   u64, wrong-typed block count skip, one tensor descriptor after metadata, bad
   high-bit counts, truncated metadata, and the still-rejected future prompt
   generation form. The target GGUF model file was not present locally.
+
+## 2026-05-10T13:21:50Z
+
+- Metadata capture now recognizes `tokenizer.ggml.tokens` when the metadata
+  value is a string array, walks the array payload for bounds validation, and
+  keeps only the element count as `vocab_size`.
+- Decision: `vocab_size` is derived from the array header rather than token
+  string contents, so no tokenizer string pointer or copied token text survives
+  `munmap`.
+- Verification evidence: synthetic fixtures covered empty metadata, full
+  architecture/context/block/token summary output, wrong-typed token metadata
+  skip, token metadata before a tensor descriptor, malformed token arrays, bad
+  high-bit counts, truncated metadata, the still-rejected future prompt form,
+  and static-link checks. The target GGUF model file was not present locally.
