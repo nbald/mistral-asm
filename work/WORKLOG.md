@@ -404,3 +404,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   their expected statuses; the real target still printed
   `token0_embedding_dequant: 1`; `strace` showed the mmap release after the real
   target smoke.
+
+## 2026-05-10T14:57:42Z
+
+- The tensor directory walker now retains `blk.0.attn_norm.weight` in a second
+  descriptor slot while preserving the existing requested-name
+  `token_embd.weight` lookup and whole-directory validation.
+- Decision: this step only records and prints the RMSNorm weight descriptor.
+  `_start` still does not call `rmsnorm_f32`; the next step can add payload
+  bounds checks and the first guarded norm smoke as a separate reviewable change.
+- Verification evidence: the real target reports the RMSNorm weight as a
+  one-dimensional f32 tensor with width 3072 and relative offset 431173632; the
+  token-0 embedding dequant smoke still reports success, and `strace` still
+  shows the mmap released after summary output.

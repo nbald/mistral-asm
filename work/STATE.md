@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a retained descriptor for `blk.0.attn_norm.weight` so the runtime can find
-the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.
+Use the retained `blk.0.attn_norm.weight` descriptor to add a guarded RMSNorm
+payload smoke for token ID 0. Validate the f32 one-dimensional weight shape and
+mapping bounds before calling `rmsnorm_f32`, and print a status line.
 
 ## Completed Work
 
@@ -18,7 +19,8 @@ the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.
   tensor-data base, and returns a live read-only mapping descriptor to `_start`.
 - The summary captures tensor count, metadata count, architecture, context
   length, block/layer count, tokenizer vocabulary size, first tensor descriptor,
-  and a retained descriptor for `token_embd.weight`.
+  a retained descriptor for `token_embd.weight`, and a retained descriptor for
+  `blk.0.attn_norm.weight`.
 - The tensor directory walker still validates all descriptors after the retained
   lookup and rejects malformed later descriptors, misaligned payload offsets,
   and payload starts beyond EOF.
@@ -32,6 +34,8 @@ the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.
   guarded token ID 0 `token_embd.weight` dequant smoke into static f32 activation
   storage, prints `token0_embedding_dequant: 1` when the smoke runs, then calls
   `gguf_release_mapping`.
+- `_start` prints the retained `blk.0.attn_norm.weight` descriptor when found;
+  the real target resolves it as a one-dimensional f32 vector of width 3072.
 - The token-0 smoke requires a retained two-dimensional Q8_0 descriptor, a
   nonzero 32-multiple embedding width no larger than the static 3072-f32 buffer,
   a nonzero row count, non-overflowing tensor-data-base plus relative offset,
@@ -67,30 +71,32 @@ None.
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed; the harnesses printed
+- `make clean`, `make`, and `make check` passed after adding the
+  `blk.0.attn_norm.weight` retained descriptor; the harnesses printed
   `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and describes the
-  token-embedding dequant smoke milestone.
+- `./mistral-asm --help` returned status 0 with the updated milestone text.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0 and printed
-  `token0_embedding_dequant: 0`.
+  `attn_norm_tensor_found: 0` plus `token0_embedding_dequant: 0`.
 - Synthetic fixtures `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with the expected
   tensor-directory diagnostics.
 - The real target model under `models/` returned status 0, retained
-  `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, and printed
-  `token0_embedding_dequant: 1`.
+  `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, retained
+  `blk.0.attn_norm.weight` as f32 with dimension 3072 and relative payload
+  offset 431173632, and printed `token0_embedding_dequant: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, the summary plus successful dequant smoke, then
-  `munmap(..., 3651679520) = 0`.
+  `close(3) = 0`, the summary plus retained RMSNorm descriptor and successful
+  dequant smoke, then `munmap(..., 3651679520) = 0`.
 - `readelf -d` reported no dynamic section; `readelf -l` reported no interpreter
   or dynamic program headers.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a retained descriptor for `blk.0.attn_norm.weight` so the runtime can find
-the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.
+Use the retained `blk.0.attn_norm.weight` descriptor to add a guarded RMSNorm
+payload smoke for token ID 0. Validate the f32 one-dimensional weight shape and
+mapping bounds before calling `rmsnorm_f32`, and print a status line.
