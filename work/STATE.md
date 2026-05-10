@@ -2,13 +2,11 @@
 
 ## Current Milestone
 
-Milestone 3: GGUF loader.
+Milestone 4: Review pass.
 
 ## Current Exact Task
 
-Add a bounds-checked GGUF tensor-info directory walker that advances over tensor
-descriptors and validates tensor-data alignment, without dumping tensor names
-yet.
+Review the GGUF loader and working docs before expanding parser scope.
 
 ## Known Blockers
 
@@ -24,37 +22,42 @@ None.
 - `work/AUTONOMOUS.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
+- `work/reviews/`
 
 ## Required Verification
 
-- `make`
-- `./mistral-asm --help`
-- `readelf` proves no dynamic dependencies/libc
-- `strace` shows direct expected syscalls for `--help`
-- loader smoke tests against tiny synthetic GGUF fixtures outside git
+- Code-review pass over the GGUF loader, diagnostics, comments, and working
+  docs.
+- Commit review notes under `work/reviews/` if there are findings or a useful
+  explicit clean result.
+- If findings exist, set the next exact step to fix the highest-impact issue.
 - `git diff --check`
 
 ## Last Verification
 
 - `make clean` then `make` passed.
-- `./mistral-asm --help` printed usage with the GGUF metadata validation
+- `./mistral-asm --help` printed usage with the GGUF tensor directory validation
   milestone text.
 - `readelf -d mistral-asm` reported no dynamic section.
 - `readelf -l mistral-asm` showed no program interpreter.
 - `strace -e trace=write,exit,exit_group ./mistral-asm --help` showed direct
-  `write(1, ..., 167)` and `exit(0)`.
-- A zero-metadata `/tmp` GGUF v3 fixture returned `GGUF metadata ok`.
+  `write(1, ..., 175)` and `exit(0)`.
+- A zero-metadata, zero-tensor `/tmp` GGUF v3 fixture returned
+  `GGUF tensor directory ok`.
 - A mixed metadata `/tmp` fixture with a string scalar, fixed scalar, and string
-  array returned `GGUF metadata ok`.
-- Truncated metadata failed with `mistral-asm: malformed GGUF metadata` and exit
-  status 3.
-- An unknown metadata type failed with
+  array returned `GGUF tensor directory ok`.
+- A one-tensor `/tmp` fixture with a bounded descriptor and aligned offset
+  returned `GGUF tensor directory ok`.
+- A truncated tensor directory failed with
+  `mistral-asm: malformed GGUF tensor directory` and exit status 3.
+- A tensor descriptor with offset 1 failed with
+  `mistral-asm: misaligned GGUF tensor data` and exit status 3.
+- A tensor descriptor with five dimensions failed with
+  `mistral-asm: malformed GGUF tensor directory` and exit status 3.
+- An unknown metadata type still failed with
   `mistral-asm: unsupported GGUF metadata type` and exit status 3.
-- Loader syscall trace on the mixed metadata fixture showed direct `openat`,
-  `fstat`, `mmap`, `munmap`, `close`, `write`, and `exit`.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add the tensor-info directory walker described above, keeping all descriptor
-reads bounded by the mapped file length.
+Run the Milestone 4 review pass over the GGUF loader and working docs.

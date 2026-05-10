@@ -9,6 +9,8 @@
 .equ STAT_BUFFER_SIZE, 160
 .equ GGUF_MAGIC_LE, 0x46554747
 .equ GGUF_VERSION_SUPPORTED, 3
+.equ GGUF_DEFAULT_ALIGNMENT, 32
+.equ GGUF_MAX_DIMS, 4
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -21,14 +23,16 @@
 .equ GGUF_ERR_BAD_COUNT, 8
 .equ GGUF_ERR_METADATA_BOUNDS, 9
 .equ GGUF_ERR_METADATA_TYPE, 10
+.equ GGUF_ERR_TENSOR_BOUNDS, 11
+.equ GGUF_ERR_TENSOR_ALIGNMENT, 12
 
 .section .text
 
 .global gguf_validate_file
 .type gguf_validate_file, @function
 
-# Contract: validate the fixed GGUF header and metadata record bounds for the
-# narrow first loader.
+# Contract: validate the fixed GGUF header, metadata record bounds, and tensor
+# descriptor directory shape for the narrow first loader.
 # Inputs: rdi = pointer to a NUL-terminated model path.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
@@ -37,8 +41,8 @@
 # and releases any descriptor/mapping before returning. The caller never owns the
 # descriptor or mapping.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
-# malformed magic/version/count fields and unsupported metadata shapes are
-# reported separately.
+# malformed magic/version/count fields, unsupported metadata shapes, malformed
+# tensor descriptors, and tensor-data alignment failures are reported separately.
 gguf_validate_file:
 	push rbp
 	mov rbp, rsp
@@ -107,11 +111,10 @@ gguf_validate_file:
 	test rax, rax
 	js .Lbad_count
 
-	# Metadata records are variable-width. Walk them now with offset arithmetic
+	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
 	# explicit bounds check. GGUF tensor infos start immediately at the cursor
-	# after metadata; tensor-data alignment is a later parser concern after the
-	# tensor-info directory has been walked.
+	# after metadata.
 	mov rdi, r13
 	mov rsi, r12
 	mov rdx, GGUF_HEADER_SIZE
@@ -119,6 +122,17 @@ gguf_validate_file:
 	call gguf_walk_metadata
 	test rax, rax
 	jnz .Lmetadata_failed
+
+	# Tensor infos are also variable-width because names and dimension counts
+	# vary per tensor. This pass only validates descriptor layout and the default
+	# 32-byte tensor-data alignment used by the target model family; it does not
+	# retain names, shapes, types, or offsets yet.
+	mov rdi, r13
+	mov rsi, r12
+	mov rcx, qword ptr [r13 + 8]
+	call gguf_walk_tensor_infos
+	test rax, rax
+	jnz .Ltensor_failed
 
 	# The success path also unmaps before closing; no mapped pointer escapes.
 	mov rdi, r13
@@ -143,6 +157,10 @@ gguf_validate_file:
 	jmp .Lunmap_with_code
 
 .Lmetadata_failed:
+	mov r14d, eax
+	jmp .Lunmap_with_code
+
+.Ltensor_failed:
 	mov r14d, eax
 	jmp .Lunmap_with_code
 
@@ -276,6 +294,139 @@ gguf_walk_metadata:
 	ret
 
 .size gguf_walk_metadata, . - gguf_walk_metadata
+
+.type gguf_walk_tensor_infos, @function
+
+# Contract: advance over the GGUF tensor-info directory without retaining
+# descriptor fields.
+# Inputs: rdi = mapping base, rsi = mapped file length, rdx = tensor-info start
+# offset, rcx = tensor count from the GGUF header.
+# Outputs: rax = GGUF_OK on success or a GGUF_ERR_TENSOR_* code; rdx = aligned
+# tensor-data start offset on success when tensors exist, or the unchanged cursor
+# when tensor_count is zero.
+# Clobbers: caller-saved registers and flags. Preserves callee-saved registers
+# it uses (rbx, r12, r13, r14, r15).
+# Ownership/lifetime: reads only from the caller-owned mapping and stores no
+# pointers into it.
+# Error behavior: returns malformed-tensor status before any out-of-bounds read.
+# Tensor payload offsets with the high bit set or not divisible by the current
+# default alignment are rejected in this narrow parser.
+gguf_walk_tensor_infos:
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
+
+	mov r13, rdi
+	mov r14, rsi
+	mov r12, rdx
+	mov rbx, rcx
+
+	# A no-tensor synthetic fixture has no tensor-data section to align. It is
+	# still useful for header/metadata smoke tests, so leave the cursor unchanged.
+	test rbx, rbx
+	jz .Ltensor_empty_success
+
+.Ltensor_loop:
+	# Tensor names use the same GGUF string encoding as metadata keys: u64 byte
+	# length followed by raw bytes, with no padding before the dimension count.
+	mov rdi, r13
+	mov rsi, r14
+	mov rdx, r12
+	call gguf_skip_string
+	test rax, rax
+	jnz .Ltensor_bad
+	mov r12, rdx
+
+	# n_dimensions is a u32 followed by that many u64 dimension sizes. GGUF
+	# tensors are capped by GGML_MAX_DIMS, four dimensions in this target format.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Ltensor_bad
+	mov r15d, dword ptr [r13 + r12]
+	add r12, 4
+	test r15d, r15d
+	jz .Ltensor_bad
+	cmp r15d, GGUF_MAX_DIMS
+	ja .Ltensor_bad
+
+	mov r8, r15
+	shl r8, 3
+	mov rsi, r14
+	mov rdx, r12
+	call gguf_skip_fixed_bytes
+	test rax, rax
+	jnz .Ltensor_bad
+	mov r12, rdx
+
+	# The u32 ggml_type tag is consumed but not interpreted in this milestone.
+	# Later tensor-directory work will record and validate supported tensor types.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Ltensor_bad
+	add r12, 4
+
+	# Tensor offsets are relative to the aligned tensor-data section. Rejecting
+	# misaligned offsets now catches malformed directories before any data load.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Ltensor_bad
+	mov rax, qword ptr [r13 + r12]
+	test rax, rax
+	js .Ltensor_bad
+	test al, GGUF_DEFAULT_ALIGNMENT - 1
+	jnz .Ltensor_bad_alignment
+	add r12, 8
+
+	dec rbx
+	jnz .Ltensor_loop
+
+	# Tensor payload bytes start after padding the descriptor cursor to the GGUF
+	# default alignment. This validates the data-section start without reading or
+	# sizing tensor payloads yet.
+	mov rax, r12
+	add rax, GGUF_DEFAULT_ALIGNMENT - 1
+	jc .Ltensor_bad
+	and rax, -GGUF_DEFAULT_ALIGNMENT
+	cmp rax, r14
+	ja .Ltensor_bad
+	mov rdx, rax
+	xor eax, eax
+	jmp .Ltensor_epilogue
+
+.Ltensor_empty_success:
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rdx, r12
+	xor eax, eax
+	jmp .Ltensor_epilogue
+
+.Ltensor_bad_alignment:
+	mov eax, GGUF_ERR_TENSOR_ALIGNMENT
+	jmp .Ltensor_epilogue
+
+.Ltensor_bad:
+	mov eax, GGUF_ERR_TENSOR_BOUNDS
+
+.Ltensor_epilogue:
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+	ret
+
+.size gguf_walk_tensor_infos, . - gguf_walk_tensor_infos
 
 .type gguf_skip_value_by_type, @function
 

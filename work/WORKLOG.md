@@ -114,3 +114,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   scalar/string-array metadata, truncated metadata, and unsupported metadata
   type tags. The target GGUF model file was not present locally, so no real-model
   smoke test ran in this iteration.
+
+## 2026-05-10T12:46:14Z
+
+- Tensor-info walking now consumes descriptor names, dimension counts, dimension
+  arrays, type tags, and payload offsets with mapped-file bounds checks before
+  any descriptor read.
+- Decision: this step validates the GGUF default 32-byte tensor-data alignment;
+  parsing a custom `general.alignment` metadata value is deferred until metadata
+  capture exists.
+- Operator inbox result: no GGUF model download or project `.venv` was needed
+  for this parser slice; verification used small `/tmp` fixtures.
