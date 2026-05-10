@@ -1322,3 +1322,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   exist yet, cleanup tracing still showed `close(3)` before final `munmap`, and
   the build, harness, oracle py-compile, runtime purity, static-link,
   tracked-artifact, help, and whitespace checks passed.
+
+## 2026-05-10T21:27:44Z
+
+- Published the first four raw f32 words of the token-0 layer-1 attention
+  output projection behind the existing `token0_layer1_attn_output_matvec`
+  status gate. This only exposes the private buffer that the previous smoke step
+  already wrote; independent oracle comparison remains the next audit step.
+- Verification evidence: the real local target printed output-projection words
+  `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`, while established
+  layer-1 norm/query/key/value/context slices stayed unchanged. The empty valid
+  synthetic GGUF kept the output gate at 0 and emitted no layer-1 output labels;
+  build, no-libc harnesses, cleanup tracing, oracle py-compile, runtime purity,
+  static-link, tracked-artifact, help, and whitespace checks passed.

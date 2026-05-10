@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first four raw f32 words of the layer-1 attention output-projection
-smoke behind its status gate.
+Add independent oracle coverage for the first four raw f32 words of the
+layer-1 attention output-projection smoke.
 
 ## Completed Work
 
@@ -68,8 +68,9 @@ smoke behind its status gate.
   `token0_layer1_attn_context` buffer and reusable
   `blk.1.attn_output.weight` descriptor. It requires exact Q8_0 `4096x3072`
   shape, bounds the complete mapped matrix payload, writes a private
-  `3072`-f32 output buffer, and currently publishes status only. The real target
-  reports status 1.
+  `3072`-f32 output buffer, and publishes the first four raw f32 words only when
+  status is 1. The real target reports `0x3deaa744`, `0x3cb6f294`,
+  `0xbf14cf4f`, and `0xbced5550`.
 
 ## Known Blockers
 
@@ -105,12 +106,13 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `token0_layer1_attn_output_matvec: 1`. Existing layer-1 norm/query/key/value
-  and context status plus public exact-hex slices stayed unchanged.
+  `token0_layer1_attn_output_matvec: 1` and output words `0x3deaa744`,
+  `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`. Existing layer-1
+  norm/query/key/value and context status plus public exact-hex slices stayed
+  unchanged.
 - A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields
-  and kept `token0_layer1_attn_output_matvec: 0`.
-- Static inspection found no `token0_layer1_attn_output*_f32_hex` labels,
-  confirming this status-only step does not publish output-projection words yet.
+  and kept `token0_layer1_attn_output_matvec: 0` without emitting any
+  `token0_layer1_attn_output*_f32_hex` labels.
 - `strace -qq -e trace=close,munmap` on the real target showed `close(3)` before
   the final `munmap`.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
@@ -119,6 +121,7 @@ None.
 
 ## Next Exact Step
 
-Add status-gated printing for the first four raw f32 words of
-`token0_layer1_attn_output`, keep empty-fixture output silent, and run the
-standard verification set.
+Add an external oracle script/note for `token0_layer1_attn_output` that
+independently recomputes the first four output-projection words from the
+layer-1 context and `blk.1.attn_output.weight`, then compare it with the runtime
+labels.
