@@ -46,10 +46,10 @@ if [[ -f work/runs/current.pid ]]; then
 else
   echo "current pid: none"
 fi
-if [[ -f work/control/INSTRUCTIONS.md ]]; then
+if [[ -f work/control/INBOX.md ]]; then
   echo
-  echo "== recent operator instructions"
-  tail -60 work/control/INSTRUCTIONS.md
+  echo "== pending operator inbox"
+  tail -60 work/control/INBOX.md
 fi
 echo
 

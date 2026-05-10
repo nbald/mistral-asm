@@ -41,8 +41,8 @@
 - `work/WORKLOG.md` is durable context, not a second git log. It is normally
   append-only, but explicit review commits may compact redundant entries.
 - Agents must not read the whole worklog once it grows; read only its tail.
-- `work/control/INSTRUCTIONS.md` is the operator channel for new instructions
-  between autonomous iterations.
+- `work/control/README.md` documents operator control. Live instructions go to
+  ignored `work/control/INBOX.md`.
 - `work/oracle/` stores small oracle notes, hashes, commands, and excerpts.
 - Large model files, binaries, traces, dumps, logs, and perf output are ignored.
 - Do not duplicate commit hashes, commit messages, changed-file lists, or routine
@@ -53,13 +53,17 @@
 
 - Use `scripts/control.sh instruction "..."` to inject instructions for the
   next iteration without interrupting the current run.
+- Use `scripts/control.sh interrupt-instruction "..."` to inject instructions
+  and interrupt the current Codex process group.
+- Use `scripts/control.sh clear-instructions` after handled transient inbox
+  entries have been recorded durably.
 - Use `scripts/control.sh pause` to prevent the next iteration from starting,
   then `scripts/control.sh resume` to continue.
 - Use `scripts/control.sh interrupt` to send SIGINT to the current Codex process.
 - Use `scripts/control.sh stop` to request loop stop and interrupt the current
   Codex process.
-- `work/runs/current.pid`, `work/control/PAUSE`, and `work/control/STOP` are
-  transient control files and are not committed.
+- `work/runs/current.pid`, `work/control/PAUSE`, `work/control/STOP`, and
+  `work/control/INBOX.md` are transient control files and are not committed.
 
 ## Review Policy
 

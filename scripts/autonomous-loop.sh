@@ -33,6 +33,25 @@ common_flags=(
   "-c" "model_reasoning_effort=\"$reasoning_effort\""
 )
 
+start_codex() {
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$@" &
+  else
+    "$@" &
+  fi
+
+  codex_pid="$!"
+  printf '%s\n' "$codex_pid" > "$pid_file"
+
+  set +e
+  wait "$codex_pid"
+  codex_status="$?"
+  set -e
+
+  rm -f "$pid_file"
+  return "$codex_status"
+}
+
 for ((i = 1; i <= iterations; i++)); do
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   output_file="$out_dir/last-message-$stamp.txt"
@@ -55,41 +74,21 @@ for ((i = 1; i <= iterations; i++)); do
 
   case "$mode" in
     new)
-      codex exec \
+      start_codex codex exec \
         --cd "$repo_root" \
         "${common_flags[@]}" \
         -o "$output_file" \
-        - < "$prompt_file" &
-      codex_pid="$!"
-      printf '%s\n' "$codex_pid" > "$pid_file"
-      set +e
-      wait "$codex_pid"
-      codex_status="$?"
-      set -e
-      rm -f "$pid_file"
-      if [[ "$codex_status" -ne 0 ]]; then
-        exit "$codex_status"
-      fi
+        - < "$prompt_file"
       ;;
     resume)
       (
         cd "$repo_root"
-        codex exec resume \
+        start_codex codex exec resume \
           --last \
           "${common_flags[@]}" \
           -o "$output_file" \
           - < "$prompt_file"
-      ) &
-      codex_pid="$!"
-      printf '%s\n' "$codex_pid" > "$pid_file"
-      set +e
-      wait "$codex_pid"
-      codex_status="$?"
-      set -e
-      rm -f "$pid_file"
-      if [[ "$codex_status" -ne 0 ]]; then
-        exit "$codex_status"
-      fi
+      )
       ;;
     *)
       echo "CODEX_LOOP_MODE must be 'new' or 'resume'" >&2

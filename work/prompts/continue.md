@@ -10,8 +10,9 @@ First inspect, in this order:
 3. `work/GOAL.md`
 4. `work/PLAN.md`
 5. `work/STATE.md`
-6. `work/control/INSTRUCTIONS.md` if it exists
-7. `tail -120 work/WORKLOG.md` if the file exists
+6. `work/control/README.md` if it exists
+7. `work/control/INBOX.md` if it exists
+8. `tail -120 work/WORKLOG.md` if the file exists
 
 Do not read the whole worklog unless `work/STATE.md` explicitly says it is
 needed. `work/STATE.md` is the compact continuation state; keep it current and
@@ -33,7 +34,7 @@ Project contract:
   into the runtime.
 - Do not rewrite git history.
 - Do not revert user changes unless explicitly instructed.
-- Honor `work/control/INSTRUCTIONS.md`; newer operator instructions override
+- Honor ignored `work/control/INBOX.md`; newer operator instructions override
   older conflicting instructions.
 
 Work loop:
@@ -50,8 +51,10 @@ Work loop:
    notes. Do not duplicate commit hashes, commit messages, changed-file lists, or
    the next exact step unless that detail is needed to understand a decision.
    Explicit review commits may compact redundant worklog entries.
-7. If an operator instruction was handled, record that fact in `work/STATE.md`
-   and `work/WORKLOG.md` without deleting the instruction.
+7. If operator inbox entries were handled, record the durable result in
+   `work/STATE.md` or `work/WORKLOG.md`, then clear the transient inbox with
+   `scripts/control.sh clear-instructions`. If an instruction is meant to be
+   persistent, encode it into a tracked work file before clearing the inbox.
 8. Commit the completed step with a short narrative commit message.
 
 Review loop:

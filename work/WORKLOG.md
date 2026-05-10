@@ -32,3 +32,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   and routine next steps; `STATE.md` held a stale commit pointer.
 - Decision: git is authoritative for commits and changed files; `STATE.md` is
   authoritative for next action; `WORKLOG.md` keeps only durable context.
+
+## 2026-05-10T11:49:02Z
+
+- Review follow-up: moved live operator instructions out of tracked files and
+  into ignored `work/control/INBOX.md`.
+- Decision: `work/control/README.md` is committed documentation; operator inbox
+  entries are transient and must be cleared after their durable effect is
+  recorded.
+- Verification evidence: shell syntax passed for all scripts; `INBOX.md` is
+  ignored; instruction append/clear leaves no tracked change; invalid watch
+  interval fails with usage.

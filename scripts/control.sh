@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 control_dir="$repo_root/work/control"
-instructions_file="$control_dir/INSTRUCTIONS.md"
+inbox_file="$control_dir/INBOX.md"
 pause_file="$control_dir/PAUSE"
 stop_file="$control_dir/STOP"
 pid_file="$repo_root/work/runs/current.pid"
@@ -14,6 +14,8 @@ usage() {
   cat >&2 <<'USAGE'
 usage:
   scripts/control.sh instruction TEXT...
+  scripts/control.sh interrupt-instruction TEXT...
+  scripts/control.sh clear-instructions
   scripts/control.sh pause
   scripts/control.sh resume
   scripts/control.sh stop
@@ -21,28 +23,72 @@ usage:
   scripts/control.sh interrupt
 
 Notes:
-  instruction  Appends operator instructions read by the next iteration.
-  pause        Stops the loop before starting another iteration.
-  resume       Removes PAUSE.
-  stop         Requests loop stop and interrupts the current Codex process.
-  interrupt    Sends SIGINT to the current Codex process only.
+  instruction             Appends operator instructions for the next iteration.
+  interrupt-instruction   Appends instructions and interrupts current Codex.
+  clear-instructions      Removes the transient operator inbox.
+  pause                   Stops the loop before starting another iteration.
+  resume                  Removes PAUSE.
+  stop                    Requests loop stop and interrupts current Codex.
+  clear-stop              Removes STOP without changing PAUSE.
+  interrupt               Sends SIGINT to the current Codex process group.
 USAGE
+}
+
+append_instruction() {
+  if [[ "$#" -eq 0 ]]; then
+    echo "missing instruction text" >&2
+    usage
+    exit 2
+  fi
+  {
+    printf '\n## %s\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '%s\n' "$*"
+  } >> "$inbox_file"
+  echo "appended instruction to $inbox_file"
+}
+
+interrupt_current() {
+  if [[ ! -f "$pid_file" ]]; then
+    echo "no current Codex pid file: $pid_file" >&2
+    return 1
+  fi
+
+  pid="$(cat "$pid_file")"
+  if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
+    echo "invalid Codex pid file: $pid_file" >&2
+    return 1
+  fi
+
+  if kill -0 "-$pid" 2>/dev/null; then
+    kill -INT "-$pid"
+    echo "sent SIGINT to process group $pid"
+    return 0
+  fi
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -INT "$pid"
+    echo "sent SIGINT to process $pid"
+    return 0
+  fi
+
+  echo "Codex process is not running: $pid" >&2
+  return 1
 }
 
 cmd="${1:-}"
 case "$cmd" in
   instruction)
     shift
-    if [[ "$#" -eq 0 ]]; then
-      echo "missing instruction text" >&2
-      usage
-      exit 2
-    fi
-    {
-      printf '\n## %s\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-      printf '%s\n' "$*"
-    } >> "$instructions_file"
-    echo "appended instruction to $instructions_file"
+    append_instruction "$@"
+    ;;
+  interrupt-instruction)
+    shift
+    append_instruction "$@"
+    interrupt_current || true
+    ;;
+  clear-instructions)
+    rm -f "$inbox_file"
+    echo "operator inbox cleared"
     ;;
   pause)
     printf 'pause requested at %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$pause_file"
@@ -55,34 +101,17 @@ case "$cmd" in
   stop)
     printf 'stop requested at %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$stop_file"
     echo "stop requested: $stop_file"
-    if [[ -f "$pid_file" ]]; then
-      pid="$(cat "$pid_file")"
-      if kill -0 "$pid" 2>/dev/null; then
-        kill -INT "$pid"
-        echo "sent SIGINT to $pid"
-      fi
-    fi
+    interrupt_current || true
     ;;
   clear-stop)
     rm -f "$stop_file"
     echo "stop cleared"
     ;;
   interrupt)
-    if [[ ! -f "$pid_file" ]]; then
-      echo "no current Codex pid file: $pid_file" >&2
-      exit 1
-    fi
-    pid="$(cat "$pid_file")"
-    if ! kill -0 "$pid" 2>/dev/null; then
-      echo "Codex process is not running: $pid" >&2
-      exit 1
-    fi
-    kill -INT "$pid"
-    echo "sent SIGINT to $pid"
+    interrupt_current
     ;;
   *)
     usage
     exit 2
     ;;
 esac
-
