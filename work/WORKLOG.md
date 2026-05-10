@@ -563,3 +563,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
   real-model smoke, cleanup tracing, query/key oracles, and whitespace checks
   passed.
+
+## 2026-05-10T16:01:52Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.attn_v.weight` descriptor alongside the existing attention query and
+  key descriptors. This is descriptor plumbing only; value-projection payload
+  bytes are still untouched.
+- Decision: keep the value descriptor in its own fixed 160-byte summary slot
+  after the key descriptor, shifting the RMSNorm epsilon summary fields after
+  the complete Q/K/V descriptor group.
+- Verification evidence: synthetic fixtures keep `attn_v_tensor_found: 0` and
+  skip all payload smokes; the real local target reports `blk.0.attn_v.weight`
+  as Q8_0 with dimensions 3072 by 1024 and relative offset 457924608. Existing
+  query/key smoke words stayed unchanged, and cleanup tracing still shows the
+  live read-only mmap released after summary and smoke output.
