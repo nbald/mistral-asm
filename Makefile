@@ -10,6 +10,7 @@ BUILD_DIR := build
 ASM_SOURCES := \
 	src/entry/_start.s \
 	src/gguf/load_header.s \
+	src/infer/token0_layer1_ffn.s \
 	src/math/q8_0_dot.s \
 	src/math/rmsnorm.s \
 	src/math/swiglu.s \

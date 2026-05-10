@@ -1506,3 +1506,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   existing layer-1 FFN norm status and four public words stayed unchanged.
   Build, no-libc harnesses, help, whitespace, runtime purity, static-link,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T00:56:00+02:00
+
+- Handled the live operator instruction to prioritize `_start.s` splitting by
+  putting the new layer-1 FFN gate matvec smoke, private status word, private
+  output buffer, and status printer in focused `src/infer` code. `_start.s`
+  now only exposes the already-owned handoff slots and calls the focused status
+  routine.
+- Verification evidence: the real target printed
+  `token0_layer1_ffn_gate_matvec: 1` while the existing layer-1 FFN norm status
+  and four public words stayed unchanged. A temporary empty valid GGUF printed
+  status `0`. Build, no-libc harnesses, help, oracle py-compile, whitespace,
+  runtime purity, static-link, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.

@@ -91,7 +91,8 @@ help_text:
 	.ascii "reusable descriptor lookup smoke, "
 	.ascii "and layer-1 attention RMSNorm/query/key/value/context/output "
 	.ascii "smoke plus layer-1 post-attention residual smoke and "
-	.ascii "FFN RMSNorm status and gate/up descriptor smoke.\n"
+	.ascii "FFN RMSNorm status, FFN gate matvec status, "
+	.ascii "and FFN up descriptor smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -1218,6 +1219,20 @@ gguf_unknown_error_text:
 	.ascii "mistral-asm: GGUF validation failed\n"
 gguf_unknown_error_text_end:
 
+# Focused inference modules consume these process-owned handoff slots while
+# _start still owns parser orchestration, mapping lifetime, and summary output.
+.global gguf_summary_tensor_data_offset
+.global gguf_mapping_base
+.global gguf_mapping_size
+.global layer1_ffn_gate_tensor_found
+.global layer1_ffn_gate_tensor_n_dimensions
+.global layer1_ffn_gate_tensor_dim0
+.global layer1_ffn_gate_tensor_dim1
+.global layer1_ffn_gate_tensor_ggml_type
+.global layer1_ffn_gate_tensor_offset
+.global token0_layer1_ffn_norm_status
+.global token0_layer1_ffn_norm_activation
+
 .section .bss
 
 .balign 8
@@ -1817,16 +1832,18 @@ token0_layer1_ffn_norm_activation:
 # residual from process-owned static buffers, then applying guarded layer-1
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, applying
-# guarded layer-1 FFN RMSNorm into private storage, and publishing status-gated
-# exact-hex slices from the audited output buffers. It also performs non-math
-# reusable descriptor lookups for
+# guarded layer-1 FFN RMSNorm into private storage, delegating the layer-1 FFN
+# gate matvec status smoke to focused inference code, and publishing
+# status-gated exact-hex slices from the audited output buffers. It also
+# performs non-math reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
 # `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, and
 # `blk.1.ffn_up.weight` into separate process-owned scratch slots before the
-# token-0 math path. The gate/up descriptors are published only as descriptor
-# summaries in this step; their payload bytes remain unread. The mapping is
-# released explicitly with
+# token-0 math path. The up descriptor is still descriptor-only in this step;
+# the gate descriptor is consumed only by the layer-1 FFN gate status smoke
+# after the FFN-normalized activation exists. The mapping is released explicitly
+# with
 # gguf_release_mapping before exit. The GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
 # string copies, and selected scalar and array-length
@@ -4120,6 +4137,8 @@ _start:
 	call sys_write
 
 	call print_token0_layer1_ffn_norm_slice
+
+	call run_token0_layer1_ffn_gate_matvec_status
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
