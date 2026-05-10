@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle note for the published layer-1 attention context slice.
+Add a guarded status-only layer-1 attention output-projection matvec smoke.
 
 ## Completed Work
 
@@ -58,6 +58,11 @@ Add an external oracle note for the published layer-1 attention context slice.
   `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`, matching the first four
   layer-1 value projection words because the first query head receives the
   first KV-head value block unchanged.
+- An external oracle note now documents the one-token grouped-query context
+  rule for `token0_layer1_attn_context`: softmax over a single key/value entry
+  is 1, each KV-head value block is copied into four query heads, and the first
+  four published context words therefore equal the first four independently
+  recomputed layer-1 value projection words.
 
 ## Known Blockers
 
@@ -83,6 +88,7 @@ None.
 - `work/oracle/token0-layer1-attn-q-output.md`
 - `work/oracle/token0-layer1-attn-k-output.md`
 - `work/oracle/token0-layer1-attn-v-output.md`
+- `work/oracle/token0-layer1-attn-context.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
@@ -103,12 +109,18 @@ None.
 - A static check of `token0_layer1_attn_context_smoke` found no references to
   `layer1_attn_output_tensor_offset`, `gguf_mapping_base`, `q8_0_matvec`, or
   `rmsnorm`, confirming this step does not read output-projection payload bytes.
+- `python3 work/oracle/token0_layer1_attn_v_oracle.py ...` reproduced the
+  layer-1 value projection words `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and
+  `0xbcca1ab6`, matching the context note's equality proof and runtime context
+  slice.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add an external oracle note for `token0_layer1_attn_context` explaining why the
-published first four words equal the first four layer-1 value projection words,
-then run the standard verification set.
+Add a guarded `token0_layer1_attn_output_matvec` smoke that consumes the private
+`token0_layer1_attn_context` buffer and `blk.1.attn_output.weight` descriptor,
+requires exact Q8_0 `4096x3072` shape and mapped payload bounds, writes a
+private output buffer, publishes status only, and runs the standard verification
+set.

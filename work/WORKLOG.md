@@ -1293,3 +1293,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   no-libc harnesses, static no-output-projection-read check, oracle
   py-compile, runtime purity, static-link, tracked-artifact, help, and
   whitespace checks passed.
+
+## 2026-05-10T21:19:54Z
+
+- Added the external layer-1 attention context oracle note. It ties the already
+  independent value projection oracle to the one-token grouped-query attention
+  rule: softmax over one entry is 1, and each 128-word KV-head value block is
+  copied into four query heads, so the first four context words must equal the
+  first four layer-1 value words.
+- Verification evidence: the real runtime still printed context words
+  `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`, matching the
+  value projection words. The external layer-1 value oracle rerun reproduced
+  those value words, the empty valid GGUF kept the context gate at 0, and the
+  build, no-libc harnesses, static no-output-projection-read check, oracle
+  py-compile, runtime purity, static-link, tracked-artifact, help, and
+  whitespace checks passed.
