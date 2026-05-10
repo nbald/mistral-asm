@@ -12,6 +12,7 @@ ASM_SOURCES := \
 	src/gguf/load_header.s \
 	src/math/q8_0_dot.s \
 	src/math/rmsnorm.s \
+	src/math/swiglu.s \
 	src/sys/close.s \
 	src/sys/exit.s \
 	src/sys/fstat.s \
@@ -23,6 +24,7 @@ ASM_SOURCES := \
 OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)
 Q8_0_DOT_CHECK := $(BUILD_DIR)/tests/q8_0_dot_check
 RMSNORM_CHECK := $(BUILD_DIR)/tests/rmsnorm_check
+SWIGLU_CHECK := $(BUILD_DIR)/tests/swiglu_check
 Q8_0_DOT_CHECK_OBJECTS := \
 	$(BUILD_DIR)/tests/q8_0_dot_harness.o \
 	$(BUILD_DIR)/math/q8_0_dot.o \
@@ -33,18 +35,26 @@ RMSNORM_CHECK_OBJECTS := \
 	$(BUILD_DIR)/math/rmsnorm.o \
 	$(BUILD_DIR)/sys/exit.o \
 	$(BUILD_DIR)/sys/write.o
+SWIGLU_CHECK_OBJECTS := \
+	$(BUILD_DIR)/tests/swiglu_harness.o \
+	$(BUILD_DIR)/math/swiglu.o \
+	$(BUILD_DIR)/sys/exit.o \
+	$(BUILD_DIR)/sys/write.o
 
-.PHONY: all clean check check-q8_0-dot check-rmsnorm
+.PHONY: all clean check check-q8_0-dot check-rmsnorm check-swiglu
 
 all: $(TARGET)
 
-check: check-q8_0-dot check-rmsnorm
+check: check-q8_0-dot check-rmsnorm check-swiglu
 
 check-q8_0-dot: $(Q8_0_DOT_CHECK)
 	$(Q8_0_DOT_CHECK)
 
 check-rmsnorm: $(RMSNORM_CHECK)
 	$(RMSNORM_CHECK)
+
+check-swiglu: $(SWIGLU_CHECK)
+	$(SWIGLU_CHECK)
 
 $(TARGET): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
@@ -54,6 +64,10 @@ $(Q8_0_DOT_CHECK): $(Q8_0_DOT_CHECK_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 $(RMSNORM_CHECK): $(RMSNORM_CHECK_OBJECTS)
+	mkdir -p $(dir $@)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(SWIGLU_CHECK): $(SWIGLU_CHECK_OBJECTS)
 	mkdir -p $(dir $@)
 	$(LD) $(LDFLAGS) -o $@ $^
 

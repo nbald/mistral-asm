@@ -39,6 +39,8 @@
 .equ TOKEN0_FFN_GATE_OUTPUT_BYTES, TOKEN0_FFN_GATE_OUTPUT_VALUES * 4
 .equ TOKEN0_FFN_UP_OUTPUT_VALUES, 9216
 .equ TOKEN0_FFN_UP_OUTPUT_BYTES, TOKEN0_FFN_UP_OUTPUT_VALUES * 4
+.equ TOKEN0_FFN_SWIGLU_VALUES, 9216
+.equ TOKEN0_FFN_SWIGLU_BYTES, TOKEN0_FFN_SWIGLU_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -58,7 +60,8 @@ help_text:
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
-	.ascii "FFN gate/up matvec smoke, FFN down descriptor.\n"
+	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
+	.ascii "FFN down descriptor.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -545,6 +548,10 @@ token0_ffn_up_matvec_text:
 	.ascii "token0_ffn_up_matvec: "
 token0_ffn_up_matvec_text_end:
 
+token0_ffn_swiglu_text:
+	.ascii "token0_ffn_swiglu: "
+token0_ffn_swiglu_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -1018,6 +1025,10 @@ token0_ffn_gate_matvec_status:
 token0_ffn_up_matvec_status:
 	.skip 8
 
+.balign 8
+token0_ffn_swiglu_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1062,6 +1073,10 @@ token0_ffn_gate_output:
 token0_ffn_up_output:
 	.skip TOKEN0_FFN_UP_OUTPUT_BYTES
 
+.balign 4
+token0_ffn_swiglu_output:
+	.skip TOKEN0_FFN_SWIGLU_BYTES
+
 .section .text
 
 .global _start
@@ -1083,8 +1098,8 @@ token0_ffn_up_output:
 # through the first output projection before adding the post-attention residual
 # from process-owned static buffers, applies the FFN RMSNorm smoke through
 # retained FFN norm weights, and projects that activation through the retained
-# FFN gate matrix. The mapping is released explicitly with gguf_release_mapping
-# before exit. The
+# FFN gate and up matrices before deriving the first FFN SwiGLU activation. The
+# mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
 # bounded metadata
@@ -1095,7 +1110,7 @@ token0_ffn_up_output:
 # tensor-data base offset for non-empty tensor directories, and a retained
 # descriptor for the first-layer attention RMSNorm weights, query projection,
 # key projection, value projection, output projection, FFN RMSNorm weights, and
-# FFN gate projection, and FFN up projection.
+# FFN gate, FFN up, and FFN down projections.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -2960,6 +2975,23 @@ _start:
 	call sys_write
 
 	call print_token0_ffn_up_output_slice
+
+	call token0_ffn_swiglu_smoke
+	mov qword ptr [rip + token0_ffn_swiglu_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_swiglu_text]
+	mov rdx, token0_ffn_swiglu_text_end - token0_ffn_swiglu_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_ffn_swiglu_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -4845,5 +4877,60 @@ token0_ffn_up_matvec_smoke:
 	ret
 
 .size token0_ffn_up_matvec_smoke, . - token0_ffn_up_matvec_smoke
+
+.type token0_ffn_swiglu_smoke, @function
+
+# Contract: derive the token-0 first FFN SwiGLU activation from the retained
+# gate and up projection outputs.
+# Inputs: no register inputs. Reads token0_ffn_gate_matvec_status,
+# token0_ffn_up_matvec_status, token0_ffn_gate_output, token0_ffn_up_output,
+# and the retained FFN gate/up/down tensor descriptors.
+# Outputs: rax = 1 after writing 9216 f32 values to token0_ffn_swiglu_output,
+# each equal to silu(token0_ffn_gate_output[i]) * token0_ffn_up_output[i];
+# otherwise rax = 0 and no activation bytes are written.
+# Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags.
+# Ownership/lifetime: reads only process-owned static gate and up projection
+# outputs and writes only process-owned static activation storage. The retained
+# blk.0.ffn_down.weight descriptor is used as a shape guard for the consumer of
+# this activation, but this function reads no mapped tensor payload bytes.
+# Error behavior: this is a smoke gate for the first FFN activation, not final
+# graph setup. Missing prerequisites or non-target FFN widths are skipped with
+# status 0.
+token0_ffn_swiglu_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_ffn_gate_matvec_status], 1
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + token0_ffn_up_matvec_status], 1
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_gate_tensor_dim1], TOKEN0_FFN_SWIGLU_VALUES
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_dim1], TOKEN0_FFN_SWIGLU_VALUES
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_found], 1
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_n_dimensions], 2
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_dim0], TOKEN0_FFN_SWIGLU_VALUES
+	jne .Lffn_swiglu_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_dim1], TOKEN0_FFN_NORM_VALUES
+	jne .Lffn_swiglu_done
+
+	# The activation is pure static math: gate and up projections were already
+	# bounded by their own smoke gates. The down descriptor only proves that the
+	# produced width is the width the next Q8_0 matvec will consume.
+	lea rdi, [rip + token0_ffn_gate_output]
+	lea rsi, [rip + token0_ffn_up_output]
+	lea rdx, [rip + token0_ffn_swiglu_output]
+	mov ecx, TOKEN0_FFN_SWIGLU_VALUES
+	call swiglu_f32
+
+	mov eax, 1
+
+.Lffn_swiglu_done:
+	ret
+
+.size token0_ffn_swiglu_smoke, . - token0_ffn_swiglu_smoke
 
 .section .note.GNU-stack,"",@progbits

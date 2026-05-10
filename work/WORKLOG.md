@@ -895,3 +895,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `9216 x 3072` at relative offset `461266944`. A Python parser cross-check
   reported the same descriptor, and cleanup tracing still showed `close(3)`
   before final `munmap`.
+
+## 2026-05-10T18:13:21Z
+
+- The runtime now computes a guarded token-0 FFN SwiGLU activation into static
+  f32 storage after the gate and up projections succeed. The activation is
+  guarded by the retained FFN down descriptor so the produced 9216-f32 row is
+  known to match the next projection's input width.
+- Decision: keep the new runtime output status-only. The scalar helper uses
+  x87 exponentiation and separate positive/negative forms for `silu(x)` to avoid
+  avoidable overflow while the exact public slice and oracle comparison remain
+  separate reviewable steps.
+- Verification evidence: the new no-libc SwiGLU harness passed. Synthetic
+  fixtures skipped the activation with status 0, while the real local target
+  printed `token0_ffn_swiglu: 1` and preserved existing exact-hex slices through
+  FFN up. Cleanup tracing still showed `close(3)` before final `munmap`.
