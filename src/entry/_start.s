@@ -62,6 +62,8 @@
 .equ TOKEN0_LAYER1_ATTN_CONTEXT_BYTES, TOKEN0_LAYER1_ATTN_CONTEXT_VALUES * 4
 .equ TOKEN0_LAYER1_ATTN_OUTPUT_VALUES, TOKEN0_LAYER1_ATTN_NORM_VALUES
 .equ TOKEN0_LAYER1_ATTN_OUTPUT_BYTES, TOKEN0_LAYER1_ATTN_OUTPUT_VALUES * 4
+.equ TOKEN0_LAYER1_POST_ATTN_RESIDUAL_VALUES, TOKEN0_LAYER1_ATTN_OUTPUT_VALUES
+.equ TOKEN0_LAYER1_POST_ATTN_RESIDUAL_BYTES, TOKEN0_LAYER1_POST_ATTN_RESIDUAL_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -85,7 +87,7 @@ help_text:
 	.ascii "FFN down matvec smoke, post-FFN residual smoke, "
 	.ascii "reusable descriptor lookup smoke, "
 	.ascii "and layer-1 attention RMSNorm/query/key/value/context/output "
-	.ascii "smoke.\n"
+	.ascii "smoke plus layer-1 post-attention residual smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -747,6 +749,10 @@ token0_layer1_attn_context_text_end:
 token0_layer1_attn_output_matvec_text:
 	.ascii "token0_layer1_attn_output_matvec: "
 token0_layer1_attn_output_matvec_text_end:
+
+token0_layer1_post_attn_residual_text:
+	.ascii "token0_layer1_post_attn_residual: "
+token0_layer1_post_attn_residual_text_end:
 
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
@@ -1509,6 +1515,10 @@ token0_layer1_attn_context_status:
 token0_layer1_attn_output_matvec_status:
 	.skip 8
 
+.balign 8
+token0_layer1_post_attn_residual_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1588,6 +1598,10 @@ token0_layer1_attn_context:
 .balign 4
 token0_layer1_attn_output:
 	.skip TOKEN0_LAYER1_ATTN_OUTPUT_BYTES
+
+.balign 4
+token0_layer1_post_attn_residual:
+	.skip TOKEN0_LAYER1_POST_ATTN_RESIDUAL_BYTES
 
 .section .text
 
@@ -3810,6 +3824,23 @@ _start:
 	call sys_write
 
 	call print_token0_layer1_attn_output_slice
+
+	call token0_layer1_post_attn_residual_smoke
+	mov qword ptr [rip + token0_layer1_post_attn_residual_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_post_attn_residual_text]
+	mov rdx, token0_layer1_post_attn_residual_text_end - token0_layer1_post_attn_residual_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer1_post_attn_residual_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -7623,5 +7654,58 @@ token0_layer1_attn_output_matvec_smoke:
 	ret
 
 .size token0_layer1_attn_output_matvec_smoke, . - token0_layer1_attn_output_matvec_smoke
+
+.type token0_layer1_post_attn_residual_smoke, @function
+
+# Contract: derive the token-0 layer-1 post-attention residual activation.
+# Inputs: no register inputs. Reads token0_post_ffn_residual_status,
+# token0_layer1_attn_output_matvec_status, token0_post_ffn_residual, and
+# token0_layer1_attn_output.
+# Outputs: rax = 1 after writing 3072 f32 sums to
+# token0_layer1_post_attn_residual; otherwise rax = 0 and no layer-1 residual
+# bytes are written.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads only process-owned static layer-0 post-FFN residual
+# and layer-1 attention output storage, writes only process-owned static
+# layer-1 post-attention residual storage, and does not read any mapped tensor
+# payload bytes.
+# Error behavior: this is a status-only smoke gate for the layer-1 residual,
+# not final layer execution. Missing prerequisites or non-target hidden width
+# are skipped with status 0.
+token0_layer1_post_attn_residual_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_post_ffn_residual_status], 1
+	jne .Llayer1_post_attn_residual_done
+	cmp qword ptr [rip + token0_layer1_attn_output_matvec_status], 1
+	jne .Llayer1_post_attn_residual_done
+
+	# The layer-1 output projection status proves the static output row was
+	# written. Keep the descriptor width guard next to the add so future
+	# layer-wise plumbing cannot reuse this hidden-size assumption silently.
+	cmp qword ptr [rip + layer1_attn_output_tensor_dim1], TOKEN0_LAYER1_POST_ATTN_RESIDUAL_VALUES
+	jne .Llayer1_post_attn_residual_done
+
+	lea rsi, [rip + token0_post_ffn_residual]
+	lea rdx, [rip + token0_layer1_attn_output]
+	lea rdi, [rip + token0_layer1_post_attn_residual]
+	mov rcx, TOKEN0_LAYER1_POST_ATTN_RESIDUAL_VALUES
+
+.Llayer1_post_attn_residual_loop:
+	vmovss xmm0, dword ptr [rsi]
+	vmovss xmm1, dword ptr [rdx]
+	vaddss xmm0, xmm0, xmm1
+	vmovss dword ptr [rdi], xmm0
+	add rsi, 4
+	add rdx, 4
+	add rdi, 4
+	dec rcx
+	jnz .Llayer1_post_attn_residual_loop
+
+	mov eax, 1
+
+.Llayer1_post_attn_residual_done:
+	ret
+
+.size token0_layer1_post_attn_residual_smoke, . - token0_layer1_post_attn_residual_smoke
 
 .section .note.GNU-stack,"",@progbits

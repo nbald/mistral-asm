@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded status-only smoke for the token-0 layer-1 post-attention
-residual.
+Publish a guarded four-word exact-hex slice from the token-0 layer-1
+post-attention residual.
 
 ## Completed Work
 
@@ -75,6 +75,12 @@ residual.
   `token0_layer1_attn_output` slice from the full layer-1 value projection,
   one-token grouped-query context, and `blk.1.attn_output.weight`. The oracle
   matches the runtime output-projection words exactly.
+- The guarded `token0_layer1_post_attn_residual` status-only smoke consumes the
+  private `token0_post_ffn_residual` and `token0_layer1_attn_output` buffers,
+  requires the layer-1 output descriptor to retain the exact 3072-row hidden
+  width, and writes a private 3072-f32 residual buffer only when prerequisites
+  are present. The real target reports status 1; an empty valid GGUF reports
+  status 0. No public layer-1 residual f32 words are emitted yet.
 
 ## Known Blockers
 
@@ -112,19 +118,17 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `token0_layer1_attn_output_matvec: 1` and output words `0x3deaa744`,
-  `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`; the prerequisite post-FFN
-  residual, layer-1 RMSNorm, and layer-1 context slices matched the new oracle
-  values exactly.
-- `python3 work/oracle/token0_layer1_attn_output_oracle.py` on the real target
-  GGUF printed oracle output words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`,
-  and `0xbced5550`.
+  `token0_post_ffn_residual: 1`, `token0_layer1_attn_output_matvec: 1`, output
+  words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`, and
+  `token0_layer1_post_attn_residual: 1`.
+- A temporary empty valid GGUF printed `token0_layer1_attn_output_matvec: 0`
+  and `token0_layer1_post_attn_residual: 0` with no layer-1 output word labels.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add a guarded `token0_layer1_post_attn_residual` status-only smoke that adds the
-private `token0_post_ffn_residual` buffer and private
-`token0_layer1_attn_output` buffer into a private 3072-f32 residual buffer.
+Print the first four raw f32 words of `token0_layer1_post_attn_residual` only
+when `token0_layer1_post_attn_residual_status` is 1, and verify the real target
+plus an empty valid GGUF skip.

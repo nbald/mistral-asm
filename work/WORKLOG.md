@@ -1348,3 +1348,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   public slices also matched the oracle output; build, no-libc harnesses,
   oracle py-compile, runtime purity, static-link, tracked-artifact, help, and
   whitespace checks passed.
+
+## 2026-05-10T21:40:07Z
+
+- Added the status-only layer-1 post-attention residual smoke. It adds the
+  private layer-0 post-FFN residual buffer to the private layer-1 attention
+  output buffer, writes a separate 3072-f32 residual buffer, and emits only a
+  status line for this step.
+- Verification evidence: the real target printed
+  `token0_layer1_post_attn_residual: 1` while the established layer-1 output
+  projection words stayed unchanged. A temporary empty valid GGUF kept the new
+  residual gate at 0. Build, no-libc harnesses, oracle py-compile, runtime
+  purity, static-link, tracked-artifact, help, and whitespace checks passed.
