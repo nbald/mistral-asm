@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Print a guarded four-word exact-hex slice from `token0_post_ffn_residual` after
-`token0_post_ffn_residual_status == 1`.
+Add an external oracle comparison for the four-word
+`token0_post_ffn_residual` exact-hex slice.
 
 ## Completed Work
 
@@ -20,11 +20,11 @@ Print a guarded four-word exact-hex slice from `token0_post_ffn_residual` after
 - Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
   projections, single-token context expansion, attention output projection,
   post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU,
-  FFN down projection, and status-only post-FFN residual addition.
-- Public exact-hex slices and external oracle notes exist through the FFN down
-  output. The FFN down oracle recomputes the full token-0 path through the
-  9216-word SwiGLU activation, dots it with the first four
-  `blk.0.ffn_down.weight` rows, and matches runtime words exactly.
+  FFN down projection, and post-FFN residual addition.
+- Public exact-hex slices exist through the post-FFN residual. External oracle
+  notes exist through the FFN down output. The FFN down oracle recomputes the
+  full token-0 path through the 9216-word SwiGLU activation, dots it with the
+  first four `blk.0.ffn_down.weight` rows, and matches runtime words exactly.
 - The real target reports `blk.0.ffn_down.weight` as Q8_0 dimensions
   `9216 x 3072` at relative offset `461266944`.
 
@@ -62,7 +62,7 @@ None.
 
 ## Last Verification
 
-- `make clean && make` passed.
+- `make clean` and `make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok`, `rmsnorm: ok`,
   and `swiglu: ok`.
 - `./mistral-asm --help` returned status 0. The unsupported prompt-generation
@@ -70,13 +70,15 @@ None.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed `token0_ffn_down_matvec: 1`, preserved FFN down words
-  `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`, and printed
-  `token0_post_ffn_residual: 1`; cleanup showed successful `close(3)` and final
-  `munmap`.
+  status 0, printed `token0_post_ffn_residual: 1`, and printed post-FFN
+  residual words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`;
+  cleanup showed successful `close(3)` and final `munmap`.
+- A direct float32 add check verified those four post-FFN residual words from
+  the printed post-attention residual and FFN down output words.
 - Synthetic valid fixtures returned status 0 with FFN down and post-FFN
-  residual smokes skipped. Synthetic malformed fixtures returned status 3 with
-  the expected bad-magic and malformed tensor diagnostics.
+  residual smokes skipped and no post-FFN residual word labels. Synthetic
+  malformed fixtures returned status 3 with the expected bad-magic and
+  malformed tensor diagnostics.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -84,6 +86,7 @@ None.
 
 ## Next Exact Step
 
-Print a guarded four-word exact-hex slice from `token0_post_ffn_residual` after
-`token0_post_ffn_residual_status == 1`, preserving status-only skip behavior for
-synthetic fixtures.
+Add `work/oracle/token0_post_ffn_residual_oracle.py` and a comparison note that
+recompute the current token-0 path through FFN down, add the first four
+post-attention residual and FFN down words as float32, and compare exactly with
+the runtime `token0_post_ffn_residual*_f32_hex` output.

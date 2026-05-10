@@ -981,3 +981,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   status 0, while the real local target printed `token0_post_ffn_residual: 1`
   and preserved the FFN down exact words. Cleanup tracing still showed
   `close(3)` before the final `munmap`.
+
+## 2026-05-10T18:52:20Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_post_ffn_residual` after `token0_post_ffn_residual_status` is 1. The
+  residual math and prerequisite guards were left unchanged.
+- Verification evidence: synthetic fixtures kept `token0_post_ffn_residual: 0`
+  with no post-FFN residual word labels. The real local target printed post-FFN
+  residual words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`;
+  a direct float32 add check from the printed post-attention residual and FFN
+  down words matched all four bits. Cleanup tracing still showed `close(3)`
+  before the final `munmap`.
