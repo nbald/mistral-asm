@@ -79,6 +79,14 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Decision: keep syscall entry points in `src/sys/` even while they are tiny, so
   the GGUF loader can add file and memory syscalls without bloating `_start`.
 
+## 2026-05-10T12:27:40Z
+
+- Operator decision: before adding more loader logic, the next autonomous step
+  should document the ASM already produced.
+- Policy: exported ASM functions need contract comments; non-obvious
+  instructions and cleanup paths need intent comments; avoid comments that only
+  restate the mnemonic.
+
 ## 2026-05-10T12:18:46Z
 
 - First GGUF loader smoke path maps the input file read-only and validates only

@@ -50,6 +50,19 @@
   next-step text across `work/` files; git and `work/STATE.md` are authoritative
   for those.
 
+## Assembly Comment Policy
+
+- Every exported assembly function must start with a human-readable contract:
+  purpose, inputs, outputs, clobbers, ownership/lifetime rules, and error
+  behavior when relevant.
+- Non-trivial internal functions must also have a short contract comment.
+- Comment logical blocks and non-obvious instructions inside functions.
+- Prefer explaining Linux ABI details, file-format offsets, register ownership,
+  cleanup paths, and why a branch exists.
+- Avoid comments that merely restate the mnemonic, such as "move rax into rbx".
+- Assembly should be readable by a human auditor following the repo history, not
+  only by someone already fluent in the implementation.
+
 ## Operator Control Policy
 
 - Use `scripts/control.sh instruction "..."` to inject instructions for the

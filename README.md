@@ -73,6 +73,15 @@ The runtime must prove it is pure ASM:
 greedy output comparisons. It must not be linked, vendored, or called by the
 runtime.
 
+## Assembly Style
+
+Assembly files should be written for audit. Exported functions carry a contract
+comment describing purpose, inputs, outputs, clobbers, and ownership rules.
+Non-trivial internal helpers get the same treatment. Inside functions, comments
+explain logical blocks, ABI assumptions, register ownership, file-format offsets,
+and cleanup/error paths. Comments should explain intent rather than repeat the
+mnemonic.
+
 ## Current State
 
 The pure ASM executable proof is implemented, and the first narrow GGUF loader

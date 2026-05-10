@@ -37,6 +37,18 @@ Project contract:
 - Honor ignored `work/control/INBOX.md`; newer operator instructions override
   older conflicting instructions.
 
+Assembly comment policy:
+
+- Every exported assembly function must start with a human-readable contract:
+  purpose, inputs, outputs, clobbers, ownership/lifetime rules, and error
+  behavior when relevant.
+- Non-trivial internal functions must also have a short contract comment.
+- Comment logical blocks and non-obvious instructions inside functions.
+- Prefer explaining Linux ABI details, file-format offsets, register ownership,
+  cleanup paths, and why a branch exists.
+- Avoid comments that merely restate the mnemonic, such as "move rax into rbx".
+- Assembly should be readable by a human auditor following the repo history.
+
 Work loop:
 
 1. Continue from `work/STATE.md`, not from memory.

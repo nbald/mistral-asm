@@ -6,9 +6,9 @@ Milestone 3: GGUF loader.
 
 ## Current Exact Task
 
-Add a structural GGUF metadata walker that starts after the 24-byte header,
-skips key/value entries with bounds checks, recognizes `general.alignment` when
-present, and validates the computed tensor directory start alignment.
+Document the existing assembly runtime before adding more loader logic. Add
+human-readable contract comments to exported functions and explanatory comments
+for non-obvious register, syscall, GGUF layout, and cleanup decisions.
 
 ## Known Blockers
 
@@ -51,4 +51,5 @@ None.
 
 ## Next Exact Step
 
-Add structural metadata-entry skipping and tensor-directory alignment validation.
+Add audit-oriented comments to the existing assembly files, then resume metadata
+walker work.
