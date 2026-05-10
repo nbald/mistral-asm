@@ -871,3 +871,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   with no FFN up output word labels. The real local target printed FFN up words
   `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`; merged cleanup
   tracing showed those lines before the final `munmap`.
+
+## 2026-05-10T17:58:38Z
+
+- Added external FFN up oracle tooling and a comparison note. The oracle
+  recomputes the full token-0 path through FFN RMSNorm, then dots that
+  activation with the first four `blk.0.ffn_up.weight` rows.
+- Verification evidence: the oracle printed FFN up output words
+  `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`. A direct
+  extraction check compared those four words with the runtime smoke output and
+  matched each one exactly. Rebuild, no-libc harnesses, CLI/static checks,
+  synthetic GGUF checks, real-model smoke, cleanup tracing, oracle py-compile,
+  and whitespace checks passed.

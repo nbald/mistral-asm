@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle comparison for the token-0 FFN up output words.
+Retain and print the `blk.0.ffn_down.weight` tensor descriptor.
 
 ## Completed Work
 
@@ -23,9 +23,8 @@ Add an external oracle comparison for the token-0 FFN up output words.
   query/key/value projections, single-token context expansion, attention output
   projection, post-attention residual, FFN RMSNorm, FFN gate projection, and FFN
   up projection.
-- Public exact-hex slices exist through the FFN up projection. Existing external
-  oracle notes cover Q/K/V/output/context-equivalent output, residual, FFN
-  RMSNorm, and FFN gate; the FFN up oracle comparison is next.
+- Public exact-hex slices and external oracle notes exist through the FFN up
+  projection.
 - The FFN gate matvec validates `blk.0.ffn_gate.weight` as Q8_0
   `[3072 x 9216]`, bounds the full mapped payload, writes static FFN gate
   activation storage, prints `token0_ffn_gate_matvec`, and prints the first four
@@ -34,6 +33,9 @@ Add an external oracle comparison for the token-0 FFN up output words.
   bounds the full mapped payload, writes static FFN up activation storage,
   prints `token0_ffn_up_matvec`, and prints the first four output f32 bit
   patterns only when the status is 1.
+- The external FFN up oracle recomputes token-0 through FFN RMSNorm, dots the
+  activation with the first four `blk.0.ffn_up.weight` rows, and matches the
+  runtime FFN up exact-hex words.
 
 ## Known Blockers
 
@@ -58,8 +60,9 @@ None.
 - Keep `make check`, static-link checks, future CLI usage rejection, GGUF smoke
   checks, cleanup tracing, oracle py-compile, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
-- Rerun existing external projection/output/residual/FFN RMSNorm/FFN gate oracle
-  comparisons when their math, shared inputs, or public exact-hex slices change.
+- Rerun existing external projection/output/residual/FFN RMSNorm/FFN gate/FFN up
+  oracle comparisons when their math, shared inputs, or public exact-hex slices
+  change.
 
 ## Last Verification
 
@@ -76,8 +79,9 @@ None.
   `token0_ffn_gate_matvec: 0` and `token0_ffn_up_matvec: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
-  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
-  alignment or tensor directory diagnostics.
+  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with
+  `misaligned GGUF tensor data` and `malformed GGUF tensor directory`
+  diagnostics.
 - The real target model under `models/` returned status 0, preserved existing
   Q/K/V/output/residual/FFN RMSNorm/FFN gate exact-hex slices, printed
   `ffn_up_tensor_found: 1`, `ffn_up_tensor_name: blk.0.ffn_up.weight`,
@@ -88,12 +92,12 @@ None.
   status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN up
   descriptor lines, `token0_ffn_up_matvec: 1`, the four FFN up output words,
   and final `munmap`.
+- `python3 work/oracle/token0_ffn_up_oracle.py` matched the runtime FFN up
+  output words `0x3f641d75`, `0x3f60c9d6`, `0x3f65a149`, and `0x3f1ee2f1`
+  exactly.
 - `python3 -m py_compile work/oracle/*.py` passed.
-- Existing external oracle comparisons were not rerun because this step only
-  exposed a new FFN up slice and did not alter existing runtime math, shared
-  inputs, or already-covered public exact-hex slices.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add an external oracle comparison for the token-0 FFN up output words.
+Retain and print the `blk.0.ffn_down.weight` tensor descriptor.
