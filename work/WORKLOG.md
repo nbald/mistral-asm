@@ -1435,3 +1435,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace check, runtime source purity scan, static-link inspection, oracle
   py-compile, and tracked-artifact scan all passed with the pre-existing
   unstaged runtime diff still left out of the review commit.
+
+## 2026-05-10T22:20:20Z
+
+- Published the first four raw f32 words of the token-0 layer-1 FFN-normalized
+  activation behind the existing `token0_layer1_ffn_norm` status gate. This
+  exposes only the private activation buffer that the prior status smoke already
+  wrote, so the next audit step is an independent oracle recomputation.
+- Verification evidence: the real target printed `token0_layer1_ffn_norm: 1`
+  with words `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and `0xbfe2ec8e`. A
+  24-byte empty valid GGUF kept the gate at 0 and emitted no layer-1 FFN norm
+  word labels; build, no-libc harnesses, help, oracle py-compile, runtime
+  purity, static-link, tracked-artifact, and whitespace checks passed.

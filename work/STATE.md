@@ -6,8 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish and verify the existing queued `src/entry/_start.s` layer-1 FFN norm
-slice diff.
+Add external oracle coverage for the published token-0 layer-1 FFN norm slice.
 
 ## Completed Work
 
@@ -97,6 +96,11 @@ slice diff.
   the complete mapped weight span, writes a private 3072-f32 activation buffer,
   and prints only `token0_layer1_ffn_norm: 1` on the real target. An empty valid
   GGUF reports status 0 and emits no layer-1 FFN norm word labels.
+- The runtime now publishes the first four raw f32 words of the token-0 layer-1
+  FFN RMSNorm activation behind the existing `token0_layer1_ffn_norm` status
+  gate. The real target reports `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and
+  `0xbfe2ec8e`. A 24-byte empty valid GGUF reports status 0 and emits no
+  `token0_layer1_ffn_norm*_f32_hex` labels.
 - Operator inbox entry dated 2026-05-10T22:09:43Z stopped feature work and
   started a committed two-pass review gate. Review pass 1 found no blocking
   runtime correctness issue in the committed layer-1 FFN norm status path and
@@ -109,9 +113,8 @@ slice diff.
 
 ## Known Blockers
 
-None. The review gate is complete. The worktree currently has an unstaged
-`src/entry/_start.s` feature diff that publishes the layer-1 FFN norm slice;
-the next feature step should verify and commit that diff.
+None. The review gate is complete and the layer-1 FFN norm slice publish has
+been verified.
 
 ## Relevant Files
 
@@ -146,18 +149,17 @@ the next feature step should verify and commit that diff.
 
 ## Last Verification
 
-- Review pass 2 verification passed: `make clean`; `make`; `make check` with
-  `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`;
-  `./mistral-asm --help`; `git diff --check`; runtime source purity scan;
-  static-link inspection; `python3 -m py_compile work/oracle/*.py`; and
-  tracked-artifact scan.
-- Verification ran with the pre-existing unstaged `src/entry/_start.s` feature
-  diff present, but only review/state/worklog files are intended for this
-  review commit.
+- Layer-1 FFN norm slice publish verification passed: `make clean`; `make`;
+  `make check` with `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and
+  `gguf_lookup: ok`; `./mistral-asm --help`; real target run showing
+  `token0_layer1_ffn_norm: 1` and the four published words above; a 24-byte
+  empty valid GGUF showing `token0_layer1_ffn_norm: 0` and no FFN norm word
+  labels; runtime source purity scan; static-link inspection;
+  `python3 -m py_compile work/oracle/*.py`; tracked-artifact scan; and
+  `git diff --check`.
 
 ## Next Exact Step
 
-Commit the existing `src/entry/_start.s` layer-1 FFN norm slice publish after
-verifying the real target prints four `token0_layer1_ffn_norm*_f32_hex` words
-behind status 1 and an empty valid GGUF keeps the status at 0 with no layer-1
-FFN norm word labels.
+Add an external oracle script and short note that independently recompute the
+published `token0_layer1_ffn_norm*_f32_hex` words from the layer-1
+post-attention residual and `blk.1.ffn_norm.weight`.
