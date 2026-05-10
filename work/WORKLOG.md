@@ -1408,3 +1408,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   emitted no layer-1 FFN norm word labels; build, no-libc harnesses, cleanup
   tracing, oracle py-compile, runtime purity, static-link, tracked-artifact,
   help, status-only label, and whitespace checks passed.
+
+## 2026-05-10T22:13:54Z
+
+- Handled the transient operator instruction to stop feature work and start the
+  required two-pass review gate. Review pass 1 inspected the committed layer-1
+  FFN norm status path, descriptor lookup, bounds checks, and artifact purity;
+  it found no blocking runtime correctness issue.
+- Durable process note: the worktree already contained an unstaged
+  `src/entry/_start.s` feature diff that publishes the layer-1 FFN norm slice.
+  The review step left that runtime diff unstaged and recorded that pass 2 must
+  complete before feature work resumes.
+- Verification evidence for the review pass: build and no-libc harnesses
+  passed, help output worked, whitespace checks passed, runtime source remained
+  `.s` only, the executable remained statically linked, and no tracked model or
+  large artifact matched the scan.
