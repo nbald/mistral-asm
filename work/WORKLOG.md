@@ -1190,3 +1190,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   kept the layer-1 norm/query/key gates at 0 and emitted no layer-1 output
   labels; rebuild, no-libc harnesses, cleanup tracing, oracle py-compile,
   runtime purity, static-link, tracked-artifact, and whitespace checks passed.
+
+## 2026-05-10T20:38:15Z
+
+- Added external layer-1 attention key oracle tooling. It reuses the full
+  layer-1 attention RMSNorm activation from the prior oracle path, then dots
+  that activation against the first four rows of `blk.1.attn_k.weight` with the
+  same scalar Q8_0 f32 accumulation order as the assembly matvec helper.
+- Verification evidence: the oracle produced `0x3fb2a129`, `0x405dbdbe`,
+  `0x3f5611d3`, and `0x3f1e325d` for the public layer-1 key words, matching the
+  current runtime labels exactly. The assembly harnesses, oracle py-compile,
+  runtime purity, static-link, tracked-artifact, and whitespace checks passed.
