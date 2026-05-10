@@ -605,3 +605,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`; cleanup tracing
   showed those lines before the final `munmap`. Existing query/key oracle words
   still matched their runtime slices exactly.
+
+## 2026-05-10T16:15:20Z
+
+- Added verification-only oracle tooling for the token-0 first attention value
+  projection. It reuses the direct GGUF parser and scalar f32 helper path from
+  the query oracle, then targets `blk.0.attn_v.weight`.
+- Decision: keep the value oracle as a separate script and note to mirror the
+  query/key checks. The runtime and build remain pure assembly; Python and numpy
+  are external verification tools only.
+- Verification evidence: the value oracle printed `0x3ca3b3bc`,
+  `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, exactly matching the runtime
+  value slice. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF
+  checks, real-model smoke, cleanup tracing, query/key/value oracles, and
+  whitespace checks passed.
