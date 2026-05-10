@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle comparison for the four-word
-`token0_post_ffn_residual` exact-hex slice.
+Run a review pass over the token-0 layer-0 forward smoke and oracle chain
+before extending beyond the first transformer block.
 
 ## Completed Work
 
@@ -21,10 +21,10 @@ Add an external oracle comparison for the four-word
   projections, single-token context expansion, attention output projection,
   post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU,
   FFN down projection, and post-FFN residual addition.
-- Public exact-hex slices exist through the post-FFN residual. External oracle
-  notes exist through the FFN down output. The FFN down oracle recomputes the
-  full token-0 path through the 9216-word SwiGLU activation, dots it with the
-  first four `blk.0.ffn_down.weight` rows, and matches runtime words exactly.
+- Public exact-hex slices and external oracle notes exist through the post-FFN
+  residual. The post-FFN residual oracle reuses the full FFN down oracle path,
+  adds the first four post-attention residual and FFN down words with f32
+  rounding, and matches runtime words exactly.
 - The real target reports `blk.0.ffn_down.weight` as Q8_0 dimensions
   `9216 x 3072` at relative offset `461266944`.
 
@@ -45,6 +45,8 @@ None.
 - `Makefile`
 - `work/oracle/token0_ffn_down_oracle.py`
 - `work/oracle/token0-ffn-down.md`
+- `work/oracle/token0_post_ffn_residual_oracle.py`
+- `work/oracle/token0-post-ffn-residual.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
@@ -69,16 +71,16 @@ None.
   form returned status 2 with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
+- Synthetic valid and malformed GGUF fixtures preserved expected behavior:
+  valid empty input returned status 0 with post-FFN residual status 0, bad
+  magic returned status 3, and a truncated tensor directory returned status 3.
+- `python3 work/oracle/token0_post_ffn_residual_oracle.py` on the real target
+  printed post-FFN residual words `0xbe256913`, `0xbf15734b`, `0x40402562`,
+  and `0xbe4c5582`.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed `token0_post_ffn_residual: 1`, and printed post-FFN
-  residual words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`;
+  status 0, printed `token0_post_ffn_residual: 1`, and matched the oracle's
+  post-attention residual, FFN down, and post-FFN residual words exactly;
   cleanup showed successful `close(3)` and final `munmap`.
-- A direct float32 add check verified those four post-FFN residual words from
-  the printed post-attention residual and FFN down output words.
-- Synthetic valid fixtures returned status 0 with FFN down and post-FFN
-  residual smokes skipped and no post-FFN residual word labels. Synthetic
-  malformed fixtures returned status 3 with the expected bad-magic and
-  malformed tensor diagnostics.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -86,7 +88,7 @@ None.
 
 ## Next Exact Step
 
-Add `work/oracle/token0_post_ffn_residual_oracle.py` and a comparison note that
-recompute the current token-0 path through FFN down, add the first four
-post-attention residual and FFN down words as float32, and compare exactly with
-the runtime `token0_post_ffn_residual*_f32_hex` output.
+Review the generated assembly and oracle docs for the token-0 layer-0 forward
+chain through post-FFN residual, focusing on math order, shape/bounds guards,
+runtime purity, stale state, and whether the oracle evidence is strong enough
+before adding layer-iteration scope.

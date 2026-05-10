@@ -177,6 +177,7 @@ def run_oracle(path):
                 FFN_GATE: ffn_gate,
                 FFN_UP: ffn_up,
                 FFN_DOWN: ffn_down,
+                "post_attn_residual_words": post_attn_residual[:4].copy(),
                 "ffn_norm_words": ffn_norm_output[:4].copy(),
                 "gate_outputs": gate_outputs[:4].copy(),
                 "up_outputs": up_outputs[:4].copy(),

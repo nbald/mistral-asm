@@ -993,3 +993,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   a direct float32 add check from the printed post-attention residual and FFN
   down words matched all four bits. Cleanup tracing still showed `close(3)`
   before the final `munmap`.
+
+## 2026-05-10T18:59:08Z
+
+- Added external post-FFN residual oracle tooling and a comparison note. The
+  script reuses the full FFN down oracle path, exposes the already-computed
+  post-attention residual slice, and applies the same f32-rounded residual add
+  as the runtime.
+- Verification evidence: the oracle printed post-FFN residual words
+  `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`. A real-model
+  extraction check matched the oracle's post-attention residual, FFN down, and
+  post-FFN residual slices exactly. Rebuild, no-libc harnesses, CLI/static
+  checks, synthetic GGUF checks, cleanup tracing, oracle py-compile, runtime
+  purity, and whitespace checks passed.
