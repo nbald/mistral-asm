@@ -71,9 +71,11 @@ def run_oracle(path):
 
     result["tensor_data_offset"] = tensor_data_offset
     result[LAYER1_ATTN_NORM] = layer1_attn_norm
-    result["layer1_attn_norm_words"] = rmsnorm(
+    result["layer1_attn_norm_activation"] = rmsnorm(
         result["post_ffn_residuals"], weights,
-        f32_from_bits(result["epsilon_bits"]))[:4].copy()
+        f32_from_bits(result["epsilon_bits"]))
+    result["layer1_attn_norm_words"] = (
+        result["layer1_attn_norm_activation"][:4].copy())
     return result
 
 

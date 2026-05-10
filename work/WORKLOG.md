@@ -1142,3 +1142,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   real local target printed layer-1 query words `0x3f98c6d6`, `0x3e72aeb6`,
   `0x3e641287`, and `0x3e76b8f1`; cleanup tracing still showed `close(3)`
   before the final `munmap`.
+
+## 2026-05-10T20:12:58Z
+
+- Added external layer-1 attention query oracle tooling. It reuses the full
+  layer-1 attention RMSNorm activation from the previous oracle path, then dots
+  that activation against the first four rows of `blk.1.attn_q.weight` using the
+  same scalar Q8_0 f32 accumulation order as the assembly matvec helper.
+- Verification evidence: the oracle produced `0x3f98c6d6`, `0x3e72aeb6`,
+  `0x3e641287`, and `0x3e76b8f1` for the public layer-1 query words, matching
+  the current runtime labels exactly. The prerequisite post-FFN residual and
+  layer-1 attention RMSNorm words stayed unchanged, and the assembly harnesses
+  still passed.

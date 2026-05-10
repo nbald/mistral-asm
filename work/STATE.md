@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a verification-only external oracle comparison for
-`token0_layer1_attn_q_output[0..3]`, without changing runtime assembly unless
-the comparison exposes a mismatch.
+Add descriptor-only runtime lookup and printed summary fields for
+`blk.1.attn_k.weight` in a separate scratch slot, without reading key-projection
+payload bytes or changing the layer-1 query math path.
 
 ## Completed Work
 
@@ -36,6 +36,12 @@ the comparison exposes a mismatch.
   words only when the status is 1. The real target reports status 1 and words
   `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`; empty synthetic
   GGUFs report status 0 and publish no layer-1 query output words.
+- The external `token0_layer1_attn_q_oracle.py` recomputes the full layer-1
+  attention RMSNorm activation from the existing layer-0 oracle chain, dots it
+  with the first four rows of `blk.1.attn_q.weight`, and matches the runtime
+  layer-1 query output words exactly. `token0_layer1_attn_norm_oracle.py` now
+  keeps the full 3072-word activation available for downstream oracle checks
+  while preserving its existing public four-word output.
 
 ## Known Blockers
 
@@ -56,34 +62,26 @@ None.
 - `work/oracle/token0_attn_q_oracle.py`
 - `work/oracle/token0_post_ffn_residual_oracle.py`
 - `work/oracle/token0_layer1_attn_norm_oracle.py`
+- `work/oracle/token0_layer1_attn_q_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
+- `work/oracle/token0-layer1-attn-q-output.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed; the harnesses printed
-  `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
-- `./mistral-asm --help` returned status 0. The unsupported prompt-generation
-  form returned status 2 with the usage diagnostic.
-- `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
-  GNU_STACK program headers, with no interpreter or dynamic program header.
-- Synthetic valid and malformed GGUF fixtures preserved expected behavior:
-  valid empty input returned status 0 with `tensor_infos_offset: 24`,
-  `tensor_data_offset: 0`, zeroed layer-1 query lookup fields,
-  `token0_layer1_attn_norm: 0`, `token0_layer1_attn_q_matvec: 0`, and no
-  `token0_layer1_attn_q_output*_f32_hex` labels; bad magic returned status 3;
-  a truncated tensor directory returned status 3.
-- The real target model returned status 0, printed
-  `layer1_attn_q_tensor_found: 1`, `layer1_attn_q_tensor_n_dimensions: 2`,
-  dimensions `3072` and `4096`, type `8`, offset `568246272`, printed
-  `token0_layer1_attn_q_matvec: 1`, preserved the recorded post-FFN residual
-  and layer-1 attention RMSNorm words, and printed layer-1 query words
-  `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`.
-- The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0 and cleanup showed successful `close(3)` before final `munmap`.
+- `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
+  `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `python3 -m py_compile work/oracle/*.py` passed.
+- `python3 work/oracle/token0_layer1_attn_q_oracle.py` on the real target GGUF
+  printed layer-1 query oracle words `0x3f98c6d6`, `0x3e72aeb6`,
+  `0x3e641287`, and `0x3e76b8f1`, with the recorded post-FFN residual and
+  layer-1 attention RMSNorm prerequisite words unchanged.
+- `./mistral-asm` on the real target GGUF printed `token0_layer1_attn_q_matvec:
+  1`; a focused oracle/runtime comparison over the post-FFN residual, layer-1
+  attention RMSNorm, and layer-1 query labels printed `layer1 query
+  oracle/runtime comparison: ok`.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
 - `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
@@ -92,7 +90,6 @@ None.
 
 ## Next Exact Step
 
-Add external oracle comparison for `token0_layer1_attn_q_output[0..3]` under
-`work/oracle/`, recomputing from the existing layer-1 attention RMSNorm
-activation and `blk.1.attn_q.weight` without changing runtime assembly unless a
-mismatch is found.
+Add descriptor-only runtime lookup and printed summary fields for
+`blk.1.attn_k.weight`, using a separate reusable descriptor slot and preserving
+the existing layer-1 query projection behavior.
