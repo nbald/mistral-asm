@@ -1165,3 +1165,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   descriptor fields. The real target printed the key descriptor as Q8_0
   `3072x1024` at relative offset `551522304`, matching an external parser
   check, while the existing layer-1 query output words stayed unchanged.
+
+## 2026-05-10T20:27:11Z
+
+- Added the status-only layer-1 key projection smoke. It reuses the private
+  layer-1 attention RMSNorm activation and `blk.1.attn_k.weight` descriptor,
+  requires exact Q8_0 `3072x1024` shape, bounds the complete mapped payload, and
+  writes only private static output storage.
+- Verification evidence: the real target printed status 1 for
+  `token0_layer1_attn_k_matvec`, while a temporary empty valid GGUF kept it at
+  0. Existing layer-1 RMSNorm and query output words stayed unchanged, no
+  layer-1 key output labels were emitted, cleanup tracing still showed
+  `close(3)` before final `munmap`, and the build, harness, oracle py-compile,
+  runtime purity, artifact, and whitespace checks passed.
