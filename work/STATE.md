@@ -6,9 +6,9 @@ Milestone 8: Q8_0 matvec.
 
 ## Current Exact Task
 
-Extend the scalar Q8_0 math slice from a verified one-block primitive to a
-multi-block row/span dot routine that can accumulate over `32 * block_count`
-f32 activations.
+Extend the scalar Q8_0 math slice from a verified row/span dot primitive to a
+small matvec routine that computes multiple output rows from one f32 activation
+vector.
 
 ## Completed Work
 
@@ -39,9 +39,12 @@ f32 activations.
   aligned tensor-data base plus that offset does not land inside the mapped file.
 - `src/math/q8_0_dot.s` exports `q8_0_dot_f32_block`, a scalar one-block GGML
   Q8_0 dot primitive for one 34-byte Q8_0 weight block and 32 f32 activations.
+- `src/math/q8_0_dot.s` also exports `q8_0_dot_f32_row`, a scalar multi-block
+  row/span dot primitive that accumulates over `32 * block_count` f32
+  activations and returns +0.0 for a zero block count.
 - `make check-q8_0-dot` builds a separate no-libc assembly verifier that checks
-  exact f32 result bits for three scalar fixtures: positive unit scale, negative
-  quant bytes, and varied f32 inputs with zero tail values.
+  exact f32 result bits for one-block fixtures, two-block row fixtures, row
+  pointer advancement, and zero-block behavior.
 
 ## Known Blockers
 
@@ -60,15 +63,17 @@ None.
 
 ## Required Verification
 
-- Define focused multi-block Q8_0 row/span fixtures with known expected results.
+- Define focused Q8_0 matvec fixtures with known expected row outputs.
 - Rebuild with `as`/`ld`.
-- Verify the assembly math routine against expected scalar results.
+- Verify the assembly matvec routine against expected scalar results.
 - Keep existing GGUF loader smoke checks passing.
 
 ## Last Verification
 
 - `make clean && make && make check` passed.
-- `make check` passed and printed `q8_0_dot: ok`.
+- `make check` passed and printed `q8_0_dot: ok`, covering exact f32 bits for
+  one-block dots, two-block row dots, row pointer advancement, and zero-block
+  return.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary milestone.
 - Synthetic GGUF fixture `/tmp/mistral_asm_tensor_valid.gguf` with one tensor,
@@ -86,6 +91,6 @@ None.
 
 ## Next Exact Step
 
-Add a scalar Q8_0 row/span dot routine that loops over multiple 32-value Q8_0
-blocks and f32 activation spans, reusing `q8_0_dot_f32_block` or its inner logic,
-with no-libc fixtures covering at least two blocks.
+Add a scalar Q8_0 matvec routine that loops over output rows, reuses
+`q8_0_dot_f32_row` or its inner logic for each row, stores f32 row outputs, and
+has no-libc fixtures covering at least two rows with two blocks per row.

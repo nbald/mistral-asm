@@ -269,3 +269,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   -16.0, and -20.0 fixtures; the main runtime rebuilt; help, future prompt-form
   rejection, valid/malformed synthetic GGUF fixtures, static-link checks, and
   whitespace checks passed. The target model file was still absent locally.
+
+## 2026-05-10T14:00:15Z
+
+- Scalar Q8_0 math now includes a row/span primitive over multiple 32-value
+  blocks, returning +0.0 for a zero block count and otherwise accumulating in the
+  same dequantize-then-add order as the one-block routine.
+- Decision: the row routine inlines the scalar block loop instead of calling the
+  one-block primitive, keeping register ownership and accumulation order obvious
+  before introducing a matvec loop.
+- Verification evidence: the no-libc verifier now covers exact f32 bits for
+  512.0 across two blocks, -20.0 with required Q8_0/f32 pointer advancement, and
+  zero-block +0.0; the main runtime and GGUF smoke checks still pass. The target
+  model file was still absent locally.
