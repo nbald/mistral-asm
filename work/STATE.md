@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a small layer-1 attention context slice.
+Add an external oracle note for the published layer-1 attention context slice.
 
 ## Completed Work
 
@@ -53,8 +53,11 @@ Publish a small layer-1 attention context slice.
 - The guarded `token0_layer1_attn_context_smoke` consumes the layer-1 value
   projection output and uses `blk.1.attn_output.weight` only as an exact Q8_0
   `4096x3072` shape guard. It expands the `1024` f32 grouped-query value output
-  into a private `4096` f32 context buffer, prints status only, and does not
-  resolve the output-projection payload offset or mapping pointer.
+  into a private `4096` f32 context buffer and publishes the first four raw f32
+  words only when status is 1. The real target reports `0x3d6bd91b`,
+  `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`, matching the first four
+  layer-1 value projection words because the first query head receives the
+  first KV-head value block unchanged.
 
 ## Known Blockers
 
@@ -90,10 +93,13 @@ None.
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
   `layer1_attn_output_tensor_found: 1`, dimensions `4096x3072`, type `8`,
-  offset `554876928`, and `token0_layer1_attn_context: 1`. Existing layer-1
-  norm/query/key/value status and public exact-hex slices stayed unchanged.
-- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields
-  and kept layer-1 norm/query/key/value/context gates at 0.
+  offset `554876928`, `token0_layer1_attn_context: 1`, and context words
+  `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`. Existing
+  layer-1 norm/query/key/value status and public exact-hex slices stayed
+  unchanged.
+- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields,
+  kept layer-1 norm/query/key/value/context gates at 0, and emitted no
+  `token0_layer1_attn_context*_f32_hex` labels.
 - A static check of `token0_layer1_attn_context_smoke` found no references to
   `layer1_attn_output_tensor_offset`, `gguf_mapping_base`, `q8_0_matvec`, or
   `rmsnorm`, confirming this step does not read output-projection payload bytes.
@@ -103,6 +109,6 @@ None.
 
 ## Next Exact Step
 
-Publish the first four raw f32 words of `token0_layer1_attn_context` behind the
-existing context status gate and verify the real target plus an empty valid GGUF
-without adding output-projection payload reads.
+Add an external oracle note for `token0_layer1_attn_context` explaining why the
+published first four words equal the first four layer-1 value projection words,
+then run the standard verification set.

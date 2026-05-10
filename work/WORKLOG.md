@@ -1279,3 +1279,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   the new context gate at 0. Static inspection of the new function found no
   references to the output-projection offset, mapping base, or matvec helper,
   confirming this step did not add output-projection payload reads.
+
+## 2026-05-10T21:13:05Z
+
+- Published the first four raw f32 words of the token-0 layer-1 attention
+  context behind the existing context status gate. Since this is still the
+  one-token context expansion step, the first query head copies the first
+  KV-head value block unchanged and no output-projection payload bytes are read.
+- Verification evidence: the real target printed context words `0x3d6bd91b`,
+  `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`, matching the first four
+  layer-1 value words already published. The empty valid synthetic GGUF kept the
+  layer-1 context gate at 0 and emitted no layer-1 context word labels; build,
+  no-libc harnesses, static no-output-projection-read check, oracle
+  py-compile, runtime purity, static-link, tracked-artifact, help, and
+  whitespace checks passed.
