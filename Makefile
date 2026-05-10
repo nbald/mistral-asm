@@ -25,6 +25,7 @@ OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)
 Q8_0_DOT_CHECK := $(BUILD_DIR)/tests/q8_0_dot_check
 RMSNORM_CHECK := $(BUILD_DIR)/tests/rmsnorm_check
 SWIGLU_CHECK := $(BUILD_DIR)/tests/swiglu_check
+GGUF_LOOKUP_CHECK := $(BUILD_DIR)/tests/gguf_lookup_check
 Q8_0_DOT_CHECK_OBJECTS := \
 	$(BUILD_DIR)/tests/q8_0_dot_harness.o \
 	$(BUILD_DIR)/math/q8_0_dot.o \
@@ -40,12 +41,22 @@ SWIGLU_CHECK_OBJECTS := \
 	$(BUILD_DIR)/math/swiglu.o \
 	$(BUILD_DIR)/sys/exit.o \
 	$(BUILD_DIR)/sys/write.o
+GGUF_LOOKUP_CHECK_OBJECTS := \
+	$(BUILD_DIR)/tests/gguf_lookup_harness.o \
+	$(BUILD_DIR)/gguf/load_header.o \
+	$(BUILD_DIR)/sys/close.o \
+	$(BUILD_DIR)/sys/exit.o \
+	$(BUILD_DIR)/sys/fstat.o \
+	$(BUILD_DIR)/sys/mmap.o \
+	$(BUILD_DIR)/sys/munmap.o \
+	$(BUILD_DIR)/sys/openat.o \
+	$(BUILD_DIR)/sys/write.o
 
-.PHONY: all clean check check-q8_0-dot check-rmsnorm check-swiglu
+.PHONY: all clean check check-q8_0-dot check-rmsnorm check-swiglu check-gguf-lookup
 
 all: $(TARGET)
 
-check: check-q8_0-dot check-rmsnorm check-swiglu
+check: check-q8_0-dot check-rmsnorm check-swiglu check-gguf-lookup
 
 check-q8_0-dot: $(Q8_0_DOT_CHECK)
 	$(Q8_0_DOT_CHECK)
@@ -55,6 +66,9 @@ check-rmsnorm: $(RMSNORM_CHECK)
 
 check-swiglu: $(SWIGLU_CHECK)
 	$(SWIGLU_CHECK)
+
+check-gguf-lookup: $(GGUF_LOOKUP_CHECK)
+	$(GGUF_LOOKUP_CHECK)
 
 $(TARGET): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
@@ -68,6 +82,10 @@ $(RMSNORM_CHECK): $(RMSNORM_CHECK_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 $(SWIGLU_CHECK): $(SWIGLU_CHECK_OBJECTS)
+	mkdir -p $(dir $@)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(GGUF_LOOKUP_CHECK): $(GGUF_LOOKUP_CHECK_OBJECTS)
 	mkdir -p $(dir $@)
 	$(LD) $(LDFLAGS) -o $@ $^
 

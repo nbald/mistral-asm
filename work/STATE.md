@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Prepare layer iteration by adding a reusable tensor-directory lookup helper that
-can rescan from the retained tensor-info directory start offset and capture one
-requested tensor descriptor without hard-coding another fixed summary slot.
+Wire the reusable tensor-directory lookup helper into a non-math runtime smoke
+that captures one later-layer descriptor into a separate scratch slot, leaving
+the existing token-0 math path on the fixed descriptors for this step.
 
 ## Completed Work
 
@@ -37,6 +37,12 @@ requested tensor descriptor without hard-coding another fixed summary slot.
 - The review finding has been fixed: Q/K/V projection smokes now require exact
   target output row counts before setting status 1, and the `_start` contract
   includes the guarded post-FFN residual add.
+- `gguf_lookup_tensor_info` now provides a reusable exported helper that
+  rescans a validated tensor-info directory from the retained start offset,
+  matches one requested tensor name, and copies the descriptor into a generic
+  caller-owned 160-byte slot without adding another fixed summary slot.
+- A pure assembly `gguf_lookup` harness covers successful descriptor capture,
+  absent-name clearing, and malformed unaligned relative-offset rejection.
 
 ## Known Blockers
 
@@ -52,6 +58,7 @@ None.
 - `tests/q8_0_dot_harness.s`
 - `tests/rmsnorm_harness.s`
 - `tests/swiglu_harness.s`
+- `tests/gguf_lookup_harness.s`
 - `Makefile`
 - `work/oracle/token0_ffn_down_oracle.py`
 - `work/oracle/token0-ffn-down.md`
@@ -64,8 +71,8 @@ None.
 ## Required Verification
 
 - Rebuild with `as`/`ld`.
-- Keep `make check` including the Q8_0 dot, RMSNorm, and SwiGLU harnesses
-  passing.
+- Keep `make check` including the Q8_0 dot, RMSNorm, SwiGLU, and GGUF lookup
+  harnesses passing.
 - Keep CLI usage rejection, static-link checks, synthetic GGUF smoke/error
   checks, cleanup tracing, oracle py-compile, runtime source purity, and
   whitespace checks passing.
@@ -77,7 +84,7 @@ None.
 
 - `make clean` and `make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok`, `rmsnorm: ok`,
-  and `swiglu: ok`.
+  `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm --help` returned status 0. The unsupported prompt-generation
   form returned status 2 with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
@@ -103,7 +110,7 @@ None.
 
 ## Next Exact Step
 
-In `src/gguf/load_header.s`, add a reusable tensor-directory lookup helper that
-rescans from the retained tensor-info directory start offset, matches one
-requested tensor name, and captures its descriptor into a caller-provided slot;
-keep it unused by runtime math until a separate wiring step.
+In `src/entry/_start.s`, add a non-math smoke call to
+`gguf_lookup_tensor_info` after successful model validation to capture
+`blk.1.attn_norm.weight` into a new scratch descriptor slot and print a minimal
+found/dimension/type/offset summary, without changing the token-0 math path.

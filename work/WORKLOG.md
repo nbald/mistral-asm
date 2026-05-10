@@ -1044,3 +1044,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   printed `tensor_infos_offset: 7867981` and `tensor_data_offset: 7882016`.
   The real-model token-0 post-FFN residual words were unchanged, and cleanup
   tracing still showed successful `close(3)` before final `munmap`.
+
+## 2026-05-10T19:23:22Z
+
+- Added a reusable GGUF tensor lookup helper with a generic 160-byte descriptor
+  slot ABI. It intentionally remains off the token-0 math path; the next
+  runtime step can use it for later-layer descriptor smoke coverage without
+  extending the fixed summary layout.
+- Verification evidence: the new assembly harness found a second descriptor,
+  proved absent-name calls clear stale slot contents, and rejected an unaligned
+  relative payload offset with the tensor-alignment status. Full rebuild,
+  harness checks, CLI/static checks, synthetic GGUF checks, real-model cleanup
+  tracing, oracle py-compile, runtime purity, tracked-artifact scan, and
+  whitespace checks passed. The real-model post-FFN residual words were
+  unchanged, so external oracle scripts were not rerun.
