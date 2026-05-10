@@ -94,10 +94,13 @@
 
 ## Review Policy
 
-- Run a code-review pass after major subsystems and before increasing scope.
-- Reviews prioritize correctness, auditability, purity, failure modes, and
-  missing verification.
-- Commit review notes under `work/reviews/` when they contain actionable
+- Before every commit, ask exactly "are you happy?" If the answer is negative,
+  mixed, or anything other than a clear yes, fix or document the reason, verify
+  again, and repeat the question. Commit only after the answer is clearly yes.
+- Run a review gate after major subsystems and before increasing scope.
+- A review gate is exactly two consecutive atomic review passes before feature
+  work resumes.
+- Commit each review pass under `work/reviews/` when it contains actionable
   findings or an explicit clean result.
 - At final acceptance, run an "are you happy?" loop: answer honestly, list why
   not if the answer is no, fix or document the issue, and repeat until the

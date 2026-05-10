@@ -67,15 +67,20 @@ Work loop:
    `work/STATE.md` or `work/WORKLOG.md`, then clear the transient inbox with
    `scripts/control.sh clear-instructions`. If an instruction is meant to be
    persistent, encode it into a tracked work file before clearing the inbox.
-8. Commit the completed step with a short narrative commit message.
+8. Before any commit, ask yourself exactly: "are you happy?" If the answer is
+   negative, mixed, or anything other than a clear yes, fix or document the
+   reason, verify again, and repeat the question. Commit only after the answer
+   is clearly yes.
+9. Commit the completed step with a short narrative commit message.
 
 Review loop:
 
-- If `work/STATE.md` says the next step is a review pass, switch to code-review
-  stance for exactly one atomic step.
-- Review generated code and working docs for bugs, audit gaps, purity violations,
-  weak verification, stale state, and unclear comments.
-- Commit concise review notes under `work/reviews/` when there are findings or a
+- If `work/STATE.md` says the next step is a review pass, or if the next feature
+  step would increase scope after a major subsystem, run a review gate before
+  feature work resumes.
+- A review gate is exactly two consecutive atomic review passes. Do not satisfy
+  both passes with one review note.
+- Commit each review pass under `work/reviews/` when there are findings or a
   useful explicit clean result.
 - If review finds issues, update `work/STATE.md` so the next exact step fixes the
   highest-impact issue instead of continuing feature work.
