@@ -1006,3 +1006,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   post-FFN residual slices exactly. Rebuild, no-libc harnesses, CLI/static
   checks, synthetic GGUF checks, cleanup tracing, oracle py-compile, runtime
   purity, and whitespace checks passed.
+
+## 2026-05-10T19:03:30Z
+
+- Reviewed the token-0 layer-0 forward smoke chain through post-FFN residual
+  before adding layer iteration. The review found no issue in the FFN math order
+  or mmap bounds checks, but did find that attention Q/K/V public slices can be
+  emitted after partial-row synthetic projection successes. The next source
+  step should tighten those guards before broader feature work.
+- Verification evidence: rebuild and no-libc harnesses passed; CLI/static
+  checks, synthetic GGUF checks, real-model cleanup tracing, oracle py-compile,
+  runtime purity, tracked-artifact scan, and whitespace checks passed. External
+  oracle scripts were not rerun because this was a docs-only review step.

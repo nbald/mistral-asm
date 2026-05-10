@@ -6,8 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run a review pass over the token-0 layer-0 forward smoke and oracle chain
-before extending beyond the first transformer block.
+Fix the token-0 forward review finding by tightening the attention Q/K/V
+projection smoke success guards so public slices are emitted only for exact
+target output shapes, and refresh the `_start` contract to include the
+post-FFN residual step.
 
 ## Completed Work
 
@@ -27,6 +29,11 @@ before extending beyond the first transformer block.
   rounding, and matches runtime words exactly.
 - The real target reports `blk.0.ffn_down.weight` as Q8_0 dimensions
   `9216 x 3072` at relative offset `461266944`.
+- A token-0 forward review was recorded in
+  `work/reviews/2026-05-10-token0-forward-review.md`. It found that Q/K/V
+  projection smokes can print four public slice words after writing fewer than
+  four rows for non-target synthetic shapes, and that the `_start` contract is
+  stale because it omits the post-FFN residual add.
 
 ## Known Blockers
 
@@ -47,6 +54,7 @@ None.
 - `work/oracle/token0-ffn-down.md`
 - `work/oracle/token0_post_ffn_residual_oracle.py`
 - `work/oracle/token0-post-ffn-residual.md`
+- `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
@@ -74,9 +82,6 @@ None.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with post-FFN residual status 0, bad
   magic returned status 3, and a truncated tensor directory returned status 3.
-- `python3 work/oracle/token0_post_ffn_residual_oracle.py` on the real target
-  printed post-FFN residual words `0xbe256913`, `0xbf15734b`, `0x40402562`,
-  and `0xbe4c5582`.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
   status 0, printed `token0_post_ffn_residual: 1`, and matched the oracle's
   post-attention residual, FFN down, and post-FFN residual words exactly;
@@ -84,11 +89,15 @@ None.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
+- `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
+  dumps.
 - `git diff --check` passed.
+- No external oracle script was rerun in this review step because runtime math,
+  shared oracle inputs, and public exact-hex outputs were unchanged.
 
 ## Next Exact Step
 
-Review the generated assembly and oracle docs for the token-0 layer-0 forward
-chain through post-FFN residual, focusing on math order, shape/bounds guards,
-runtime purity, stale state, and whether the oracle evidence is strong enough
-before adding layer-iteration scope.
+In `src/entry/_start.s`, require exact target output row counts for
+`token0_attn_q_matvec_smoke`, `token0_attn_k_matvec_smoke`, and
+`token0_attn_v_matvec_smoke` before setting status 1 or printing public slices,
+then update the `_start` contract to mention the guarded post-FFN residual add.
