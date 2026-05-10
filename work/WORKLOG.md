@@ -235,3 +235,12 @@ redundant entries. Do not treat it as the primary continuation source; use
   misaligned second-offset rejection, and truncated dimension-array rejection.
   The future prompt form remained a usage error, and static-link plus whitespace
   checks passed.
+
+## 2026-05-10T13:40:22Z
+
+- Milestone 7 review found one correctness issue to fix before tensor payload
+  reads: tensor relative offsets are checked for sign and alignment, but not for
+  landing inside the mapped file after the aligned tensor-data base is known.
+- Verification evidence for the finding: a 64-byte synthetic one-tensor GGUF in
+  `/tmp` with aligned `first_tensor_offset: 1024` was accepted with status 0.
+  The next implementation step should turn that fixture into a rejection case.
