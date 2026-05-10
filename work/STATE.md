@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded status-only `token0_layer1_ffn_norm` smoke that consumes
-`token0_layer1_post_attn_residual` plus the reusable
-`blk.1.ffn_norm.weight` descriptor and writes private activation storage.
+Publish the first four raw f32 words of `token0_layer1_ffn_norm_activation`
+behind the existing `token0_layer1_ffn_norm_status` gate and verify the real
+target plus an empty valid GGUF skip.
 
 ## Completed Work
 
@@ -92,6 +92,12 @@ Add a guarded status-only `token0_layer1_ffn_norm` smoke that consumes
   `blk.1.ffn_norm.weight` without reading its tensor payload. The real target
   reports found `1`, dimensions `3072`, type `0`, and offset `645120000`,
   matching an independent GGUF parser cross-check.
+- The guarded status-only `token0_layer1_ffn_norm_smoke` consumes the private
+  `token0_layer1_post_attn_residual` buffer and reusable
+  `blk.1.ffn_norm.weight` descriptor, requires exact f32 `[3072]` shape, bounds
+  the complete mapped weight span, writes a private 3072-f32 activation buffer,
+  and prints only `token0_layer1_ffn_norm: 1` on the real target. An empty valid
+  GGUF reports status 0 and emits no layer-1 FFN norm word labels.
 
 ## Known Blockers
 
@@ -128,25 +134,21 @@ None.
 
 ## Last Verification
 
+- `make` and `make check` passed after adding the status-only layer-1 FFN
+  RMSNorm smoke; harnesses printed `q8_0_dot: ok`, `rmsnorm: ok`,
+  `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `layer1_ffn_norm_tensor_found: 1`,
-  `layer1_ffn_norm_tensor_n_dimensions: 1`,
-  `layer1_ffn_norm_tensor_dim0: 3072`,
-  `layer1_ffn_norm_tensor_ggml_type: 0`, and
-  `layer1_ffn_norm_tensor_offset: 645120000`; established layer-1
-  output-projection and post-attention residual exact-hex words stayed
-  unchanged.
-- An independent external GGUF parser using the oracle helpers reported the same
-  `blk.1.ffn_norm.weight` descriptor summary.
-- `make` and `make check` passed; the harnesses printed `q8_0_dot: ok`,
-  `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
+  `token0_layer1_ffn_norm: 1`; established layer-1 output-projection and
+  post-attention residual exact-hex words stayed unchanged.
+- A temporary empty valid GGUF printed `token0_layer1_ffn_norm: 0` and emitted
+  no `token0_layer1_ffn_norm*_f32_hex` labels.
 - `python3 -m py_compile work/oracle/*.py`, `./mistral-asm --help`,
-  `git diff --check`, runtime source purity scan, static-link inspection, and
-  tracked artifact scan passed. Static inspection found no
-  `layer1_ffn_norm_tensor_offset` use outside descriptor summary printing.
+  `git diff --check`, runtime source purity scan, static-link inspection,
+  tracked artifact scan, status-only label scan, and cleanup tracing passed.
+  Cleanup tracing showed `close(3)` before final `munmap`.
 
 ## Next Exact Step
 
-Add a guarded status-only `token0_layer1_ffn_norm_smoke` that applies RMSNorm to
-`token0_layer1_post_attn_residual` with `blk.1.ffn_norm.weight`, stores the
-full private activation, and prints only the status line.
+Publish the first four raw f32 words of `token0_layer1_ffn_norm_activation`
+only when `token0_layer1_ffn_norm_status` is 1, then verify the real target
+plus an empty valid GGUF skip.

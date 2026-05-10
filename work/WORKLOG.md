@@ -1395,3 +1395,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   output-projection and post-attention residual exact-hex slices stayed
   unchanged, and static inspection found no FFN norm payload-offset use outside
   descriptor summary printing.
+
+## 2026-05-10T22:05:22Z
+
+- Added the status-only layer-1 FFN RMSNorm smoke. It consumes the private
+  layer-1 post-attention residual buffer, resolves and bounds the reusable
+  `blk.1.ffn_norm.weight` f32 payload, and writes a separate private activation
+  buffer without publishing any f32 words yet.
+- Verification evidence: the real target printed `token0_layer1_ffn_norm: 1`
+  while established layer-1 output-projection and post-attention residual words
+  stayed unchanged. A temporary empty valid GGUF kept the new gate at 0 and
+  emitted no layer-1 FFN norm word labels; build, no-libc harnesses, cleanup
+  tracing, oracle py-compile, runtime purity, static-link, tracked-artifact,
+  help, status-only label, and whitespace checks passed.
