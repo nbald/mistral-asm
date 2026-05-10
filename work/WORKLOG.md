@@ -947,3 +947,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_ffn_down_matvec: 0`, while the real local target printed
   `token0_ffn_down_matvec: 1` and preserved the existing SwiGLU words. Cleanup
   tracing still showed `close(3)` before the final `munmap`.
+
+## 2026-05-10T18:34:33Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_down_output` after `token0_ffn_down_matvec_status` is 1. The FFN
+  down matvec math, descriptor guards, and bounds checks were left unchanged.
+- Verification evidence: synthetic fixtures kept `token0_ffn_down_matvec: 0`
+  with no FFN down output word labels. The real local target printed FFN down
+  words `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`; cleanup
+  tracing showed those lines before the final `munmap`.

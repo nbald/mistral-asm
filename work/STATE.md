@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Print a guarded four-word exact-hex slice from `token0_ffn_down_output` after
-`token0_ffn_down_matvec_status` is 1, preserving status-only skip behavior for
-synthetic fixtures.
+Add external token-0 FFN down oracle tooling and a comparison note for the new
+public FFN down exact-hex slice.
 
 ## Completed Work
 
@@ -23,17 +22,18 @@ synthetic fixtures.
 - Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
   projections, single-token context expansion, attention output projection,
   post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU, and
-  status-only FFN down projection.
-- Public exact-hex slices and external oracle notes exist through the FFN
-  SwiGLU activation. No public FFN down output slice exists yet.
+  FFN down projection.
+- Public exact-hex slices exist through the FFN down output. External oracle
+  notes exist through the FFN SwiGLU activation; no FFN down oracle comparison
+  note exists yet.
 - The real target reports `blk.0.ffn_down.weight` as Q8_0 dimensions
   `9216 x 3072` at relative offset `461266944`.
-- The runtime computes a guarded status-only token-0 FFN down matvec from
+- The runtime computes a guarded token-0 FFN down matvec from
   `token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`. It requires
   `token0_ffn_swiglu_status == 1`, exact Q8_0 `[9216 x 3072]` shape, and a
   bounded full matrix span before reading payload bytes; on success it writes
-  3072 f32 values to static `token0_ffn_down_output` and prints only
-  `token0_ffn_down_matvec: 1`.
+  3072 f32 values to static `token0_ffn_down_output` and prints a guarded
+  four-word exact-hex slice.
 
 ## Known Blockers
 
@@ -88,10 +88,12 @@ None.
   tensor alignment/directory diagnostics.
 - The real target model under `models/` returned status 0, preserved existing
   FFN SwiGLU exact-hex words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and
-  `0xbe30ee21`, and printed `token0_ffn_down_matvec: 1`.
+  `0xbe30ee21`, printed `token0_ffn_down_matvec: 1`, and printed FFN down
+  words `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
   showed the full-file read-only `mmap`, successful `close(3)`, FFN down
-  descriptor output, `token0_ffn_down_matvec: 1`, and final `munmap`.
+  descriptor output, `token0_ffn_down_matvec: 1`, the FFN down exact-hex slice,
+  and final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -99,6 +101,6 @@ None.
 
 ## Next Exact Step
 
-Print a guarded four-word exact-hex slice from `token0_ffn_down_output` after
-`token0_ffn_down_matvec_status` is 1, preserving status-only skip behavior for
-synthetic fixtures.
+Add external token-0 FFN down oracle tooling and a comparison note that
+recomputes the full token-0 path through FFN SwiGLU, dots it with the first four
+`blk.0.ffn_down.weight` rows, and compares those words with the runtime slice.
