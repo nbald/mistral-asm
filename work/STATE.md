@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only reusable lookup coverage for `blk.1.ffn_gate.weight` and
-`blk.1.ffn_up.weight`, storing separate layer-1 descriptor slots and printing
-found/dim/type/offset summaries without reading payload bytes.
+Add a status-only token-0 layer-1 FFN gate matvec smoke through
+`blk.1.ffn_gate.weight`, consuming the private
+`token0_layer1_ffn_norm_activation`, writing a private layer-1 FFN gate output
+buffer, and printing only the status label.
 
 ## Completed Work
 
@@ -30,10 +31,14 @@ found/dim/type/offset summaries without reading payload bytes.
 - The first behavior-preserving `_start.s` responsibility split is complete:
   generic text/output helpers now live in `src/runtime/text.s`, and the
   runtime link includes that module.
+- Descriptor-only reusable lookup coverage now includes
+  `blk.1.ffn_gate.weight` and `blk.1.ffn_up.weight`. Each descriptor is stored
+  in a separate layer-1 scratch slot and printed as found/dimension/type/offset
+  summary lines without reading payload bytes.
 
 ## Known Blockers
 
-- No current blocker for the next descriptor-only feature step.
+- No current blocker for the next status-only layer-1 FFN gate matvec step.
 - Residual maintainability risk remains: `src/entry/_start.s` still owns entry
   dispatch, descriptor lookup sequencing, descriptor/slice printing, static
   runtime buffers, and token-0 smoke orchestration. Prefer further
@@ -58,19 +63,20 @@ found/dim/type/offset summaries without reading payload bytes.
 
 ## Last Verification
 
-- Behavior-preserving helper split verification passed: `make clean && make`;
-  `./mistral-asm --help` matched the pre-split baseline exactly; real target
-  smoke filtered to the current layer-1 handoff labels matched the pre-split
-  baseline exactly, showing `layer1_ffn_norm_tensor_found: 1`,
-  `token0_layer1_attn_output_matvec: 1`,
-  `token0_layer1_post_attn_residual: 1`,
-  `token0_layer1_ffn_norm: 1`, and words `0xbec8ddb4`, `0xc11f7d85`,
-  `0x40d46234`, `0xbfe2ec8e`; `make check`; `git diff --check`; runtime
-  source purity scan; static-link inspection; tracked-artifact and large-file
-  scans; and exported-symbol inspection for `build/runtime/text.o`.
+- Descriptor-only layer-1 FFN gate/up lookup verification passed:
+  `make clean && make`; `make check`; `./mistral-asm --help`; real target
+  smoke showed `layer1_ffn_gate_tensor_found: 1`, dimensions `3072 x 9216`,
+  type `8`, offset `615038976`, and `layer1_ffn_up_tensor_found: 1`,
+  dimensions `3072 x 9216`, type `8`, offset `645132288`; an independent
+  GGUF parser reported the same two descriptors. Existing layer-1 handoff
+  labels stayed good, including `token0_layer1_ffn_norm: 1` and words
+  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`. `git diff --check`,
+  runtime source purity scan, static-link inspection, tracked-artifact scan,
+  and tracked large-file scan passed.
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.1.ffn_gate.weight` and
-`blk.1.ffn_up.weight`, storing separate layer-1 descriptor slots and printing
-found/dim/type/offset summaries without reading payload bytes.
+Add a status-only token-0 layer-1 FFN gate matvec smoke through
+`blk.1.ffn_gate.weight`, consuming the private
+`token0_layer1_ffn_norm_activation`, writing a private layer-1 FFN gate output
+buffer, and printing only the status label.

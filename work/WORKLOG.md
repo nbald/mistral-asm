@@ -1493,3 +1493,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x40d46234`, and `0xbfe2ec8e`. Build, no-libc harnesses, whitespace,
   runtime source purity, static-link, exported-symbol, tracked-artifact, and
   large-file checks passed.
+
+## 2026-05-11T00:50:12+02:00
+
+- Added descriptor-only coverage for the layer-1 FFN gate and up tensors. The
+  runtime resolves both names through `gguf_lookup_tensor_info`, keeps separate
+  scratch slots, and prints only descriptor fields so no new Q8_0 payload bytes
+  are consumed in this step.
+- Verification evidence: the real target reported both descriptors as present
+  with dimensions `3072 x 9216`, type `8`, and offsets `615038976` and
+  `645132288`; an independent GGUF parser reported the same values. The
+  existing layer-1 FFN norm status and four public words stayed unchanged.
+  Build, no-libc harnesses, help, whitespace, runtime purity, static-link,
+  tracked-artifact, and tracked large-file checks passed.
