@@ -20,6 +20,11 @@
 .equ TOKEN0_ATTN_K_OUTPUT_BYTES, TOKEN0_ATTN_K_OUTPUT_VALUES * 4
 .equ TOKEN0_ATTN_V_OUTPUT_VALUES, 1024
 .equ TOKEN0_ATTN_V_OUTPUT_BYTES, TOKEN0_ATTN_V_OUTPUT_VALUES * 4
+.equ TOKEN0_ATTN_HEAD_DIM_VALUES, 128
+.equ TOKEN0_ATTN_QUERY_HEADS_PER_KV_HEAD, 4
+.equ TOKEN0_ATTN_KV_HEADS, TOKEN0_ATTN_V_OUTPUT_VALUES / TOKEN0_ATTN_HEAD_DIM_VALUES
+.equ TOKEN0_ATTN_CONTEXT_VALUES, TOKEN0_ATTN_Q_OUTPUT_VALUES
+.equ TOKEN0_ATTN_CONTEXT_BYTES, TOKEN0_ATTN_CONTEXT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -37,7 +42,7 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
-	.ascii "RMSNorm, attention query/key/value smoke, and output descriptor.\n"
+	.ascii "RMSNorm, attention query/key/value smoke, context, and output descriptor.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -356,6 +361,10 @@ token0_attn_v_matvec_text:
 	.ascii "token0_attn_v_matvec: "
 token0_attn_v_matvec_text_end:
 
+token0_attn_context_text:
+	.ascii "token0_attn_context: "
+token0_attn_context_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -637,6 +646,10 @@ token0_attn_k_matvec_status:
 token0_attn_v_matvec_status:
 	.skip 8
 
+.balign 8
+token0_attn_context_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -657,6 +670,10 @@ token0_attn_k_output:
 token0_attn_v_output:
 	.skip TOKEN0_ATTN_V_OUTPUT_BYTES
 
+.balign 4
+token0_attn_context:
+	.skip TOKEN0_ATTN_CONTEXT_BYTES
+
 .section .text
 
 .global _start
@@ -674,7 +691,8 @@ token0_attn_v_output:
 # loader returns a live read-only model mapping descriptor on success; _start
 # keeps it live through the current summary path and token embedding, RMSNorm,
 # first query projection, first key projection, and first value projection
-# smokes, then releases it explicitly with gguf_release_mapping before exit. The
+# smokes, then derives the single-token attention context before releasing it
+# explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
 # bounded metadata
@@ -1928,6 +1946,23 @@ _start:
 
 	call print_token0_attn_v_output_slice
 
+	call token0_attn_context_smoke
+	mov qword ptr [rip + token0_attn_context_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_attn_context_text]
+	mov rdx, token0_attn_context_text_end - token0_attn_context_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_attn_context_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -2866,5 +2901,76 @@ token0_attn_v_matvec_smoke:
 	ret
 
 .size token0_attn_v_matvec_smoke, . - token0_attn_v_matvec_smoke
+
+.type token0_attn_context_smoke, @function
+
+# Contract: derive the token-0 single-token attention context from the retained
+# first value projection output.
+# Inputs: no register inputs. Reads token0_attn_v_matvec_status,
+# token0_attn_v_output, and the retained value and output projection tensor
+# descriptors.
+# Outputs: rax = 1 after writing a 4096-f32 token0_attn_context by repeating
+# each 128-f32 KV-head value block four times for the associated query heads;
+# otherwise rax = 0 and no context bytes are written.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: reads only process-owned static value-output storage and
+# writes only process-owned static context storage. The output projection
+# descriptor is used as a shape guard, but this function does not read any
+# blk.0.attn_output.weight payload bytes.
+# Error behavior: this is a smoke gate for the first single-token attention
+# context, not final attention setup. Shape mismatches are skipped with status 0.
+token0_attn_context_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_attn_v_matvec_status], 1
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_v_tensor_dim1], TOKEN0_ATTN_V_OUTPUT_VALUES
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_found], 1
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_n_dimensions], 2
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_dim0], TOKEN0_ATTN_CONTEXT_VALUES
+	jne .Lattn_context_done
+	cmp qword ptr [rip + gguf_summary_attn_output_tensor_dim1], TOKEN_EMBEDDING_ACTIVATION_VALUES
+	jne .Lattn_context_done
+
+	# With a one-token sequence, each attention row has one score, so softmax is
+	# exactly 1. The context is therefore the value vector, expanded from the
+	# model's grouped-query layout: eight KV heads, four query heads per KV head,
+	# and 128 f32 values per head.
+	lea rsi, [rip + token0_attn_v_output]
+	lea rdi, [rip + token0_attn_context]
+	mov r8, TOKEN0_ATTN_KV_HEADS
+
+.Lattn_context_kv_head_loop:
+	mov r9, TOKEN0_ATTN_QUERY_HEADS_PER_KV_HEAD
+
+.Lattn_context_repeat_loop:
+	mov rcx, TOKEN0_ATTN_HEAD_DIM_VALUES
+	mov r10, rsi
+
+.Lattn_context_copy_loop:
+	mov eax, dword ptr [r10]
+	mov dword ptr [rdi], eax
+	add r10, 4
+	add rdi, 4
+	dec rcx
+	jnz .Lattn_context_copy_loop
+
+	dec r9
+	jnz .Lattn_context_repeat_loop
+
+	add rsi, TOKEN0_ATTN_HEAD_DIM_VALUES * 4
+	dec r8
+	jnz .Lattn_context_kv_head_loop
+
+	mov eax, 1
+
+.Lattn_context_done:
+	ret
+
+.size token0_attn_context_smoke, . - token0_attn_context_smoke
 
 .section .note.GNU-stack,"",@progbits

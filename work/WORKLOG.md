@@ -634,3 +634,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   4096 by 3072 at relative offset 431185920. Existing Q/K/V output words stayed
   unchanged, and cleanup tracing still shows the read-only mapping released
   after summary and smoke output.
+
+## 2026-05-10T16:26:55Z
+
+- The runtime now derives a guarded token-0 single-token attention context from
+  the value projection without reading `blk.0.attn_output.weight` payload bytes.
+  The context helper treats the one-token softmax as 1, repeats each 128-f32 KV
+  value-head block across its four query heads, and writes the resulting
+  4096-f32 context into static storage.
+- Decision: guard the status with the retained output projection descriptor's
+  shape, but keep that descriptor read-only metadata for this step. This proves
+  the context width is suitable for the next output-projection smoke while
+  preserving the no-payload-read boundary.
+- Verification evidence: synthetic fixtures kept `token0_attn_context: 0`; the
+  real local target printed `token0_attn_context: 1` and unchanged Q/K/V oracle
+  words; cleanup tracing still showed `close(3)` before final `munmap`.
