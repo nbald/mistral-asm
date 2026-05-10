@@ -6,7 +6,7 @@ Milestone 5: Metadata dump.
 
 ## Current Exact Task
 
-Begin metadata dump output from the validated GGUF header and selected metadata.
+Extend the metadata summary beyond raw header counts.
 
 ## Known Blockers
 
@@ -30,16 +30,18 @@ None.
 ## Last Verification
 
 - `make clean && make` passed.
-- `./mistral-asm --help` returned status 0 and now lists only supported current
-  invocations.
+- `./mistral-asm --help` returned status 0 and lists the metadata-summary
+  milestone.
+- Synthetic GGUF fixtures verified successful count output for 0/0 and 1/2
+  tensor/metadata counts, plus bad high-bit count and truncated metadata
+  failures.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
-- Runtime source search found no stale comment claiming tensor-info walking is a
-  future slice.
+- `readelf` reported no dynamic section and no interpreter segment.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Introduce a small caller-owned GGUF summary buffer, store the header tensor and
-metadata counts during validation, and print those counts as decimal text after
-a successful load.
+Extend the caller-owned GGUF summary with a fixed-size architecture string,
+capture `general.architecture` when its metadata value is a string, and print it
+after the header counts.

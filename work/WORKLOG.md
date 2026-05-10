@@ -144,3 +144,14 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: rebuild passed; help returned status 0; the future
   prompt form remained a usage error with status 2; runtime source search found
   no stale future-slice wording.
+
+## 2026-05-10T12:59:19Z
+
+- Metadata-summary output now begins with the two validated GGUF header counts:
+  `tensor_count` and `metadata_kv_count`.
+- Decision: the summary is caller-owned static storage in `_start`, so no
+  mapped-file pointer or loader-owned lifetime escapes after `munmap`.
+- Verification evidence: synthetic fixtures covered zero counts, non-zero
+  decimal count output with metadata and one tensor descriptor, high-bit count
+  rejection, and truncated metadata rejection. The target model file was not
+  present locally.

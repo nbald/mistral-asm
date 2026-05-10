@@ -1,5 +1,7 @@
 .intel_syntax noprefix
 
+.equ DECIMAL_SCRATCH_SIZE, 32
+
 .section .rodata
 
 help_arg:
@@ -13,7 +15,7 @@ help_text:
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF tensor directory validation.\n"
+	.ascii "Current milestone: GGUF metadata summary.\n"
 help_text_end:
 
 usage_error_text:
@@ -21,8 +23,20 @@ usage_error_text:
 usage_error_text_end:
 
 gguf_ok_text:
-	.ascii "GGUF tensor directory ok\n"
+	.ascii "GGUF summary\n"
 gguf_ok_text_end:
+
+tensor_count_text:
+	.ascii "tensor_count: "
+tensor_count_text_end:
+
+metadata_count_text:
+	.ascii "metadata_kv_count: "
+metadata_count_text_end:
+
+newline_text:
+	.ascii "\n"
+newline_text_end:
 
 gguf_open_error_text:
 	.ascii "mistral-asm: could not open model\n"
@@ -76,6 +90,15 @@ gguf_unknown_error_text:
 	.ascii "mistral-asm: GGUF validation failed\n"
 gguf_unknown_error_text_end:
 
+.section .bss
+
+.balign 8
+gguf_summary:
+gguf_summary_tensor_count:
+	.skip 8
+gguf_summary_metadata_count:
+	.skip 8
+
 .section .text
 
 .global _start
@@ -90,7 +113,9 @@ gguf_unknown_error_text_end:
 # validation errors.
 # Clobbers: all general-purpose registers may be clobbered; no caller exists.
 # Ownership/lifetime: argv strings remain kernel-provided process memory. Any
-# model mapping is owned and released inside gguf_validate_file.
+# model mapping is owned and released inside gguf_validate_file. The GGUF
+# summary buffer is process-owned static storage passed to the loader for scalar
+# header counts only.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -121,6 +146,7 @@ _start:
 	# The loader owns all file descriptors and mappings it creates. _start only
 	# translates its small status-code enum into user-visible process behavior.
 	mov rdi, qword ptr [rsp + 16]
+	lea rsi, [rip + gguf_summary]
 	call gguf_validate_file
 	test rax, rax
 	jz .Lgguf_ok
@@ -225,11 +251,40 @@ _start:
 
 .Lgguf_ok:
 	# This milestone validates the fixed GGUF header, metadata shapes, and
-	# tensor-info directory bounds. Later parser milestones will replace this
-	# with metadata and inference output.
+	# tensor-info directory bounds, then exposes the two header counts that were
+	# retained in caller-owned storage. Later parser milestones will add selected
+	# named metadata fields and tensor descriptors.
 	mov rdi, 1
 	lea rsi, [rip + gguf_ok_text]
 	mov rdx, gguf_ok_text_end - gguf_ok_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + tensor_count_text]
+	mov rdx, tensor_count_text_end - tensor_count_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_tensor_count]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + metadata_count_text]
+	mov rdx, metadata_count_text_end - metadata_count_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_metadata_count]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
 	call sys_write
 
 	xor rdi, rdi
@@ -284,5 +339,56 @@ str_eq_exact:
 	ret
 
 .size str_eq_exact, . - str_eq_exact
+
+.type write_u64_decimal, @function
+
+# Contract: write an unsigned 64-bit integer as base-10 ASCII.
+# Inputs: rdi = output file descriptor; rsi = value to print.
+# Outputs: returns after one write(2) attempt for the generated digit span; the
+# raw sys_write result is intentionally ignored by this milestone caller.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: uses a fixed scratch area on its own stack frame and does
+# not retain pointers after sys_write returns.
+# Error behavior: write errors are not reported separately; later CLI output
+# plumbing can centralize short-write handling if it becomes useful.
+write_u64_decimal:
+	push rbp
+	mov rbp, rsp
+	sub rsp, DECIMAL_SCRATCH_SIZE
+
+	# Fill digits backward from the end of the scratch space. Twenty bytes would
+	# hold any u64 value, but the larger round size keeps the frame simple.
+	lea r8, [rsp + DECIMAL_SCRATCH_SIZE]
+	mov r9, r8
+	mov rax, rsi
+	test rax, rax
+	jnz .Ldecimal_loop
+
+	dec r9
+	mov byte ptr [r9], '0'
+	jmp .Ldecimal_write
+
+.Ldecimal_loop:
+	xor edx, edx
+	mov r10d, 10
+	div r10
+	add dl, '0'
+	dec r9
+	mov byte ptr [r9], dl
+	test rax, rax
+	jnz .Ldecimal_loop
+
+.Ldecimal_write:
+	# r9 points at the first digit and r8 one byte past the last digit.
+	mov rsi, r9
+	mov rdx, r8
+	sub rdx, r9
+	call sys_write
+
+	add rsp, DECIMAL_SCRATCH_SIZE
+	pop rbp
+	ret
+
+.size write_u64_decimal, . - write_u64_decimal
 
 .section .note.GNU-stack,"",@progbits

@@ -11,6 +11,8 @@
 .equ GGUF_VERSION_SUPPORTED, 3
 .equ GGUF_DEFAULT_ALIGNMENT, 32
 .equ GGUF_MAX_DIMS, 4
+.equ GGUF_SUMMARY_TENSOR_COUNT, 0
+.equ GGUF_SUMMARY_METADATA_COUNT, 8
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -33,13 +35,16 @@
 
 # Contract: validate the fixed GGUF header, metadata record bounds, and tensor
 # descriptor directory shape for the narrow first loader.
-# Inputs: rdi = pointer to a NUL-terminated model path.
+# Inputs: rdi = pointer to a NUL-terminated model path; rsi = pointer to a
+# caller-owned summary buffer with room for two u64 fields: tensor_count at
+# offset 0 and metadata_kv_count at offset 8.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
-# it uses (rbx, r12, r13, r14, rbp).
+# it uses (rbx, r12, r13, r14, r15, rbp).
 # Ownership/lifetime: opens the model read-only, mmaps the whole file privately,
 # and releases any descriptor/mapping before returning. The caller never owns the
-# descriptor or mapping.
+# descriptor or mapping. The summary buffer remains caller-owned; this function
+# only writes scalar header counts into it.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -52,9 +57,11 @@ gguf_validate_file:
 	push r12
 	push r13
 	push r14
+	push r15
 	# Linux x86-64 struct stat is 144 bytes on the target ABI. Reserve 160 bytes
 	# to keep a round size and read st_size at STAT_SIZE_OFFSET below.
 	sub rsp, STAT_BUFFER_SIZE
+	mov r15, rsi
 
 	# openat(AT_FDCWD, path, O_RDONLY, 0). Using openat keeps all file opens in
 	# one syscall wrapper; mode is ignored without O_CREAT but is passed as 0.
@@ -107,9 +114,14 @@ gguf_validate_file:
 	mov rax, qword ptr [r13 + 8]
 	test rax, rax
 	js .Lbad_count
-	mov rax, qword ptr [r13 + 16]
-	test rax, rax
+	mov rdx, qword ptr [r13 + 16]
+	test rdx, rdx
 	js .Lbad_count
+	# Copy the validated header counts into caller-owned storage before the
+	# variable-width walkers consume the same values. No mapped-file pointer
+	# escapes through this summary.
+	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT], rdx
 
 	# Metadata records are variable-width. Walk them with offset arithmetic
 	# against the mapped file length so every later load is preceded by an
@@ -118,7 +130,7 @@ gguf_validate_file:
 	mov rdi, r13
 	mov rsi, r12
 	mov rdx, GGUF_HEADER_SIZE
-	mov rcx, qword ptr [r13 + 16]
+	mov rcx, qword ptr [r15 + GGUF_SUMMARY_METADATA_COUNT]
 	call gguf_walk_metadata
 	test rax, rax
 	jnz .Lmetadata_failed
@@ -129,7 +141,7 @@ gguf_validate_file:
 	# retain names, shapes, types, or offsets yet.
 	mov rdi, r13
 	mov rsi, r12
-	mov rcx, qword ptr [r13 + 8]
+	mov rcx, qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT]
 	call gguf_walk_tensor_infos
 	test rax, rax
 	jnz .Ltensor_failed
@@ -204,6 +216,7 @@ gguf_validate_file:
 
 .Ldone:
 	add rsp, STAT_BUFFER_SIZE
+	pop r15
 	pop r14
 	pop r13
 	pop r12
