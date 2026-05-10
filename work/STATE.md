@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded four-word exact-hex slice for `token0_layer1_attn_norm_activation`
-after `token0_layer1_attn_norm_status` is 1, leaving external oracle comparison
-for a later step.
+Add an external oracle comparison for the token-0 layer-1 attention RMSNorm
+exact-hex slice.
 
 ## Completed Work
 
@@ -31,6 +30,9 @@ for a later step.
   `blk.1.attn_norm.weight` descriptor for a status-only layer-1 attention
   RMSNorm smoke, writing `token0_layer1_attn_norm_activation` and printing
   `token0_layer1_attn_norm: 1` on the real target.
+- The layer-1 attention RMSNorm smoke now prints a guarded four-word exact-hex
+  activation slice after status 1. The real target printed
+  `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`.
 
 ## Known Blockers
 
@@ -66,24 +68,26 @@ None.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with `tensor_infos_offset: 24`,
   `tensor_data_offset: 0`, zeroed layer-1 lookup fields,
-  `token0_post_ffn_residual: 0`, and `token0_layer1_attn_norm: 0`; bad magic
-  returned status 3; a truncated tensor directory returned status 3.
+  `token0_post_ffn_residual: 0`, `token0_layer1_attn_norm: 0`, and no layer-1
+  exact-hex labels; bad magic returned status 3; a truncated tensor directory
+  returned status 3.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
   status 0, printed the expected layer-1 descriptor fields, preserved Q/K/V
   status 1 and the recorded post-FFN residual words, printed
-  `token0_layer1_attn_norm: 1`, and cleanup showed successful `close(3)` and
-  final `munmap`.
+  `token0_layer1_attn_norm: 1`, printed layer-1 attention RMSNorm words
+  `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`, and cleanup
+  showed successful `close(3)` and final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
 - `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
   dumps.
 - `git diff --check` passed.
-- No external oracle script was rerun because this step adds status-only
-  layer-1 math and no new public exact-hex output.
+- No external oracle script was rerun because the new public exact-hex output is
+  intentionally awaiting a separate oracle comparison step.
 
 ## Next Exact Step
 
-In `src/entry/_start.s`, add a guarded public four-word exact-hex slice from
-`token0_layer1_attn_norm_activation` after `token0_layer1_attn_norm_status` is
-1.
+Add external oracle tooling and a comparison note for
+`token0_layer1_attn_norm_activation`, reusing the existing post-FFN residual
+oracle path and comparing the four runtime words now printed by `mistral-asm`.

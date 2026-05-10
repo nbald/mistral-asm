@@ -1082,3 +1082,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   words. Rebuild, no-libc harnesses, CLI/static checks, malformed synthetic
   checks, cleanup tracing, oracle py-compile, runtime purity, tracked-artifact
   scan, and whitespace checks passed.
+
+## 2026-05-10T19:39:36Z
+
+- Published the first four raw f32 words of the token-0 layer-1 attention
+  RMSNorm activation behind the existing status gate. This intentionally stops
+  short of external oracle comparison so the next step can review the oracle
+  path separately.
+- Verification evidence: the empty valid synthetic GGUF printed
+  `token0_layer1_attn_norm: 0` and no layer-1 exact-hex labels. The real local
+  target printed layer-1 words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and
+  `0xc0a7934a`; cleanup tracing still showed `close(3)` before final `munmap`.
