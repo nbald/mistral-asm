@@ -921,3 +921,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`; a direct
   float32 calculation from the printed gate/up words matched all four bits.
   Cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T18:25:06Z
+
+- Added external token-0 FFN SwiGLU oracle tooling and a comparison note. The
+  oracle recomputes the existing path through FFN norm, gate, and up, verifies
+  the FFN down descriptor guard, then applies `silu(gate) * up` for the first
+  four activation words.
+- Verification evidence: the oracle printed SwiGLU words `0xbe697324`,
+  `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`. A direct extraction check
+  compared runtime FFN norm, gate, up, and SwiGLU slices with the oracle output
+  exactly. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
+  real-model cleanup tracing, oracle py-compile, and whitespace checks passed.

@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add external oracle tooling and a comparison note for the guarded
-`token0_ffn_swiglu_output` exact-hex slice.
+Implement a guarded status-only token-0 FFN down matvec from
+`token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`.
 
 ## Completed Work
 
@@ -25,12 +25,12 @@ Add external oracle tooling and a comparison note for the guarded
   projections, single-token context expansion, attention output projection,
   post-attention residual, FFN RMSNorm, FFN gate projection, FFN up projection,
   and FFN SwiGLU activation.
-- Public exact-hex slices and external oracle notes exist through the FFN up
-  projection.
+- Public exact-hex slices and external oracle notes exist through the FFN
+  SwiGLU activation.
 - The `blk.0.ffn_down.weight` descriptor is retained and printed. The real
   target reports Q8_0 dimensions `9216 x 3072` at relative offset `461266944`.
   No FFN down payload bytes are read yet.
-- This step added a scalar `swiglu_f32` helper and no-libc harness. The runtime
+- The scalar `swiglu_f32` helper has a no-libc harness. The runtime
   computes the guarded token-0 FFN SwiGLU activation into static f32 storage
   after the FFN gate/up matvecs succeed and the retained FFN down descriptor
   proves the target `[9216 x 3072]` consumer shape. The public smoke output is
@@ -39,6 +39,9 @@ Add external oracle tooling and a comparison note for the guarded
   `token0_ffn_swiglu_output` after `token0_ffn_swiglu_status` is 1, without
   changing the SwiGLU math. The real target prints words `0xbe697324`,
   `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`.
+- External SwiGLU oracle tooling recomputes the existing token-0 path through
+  FFN norm, gate, and up projections, applies `silu(gate) * up`, checks the
+  FFN down descriptor guard, and matches the four runtime SwiGLU words exactly.
 
 ## Known Blockers
 
@@ -66,9 +69,9 @@ None.
   usage rejection, GGUF smoke checks, cleanup tracing, oracle py-compile, and
   whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
-- Rerun existing external projection/output/residual/FFN RMSNorm/FFN gate/FFN up
-  oracle comparisons when their math, shared inputs, or public exact-hex slices
-  change.
+- Rerun existing external projection/output/residual/FFN RMSNorm/FFN gate/FFN
+  up/SwiGLU oracle comparisons when their math, shared inputs, or public
+  exact-hex slices change.
 
 ## Last Verification
 
@@ -96,16 +99,19 @@ None.
   SwiGLU exact-hex words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and
   `0xbe30ee21`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed the full-file read-only `mmap`, `close(3) = 0`, the FFN down descriptor
-  lines, FFN up output words, `token0_ffn_swiglu: 1`, the new SwiGLU output
-  words, and final `munmap`.
-- A quick independent Python float32 calculation from the printed gate/up words
-  matched all four new SwiGLU output words bit-for-bit.
+  showed the full-file read-only `mmap`, a successful file-descriptor close
+  before the final `munmap`, the FFN down descriptor lines, FFN up output words,
+  `token0_ffn_swiglu: 1`, and the SwiGLU output words.
+- `python3 work/oracle/token0_ffn_swiglu_oracle.py` on the real target printed
+  SwiGLU words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`.
+  A direct extraction check compared the runtime FFN norm, gate, up, and SwiGLU
+  slices against the oracle output and matched all checked words exactly.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add external token-0 FFN SwiGLU oracle tooling and a comparison note that
-recomputes the four new exact-hex words from the existing gate/up path and
-compares them with runtime output.
+Implement a guarded status-only token-0 FFN down matvec from
+`token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`, requiring the exact
+Q8_0 `[9216 x 3072]` shape and a bounded full matrix span before reading
+payload bytes.
