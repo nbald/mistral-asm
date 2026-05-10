@@ -1383,3 +1383,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x401af18e`, and `0xbe6a002c`, matching the current runtime labels exactly.
   Build, no-libc harnesses, oracle py-compile, runtime purity, static-link,
   tracked-artifact, help, and whitespace checks passed.
+
+## 2026-05-10T22:00:45Z
+
+- Added descriptor-only runtime coverage for `blk.1.ffn_norm.weight`. The new
+  path uses `gguf_lookup_tensor_info`, stores the summary in a separate
+  process-owned layer-1 FFN norm slot, and prints only descriptor fields.
+- Verification evidence: the real target printed found `1`, dimension count
+  `1`, dim0 `3072`, type `0`, and offset `645120000`; an independent GGUF
+  parser cross-check reported the same descriptor. Established layer-1
+  output-projection and post-attention residual exact-hex slices stayed
+  unchanged, and static inspection found no FFN norm payload-offset use outside
+  descriptor summary printing.
