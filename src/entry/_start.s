@@ -1174,8 +1174,9 @@ token0_post_ffn_residual:
 # through the first output projection before adding the post-attention residual
 # from process-owned static buffers, applies the FFN RMSNorm smoke through
 # retained FFN norm weights, and projects that activation through the retained
-# FFN gate and up matrices before deriving the first FFN SwiGLU activation and
-# projecting it through the retained FFN down matrix. The
+# FFN gate and up matrices before deriving the first FFN SwiGLU activation,
+# projecting it through the retained FFN down matrix, and adding the guarded
+# post-FFN residual from process-owned static buffers. The
 # mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
@@ -4456,14 +4457,15 @@ token0_attn_norm_smoke:
 # descriptor, token0_attn_norm_status, and token0_attn_norm_activation.
 # Outputs: rax = 1 when token0_attn_norm_activation is available and a
 # two-dimensional Q8_0 blk.0.attn_q.weight matrix with matching input width and
-# bounded output row count fits inside the mapping, after q8_0_matvec_f32 writes
-# token0_attn_q_output; otherwise rax = 0 and no query matrix payload is read.
+# exact target output row count fits inside the mapping, after q8_0_matvec_f32
+# writes token0_attn_q_output; otherwise rax = 0 and no query matrix payload is
+# read.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
 # helper preserves any callee-saved registers it uses internally.
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during q8_0_matvec_f32,
 # reads the static normalized activation as the shared f32 input vector, and
-# writes at most TOKEN0_ATTN_Q_OUTPUT_BYTES into static output storage. The mmap
-# remains owned by _start and must be released separately.
+# writes exactly TOKEN0_ATTN_Q_OUTPUT_BYTES into static output storage. The
+# mmap remains owned by _start and must be released separately.
 # Error behavior: this is a smoke gate for the first attention query projection,
 # not final graph setup. Non-target synthetic GGUF fixtures and shape mismatches
 # are skipped with status 0.
@@ -4498,7 +4500,7 @@ token0_attn_q_matvec_smoke:
 	jz .Lattn_q_smoke_done
 	js .Lattn_q_smoke_done
 	cmp rcx, TOKEN0_ATTN_Q_OUTPUT_VALUES
-	ja .Lattn_q_smoke_done
+	jne .Lattn_q_smoke_done
 
 	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
 	# matrix start and prove the full row-major Q8_0 matrix fits in the live mmap
@@ -4560,14 +4562,15 @@ token0_attn_q_matvec_smoke:
 # descriptor, token0_attn_norm_status, and token0_attn_norm_activation.
 # Outputs: rax = 1 when token0_attn_norm_activation is available and a
 # two-dimensional Q8_0 blk.0.attn_k.weight matrix with matching input width and
-# bounded output row count fits inside the mapping, after q8_0_matvec_f32 writes
-# token0_attn_k_output; otherwise rax = 0 and no key matrix payload is read.
+# exact target output row count fits inside the mapping, after q8_0_matvec_f32
+# writes token0_attn_k_output; otherwise rax = 0 and no key matrix payload is
+# read.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
 # helper preserves any callee-saved registers it uses internally.
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during q8_0_matvec_f32,
 # reads the static normalized activation as the shared f32 input vector, and
-# writes at most TOKEN0_ATTN_K_OUTPUT_BYTES into static output storage. The mmap
-# remains owned by _start and must be released separately.
+# writes exactly TOKEN0_ATTN_K_OUTPUT_BYTES into static output storage. The
+# mmap remains owned by _start and must be released separately.
 # Error behavior: this is a smoke gate for the first attention key projection,
 # not final graph setup. Non-target synthetic GGUF fixtures and shape mismatches
 # are skipped with status 0.
@@ -4602,7 +4605,7 @@ token0_attn_k_matvec_smoke:
 	jz .Lattn_k_smoke_done
 	js .Lattn_k_smoke_done
 	cmp rcx, TOKEN0_ATTN_K_OUTPUT_VALUES
-	ja .Lattn_k_smoke_done
+	jne .Lattn_k_smoke_done
 
 	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
 	# matrix start and prove the full row-major Q8_0 matrix fits in the live mmap
@@ -4664,14 +4667,15 @@ token0_attn_k_matvec_smoke:
 # descriptor, token0_attn_norm_status, and token0_attn_norm_activation.
 # Outputs: rax = 1 when token0_attn_norm_activation is available and a
 # two-dimensional Q8_0 blk.0.attn_v.weight matrix with matching input width and
-# bounded output row count fits inside the mapping, after q8_0_matvec_f32 writes
-# token0_attn_v_output; otherwise rax = 0 and no value matrix payload is read.
+# exact target output row count fits inside the mapping, after q8_0_matvec_f32
+# writes token0_attn_v_output; otherwise rax = 0 and no value matrix payload is
+# read.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
 # helper preserves any callee-saved registers it uses internally.
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during q8_0_matvec_f32,
 # reads the static normalized activation as the shared f32 input vector, and
-# writes at most TOKEN0_ATTN_V_OUTPUT_BYTES into static output storage. The mmap
-# remains owned by _start and must be released separately.
+# writes exactly TOKEN0_ATTN_V_OUTPUT_BYTES into static output storage. The
+# mmap remains owned by _start and must be released separately.
 # Error behavior: this is a smoke gate for the first attention value projection,
 # not final graph setup. Non-target synthetic GGUF fixtures and shape mismatches
 # are skipped with status 0.
@@ -4706,7 +4710,7 @@ token0_attn_v_matvec_smoke:
 	jz .Lattn_v_smoke_done
 	js .Lattn_v_smoke_done
 	cmp rcx, TOKEN0_ATTN_V_OUTPUT_VALUES
-	ja .Lattn_v_smoke_done
+	jne .Lattn_v_smoke_done
 
 	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
 	# matrix start and prove the full row-major Q8_0 matrix fits in the live mmap

@@ -1018,3 +1018,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   checks, synthetic GGUF checks, real-model cleanup tracing, oracle py-compile,
   runtime purity, tracked-artifact scan, and whitespace checks passed. External
   oracle scripts were not rerun because this was a docs-only review step.
+
+## 2026-05-10T19:10:30Z
+
+- Tightened the Q/K/V smoke success meaning after the token-0 forward review:
+  public attention projection slices are now status-gated on exact target row
+  counts rather than any positive bounded row count. The entry-point contract
+  now reaches the guarded post-FFN residual add.
+- Verification evidence: a disposable partial-row Q/K/V GGUF reached embedding
+  dequantization and attention RMSNorm successfully, then reported Q/K/V matvec
+  statuses of 0 and emitted no Q/K/V slice labels. The real target still
+  reported Q/K/V status 1 and preserved the recorded post-FFN residual words.
+  Rebuild, no-libc harnesses, CLI/static checks, synthetic malformed checks,
+  cleanup tracing, oracle py-compile, runtime purity, tracked-artifact scan,
+  and whitespace checks passed.

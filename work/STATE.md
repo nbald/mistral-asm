@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Fix the token-0 forward review finding by tightening the attention Q/K/V
-projection smoke success guards so public slices are emitted only for exact
-target output shapes, and refresh the `_start` contract to include the
-post-FFN residual step.
+Prepare layer iteration by retaining the validated tensor-info directory start
+offset in the GGUF summary and printing it alongside the tensor-data base
+offset.
 
 ## Completed Work
 
@@ -34,6 +33,9 @@ post-FFN residual step.
   projection smokes can print four public slice words after writing fewer than
   four rows for non-target synthetic shapes, and that the `_start` contract is
   stale because it omits the post-FFN residual add.
+- The review finding has been fixed: Q/K/V projection smokes now require exact
+  target output row counts before setting status 1, and the `_start` contract
+  includes the guarded post-FFN residual add.
 
 ## Known Blockers
 
@@ -82,22 +84,26 @@ None.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with post-FFN residual status 0, bad
   magic returned status 3, and a truncated tensor directory returned status 3.
+- A disposable partial-row Q/K/V GGUF fixture under `/tmp` proved the tightened
+  guards: embedding dequantization and attention RMSNorm returned status 1,
+  all three Q/K/V matvec smokes returned status 0, and no Q/K/V public exact-hex
+  slice labels were emitted.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed `token0_post_ffn_residual: 1`, and matched the oracle's
-  post-attention residual, FFN down, and post-FFN residual words exactly;
-  cleanup showed successful `close(3)` and final `munmap`.
+  status 0, printed exact-target Q/K/V matvec status 1 plus
+  `token0_post_ffn_residual: 1`, and preserved the recorded post-FFN residual
+  words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`; cleanup
+  showed successful `close(3)` and final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
 - `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
   dumps.
 - `git diff --check` passed.
-- No external oracle script was rerun in this review step because runtime math,
-  shared oracle inputs, and public exact-hex outputs were unchanged.
+- No external oracle script was rerun because runtime math, shared oracle
+  inputs, and public exact-hex outputs were unchanged.
 
 ## Next Exact Step
 
-In `src/entry/_start.s`, require exact target output row counts for
-`token0_attn_q_matvec_smoke`, `token0_attn_k_matvec_smoke`, and
-`token0_attn_v_matvec_smoke` before setting status 1 or printing public slices,
-then update the `_start` contract to mention the guarded post-FFN residual add.
+In `src/gguf/load_header.s` and `src/entry/_start.s`, retain the validated
+tensor-info directory start offset in the GGUF summary and print it alongside
+the tensor-data base offset.
