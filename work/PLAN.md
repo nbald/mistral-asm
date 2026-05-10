@@ -15,6 +15,15 @@
 - Initial generation path accepts token IDs first, then adds tokenizer decode,
   then tokenizer encode.
 
+## Local Model Input
+
+- The target GGUF has been downloaded outside git to:
+  `models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`.
+- SHA256 verified locally:
+  `920163471715241a9d99367d507e2ad94d1ebc34d0d169d25e5d97a49ec72556`.
+- `models/` and `*.gguf` are ignored. The model file is an external input, not
+  generated source, and must not be committed.
+
 ## Milestones
 
 1. Repository method: docs, prompt loop, ignore rules, working state.

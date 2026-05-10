@@ -282,3 +282,11 @@ redundant entries. Do not treat it as the primary continuation source; use
   512.0 across two blocks, -20.0 with required Q8_0/f32 pointer advancement, and
   zero-block +0.0; the main runtime and GGUF smoke checks still pass. The target
   model file was still absent locally.
+
+## 2026-05-10T14:04:44Z
+
+- External input update: the target Unsloth Ministral 3 3B Instruct Q8_0 GGUF
+  is now present locally under `models/`, which is ignored by git.
+- Verification evidence: local SHA256 is
+  `920163471715241a9d99367d507e2ad94d1ebc34d0d169d25e5d97a49ec72556`, matching
+  the upstream Hugging Face file record used for the download.
