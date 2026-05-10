@@ -7,7 +7,7 @@ Milestone 9: one-token forward from token IDs.
 ## Current Exact Task
 
 Add a guarded first-four exact-hex slice printer for
-`token0_layer1_ffn_gate_output` in `src/infer/token0_layer1_ffn.s`,
+`token0_layer1_ffn_up_output` in `src/infer/token0_layer1_ffn.s`,
 preserving the existing output order.
 
 ## Completed Work
@@ -56,10 +56,15 @@ preserving the existing output order.
   `src/infer/token0_layer1_ffn.s`. `_start.s` exports only the needed
   `blk.1.ffn_up.weight` descriptor handoff fields and calls the focused up
   status wrapper immediately after the existing gate status line.
+- The layer-1 FFN gate matvec wrapper now also prints a guarded first-four
+  exact-hex slice from the private `token0_layer1_ffn_gate_output` buffer when
+  its status is 1. The new gate output words appear after
+  `token0_layer1_ffn_gate_matvec: 1` and before the existing up status line,
+  matching the layer-0 FFN diagnostic order.
 
 ## Known Blockers
 
-- No current blocker for the next focused layer-1 FFN gate output slice step.
+- No current blocker for the next focused layer-1 FFN up output slice step.
 - Residual maintainability risk remains: `src/entry/_start.s` still owns entry
   dispatch, descriptor lookup sequencing, descriptor/slice printing, static
   runtime buffers, and token-0 smoke orchestration. Keep new subsystem-specific
@@ -86,20 +91,21 @@ preserving the existing output order.
 
 ## Last Verification
 
-- Status-only layer-1 FFN up matvec coverage passed: `make clean && make`;
-  `make check`; `./mistral-asm --help`; real target smoke showed the expected
-  layer-1 FFN norm/gate/up descriptors, unchanged FFN norm words
-  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, followed by
-  `token0_layer1_ffn_gate_matvec: 1` and `token0_layer1_ffn_up_matvec: 1`. A
-  temporary empty valid GGUF printed `token0_layer1_ffn_norm: 0`,
-  `token0_layer1_ffn_gate_matvec: 0`, and `token0_layer1_ffn_up_matvec: 0`.
-  `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
-  purity scan, static-link inspection, undefined-symbol inspection,
-  exported-symbol inspection, tracked-artifact scan, and tracked large-file
-  scan passed.
+- Layer-1 FFN gate output slice passed: `make clean all`; `make check`;
+  `./mistral-asm --help`; real target smoke showed unchanged FFN norm words
+  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, then
+  `token0_layer1_ffn_gate_matvec: 1`, gate output words `0xbe34ea97`,
+  `0xbfcc8119`, `0xbf150238`, `0xbf882cef`, and then
+  `token0_layer1_ffn_up_matvec: 1`. A temporary empty valid GGUF printed the
+  layer-1 FFN norm/gate/up statuses as `0` and emitted no gate output word
+  labels. A one-off external Python oracle recomputed the upstream layer-1 path
+  and matched the four new gate words exactly. `python3 -m py_compile
+  work/oracle/*.py`, `git diff --check`, runtime source purity scan,
+  static-link inspection, undefined-symbol inspection, exported-symbol
+  inspection, tracked-artifact scan, and tracked large-file scan passed.
 
 ## Next Exact Step
 
 Add a guarded first-four exact-hex slice printer for
-`token0_layer1_ffn_gate_output` in `src/infer/token0_layer1_ffn.s`,
+`token0_layer1_ffn_up_output` in `src/infer/token0_layer1_ffn.s`,
 preserving the existing output order.

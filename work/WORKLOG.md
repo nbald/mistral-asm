@@ -1564,3 +1564,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T01:21:37+02:00
+
+- Added the first public layer-1 FFN gate projection slice while keeping the
+  focused inference module responsible for the private gate output buffer and
+  its printer. The status remains the guard: synthetic non-target inputs print
+  only the zero statuses, while the real target emits the four gate words before
+  the existing up status line.
+- Verification evidence: the real target printed gate output words
+  `0xbe34ea97`, `0xbfcc8119`, `0xbf150238`, and `0xbf882cef`; a one-off
+  external Python oracle recomputed the upstream layer-1 path and matched those
+  words exactly. Build, no-libc harnesses, help, oracle py-compile, whitespace,
+  runtime purity, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
