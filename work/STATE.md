@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded four-word exact-hex slice from the token-0 layer-1
-post-attention residual.
+Add external oracle coverage for the published token-0 layer-1 post-attention
+residual slice.
 
 ## Completed Work
 
@@ -75,12 +75,14 @@ post-attention residual.
   `token0_layer1_attn_output` slice from the full layer-1 value projection,
   one-token grouped-query context, and `blk.1.attn_output.weight`. The oracle
   matches the runtime output-projection words exactly.
-- The guarded `token0_layer1_post_attn_residual` status-only smoke consumes the
-  private `token0_post_ffn_residual` and `token0_layer1_attn_output` buffers,
-  requires the layer-1 output descriptor to retain the exact 3072-row hidden
-  width, and writes a private 3072-f32 residual buffer only when prerequisites
-  are present. The real target reports status 1; an empty valid GGUF reports
-  status 0. No public layer-1 residual f32 words are emitted yet.
+- The guarded `token0_layer1_post_attn_residual` smoke consumes the private
+  `token0_post_ffn_residual` and `token0_layer1_attn_output` buffers, requires
+  the layer-1 output descriptor to retain the exact 3072-row hidden width, and
+  writes a private 3072-f32 residual buffer only when prerequisites are present.
+  It now publishes the first four raw f32 words only when status is 1. The real
+  target reports `0xbd4055c4`, `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`;
+  an empty valid GGUF reports status 0 and emits no layer-1 post-attention
+  residual word labels.
 
 ## Known Blockers
 
@@ -118,17 +120,20 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `token0_post_ffn_residual: 1`, `token0_layer1_attn_output_matvec: 1`, output
-  words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`, and
-  `token0_layer1_post_attn_residual: 1`.
+  `token0_post_ffn_residual: 1`, `token0_layer1_attn_output_matvec: 1`,
+  output words `0x3deaa744`, `0x3cb6f294`, `0xbf14cf4f`, and `0xbced5550`,
+  `token0_layer1_post_attn_residual: 1`, and residual words `0xbd4055c4`,
+  `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`.
 - A temporary empty valid GGUF printed `token0_layer1_attn_output_matvec: 0`
-  and `token0_layer1_post_attn_residual: 0` with no layer-1 output word labels.
+  and `token0_layer1_post_attn_residual: 0` with no layer-1 post-attention
+  residual word labels.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Print the first four raw f32 words of `token0_layer1_post_attn_residual` only
-when `token0_layer1_post_attn_residual_status` is 1, and verify the real target
-plus an empty valid GGUF skip.
+Add an external oracle script and note that independently recompute the first
+four `token0_layer1_post_attn_residual` words from the layer-0 post-FFN
+residual plus the layer-1 attention output projection, then compare them with
+the published runtime slice.

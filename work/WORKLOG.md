@@ -1360,3 +1360,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   projection words stayed unchanged. A temporary empty valid GGUF kept the new
   residual gate at 0. Build, no-libc harnesses, oracle py-compile, runtime
   purity, static-link, tracked-artifact, help, and whitespace checks passed.
+
+## 2026-05-10T21:44:55Z
+
+- Published the first four raw f32 words of the token-0 layer-1 post-attention
+  residual behind the existing residual status gate. This only exposes the
+  private buffer that the previous smoke step already wrote; no new tensor
+  payload bytes are read.
+- Verification evidence: the real target printed residual words `0xbd4055c4`,
+  `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`. The empty valid synthetic GGUF
+  kept the residual gate at 0 and emitted no layer-1 post-attention residual
+  word labels; build, no-libc harnesses, oracle py-compile, runtime purity,
+  static-link, tracked-artifact, help, and whitespace checks passed.
