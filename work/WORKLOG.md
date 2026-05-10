@@ -1241,3 +1241,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-1 value-output labels; rebuild, no-libc harnesses, cleanup tracing,
   oracle py-compile, runtime purity, static-link, tracked-artifact, help, and
   whitespace checks passed.
+
+## 2026-05-10T20:57:52Z
+
+- Added external layer-1 attention value oracle tooling. It reuses the full
+  layer-1 attention RMSNorm activation from the prior oracle path, then dots
+  that activation against the first four rows of `blk.1.attn_v.weight` with the
+  same scalar Q8_0 f32 accumulation order as the assembly matvec helper.
+- Verification evidence: the oracle produced `0x3d6bd91b`, `0x3d763224`,
+  `0x3d709b92`, and `0xbcca1ab6` for the public layer-1 value words, matching
+  the current runtime labels exactly. The assembly harnesses, oracle
+  py-compile, runtime purity, static-link, tracked-artifact, help, and
+  whitespace checks passed.

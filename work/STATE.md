@@ -6,8 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add external oracle coverage for the first four
-`token0_layer1_attn_v_output` words and compare it with the runtime slice.
+Add descriptor-only runtime coverage for `blk.1.attn_output.weight`.
 
 ## Completed Work
 
@@ -46,6 +45,9 @@ Add external oracle coverage for the first four
   payload, writes a private output buffer, and publishes the first four raw f32
   words only when status is 1. The real target reports `0x3d6bd91b`,
   `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`.
+- External oracle tooling now independently recomputes the published
+  `token0_layer1_attn_v_output` slice from the full layer-0 FFN and layer-1
+  attention RMSNorm chain. The oracle matches the runtime value words exactly.
 
 ## Known Blockers
 
@@ -66,9 +68,11 @@ None.
 - `work/oracle/token0_layer1_attn_norm_oracle.py`
 - `work/oracle/token0_layer1_attn_q_oracle.py`
 - `work/oracle/token0_layer1_attn_k_oracle.py`
+- `work/oracle/token0_layer1_attn_v_oracle.py`
 - `work/oracle/token0-layer1-attn-norm.md`
 - `work/oracle/token0-layer1-attn-q-output.md`
 - `work/oracle/token0-layer1-attn-k-output.md`
+- `work/oracle/token0-layer1-attn-v-output.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
@@ -77,23 +81,19 @@ None.
 
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
+- `python3 work/oracle/token0_layer1_attn_v_oracle.py` on the real target GGUF
+  produced `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6` for the
+  first four layer-1 value projection words.
 - `./mistral-asm` on the real target GGUF printed
   `layer1_attn_v_tensor_found: 1`, dimensions `3072x1024`, type `8`, offset
   `581615616`, `token0_layer1_attn_v_matvec: 1`, and value words
   `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`.
-- A temporary empty valid GGUF printed zeroed layer-1 query/key/value descriptor
-  fields, kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`,
-  `token0_layer1_attn_k_matvec`, and `token0_layer1_attn_v_matvec` at 0, and
-  emitted no `token0_layer1_attn_v_output*` labels.
-- Existing layer-1 query/key public output words stayed unchanged on the real
-  target.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
-  smoke passed. Cleanup tracing on a temporary valid GGUF still showed
-  `close(3)` before the final `munmap`.
+  smoke passed.
 
 ## Next Exact Step
 
-Add an external oracle script and note for `token0_layer1_attn_v_output` that
-recomputes the first four value projection words from the full layer-1
-attention RMSNorm chain, then compare it with the runtime slice.
+Add descriptor-only runtime coverage for `blk.1.attn_output.weight` in a
+reusable lookup slot, print found/dim/type/offset fields, and verify the real
+target plus an empty valid GGUF without reading projection payload bytes.
