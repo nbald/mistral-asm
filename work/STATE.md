@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add fixed `blk.0.ffn_gate.weight` descriptor plumbing to the GGUF summary and
-runtime output, with synthetic fixtures keeping it absent and the real target
-printing its type, dimensions, and relative offset.
+Add a guarded token-0 FFN gate matvec smoke using `blk.0.ffn_gate.weight` and
+`token0_ffn_norm_activation`, validate Q8_0 `[3072 x 9216]` shape and mapped
+payload bounds, write static FFN gate activation storage, and print only a
+`token0_ffn_gate_matvec` status line.
 
 ## Completed Work
 
@@ -19,20 +20,16 @@ printing its type, dimensions, and relative offset.
   summary and guarded smoke output.
 - The summary captures selected Mistral metadata, tensor-data base offset, the
   first tensor, `token_embd.weight`, first-layer attention norm/Q/K/V/output
-  descriptors, `blk.0.ffn_norm.weight`, and attention RMSNorm epsilon bits.
+  descriptors, `blk.0.ffn_norm.weight`, `blk.0.ffn_gate.weight`, and attention
+  RMSNorm epsilon bits.
 - Token-0 smokes currently cover embedding dequantization, attention RMSNorm,
   query/key/value projections, single-token context expansion, attention output
   projection, post-attention residual, and FFN RMSNorm. The
   query/key/value/output/residual/FFN RMSNorm exact-hex slices have external
   oracle notes.
-- The FFN RMSNorm smoke consumes `blk.0.ffn_norm.weight` only after
-  `token0_post_attn_residual` is available, validates the retained descriptor as
-  f32 `[3072]`, proves the mapped payload span is in bounds, writes
-  `token0_ffn_norm_activation`, and now prints a guarded four-word exact-hex
-  slice when `token0_ffn_norm_status` is 1.
-- The external FFN RMSNorm oracle recomputes token 0 through the full
-  3072-word post-attention residual before applying `blk.0.ffn_norm.weight`,
-  because the RMSNorm scale depends on every residual element.
+- The FFN gate descriptor step is descriptor-only: synthetic fixtures keep it
+  absent, while the real target prints Q8_0 dimensions `3072 x 9216` at relative
+  offset `491347968`.
 
 ## Known Blockers
 
@@ -82,40 +79,37 @@ None.
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and reported the FFN RMSNorm smoke
-  milestone; the current unsupported prompt generation form returned status 2
-  with the usage diagnostic.
+- `./mistral-asm --help` returned status 0 and reported the FFN gate descriptor
+  milestone; the unsupported prompt generation form returned status 2 with the
+  usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
-  `ffn_norm_tensor_found: 0`, and kept `token0_post_attn_residual: 0` and
-  `token0_ffn_norm: 0` with no FFN norm word slice.
+  `ffn_norm_tensor_found: 0` and `ffn_gate_tensor_found: 0`, and kept
+  `token0_post_attn_residual: 0` and `token0_ffn_norm: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
   alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
-  `blk.0.ffn_norm.weight` as f32 with dimension 3072 at relative offset
-  521428992, kept the existing token-0 attention and residual exact-hex slices,
-  printed `token0_ffn_norm: 1`, and printed FFN norm words `0xc01a392c`,
-  `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`.
+  `blk.0.ffn_gate.weight` as Q8_0 with dimensions `3072 x 9216` at relative
+  offset `491347968`, kept the existing token-0 attention/residual exact-hex
+  slices, and kept FFN norm words `0xc01a392c`, `0xc116e478`, `0x416e11b8`,
+  and `0x3fe0d866`.
 - Merged `strace -e trace=mmap,munmap,close` output on the real target returned
-  status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN norm
-  status and four-word slice, then final `munmap`.
-- `python3 -m py_compile` passed for all oracle scripts, including
-  `work/oracle/token0_ffn_norm_oracle.py`.
-- `work/oracle/token0_ffn_norm_oracle.py` matched the runtime FFN RMSNorm words
-  `0xc01a392c`, `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`; its intermediate
-  residual words also matched the runtime residual slice.
-- The older external projection/output/residual oracle scripts were not rerun
-  because this verification-only step did not change runtime math, projection
-  inputs, residual math, or shared token-0 inputs.
+  status 0, showed the full-file read-only `mmap`, `close(3) = 0`, and final
+  `munmap`.
+- `python3 -m py_compile work/oracle/*.py` passed.
+- The external projection/output/residual/FFN RMSNorm oracle scripts were not
+  rerun because this descriptor-only step did not change runtime math, token-0
+  inputs, or existing tensor payload handling.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add fixed `blk.0.ffn_gate.weight` descriptor plumbing to the GGUF summary and
-runtime output, with synthetic fixtures keeping it absent and the real target
-printing its type, dimensions, and relative offset.
+Add a guarded token-0 FFN gate matvec smoke using `blk.0.ffn_gate.weight` and
+`token0_ffn_norm_activation`, validate Q8_0 `[3072 x 9216]` shape and mapped
+payload bounds, write static FFN gate activation storage, and print only a
+`token0_ffn_gate_matvec` status line.

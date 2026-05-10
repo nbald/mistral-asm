@@ -783,3 +783,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   the residual intermediate words. Rebuild, no-libc harnesses, CLI/static
   checks, synthetic GGUF checks, real-model smoke, cleanup tracing, oracle
   py-compile, and whitespace checks passed.
+
+## 2026-05-10T17:24:05Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.ffn_gate.weight` descriptor after the FFN RMSNorm descriptor. This is
+  descriptor plumbing only; the runtime does not read FFN gate payload bytes in
+  this step.
+- Verification evidence: synthetic fixtures keep `ffn_gate_tensor_found: 0`;
+  the real local target prints the gate projection as Q8_0 with dimensions
+  `3072 x 9216` at relative offset `491347968` while preserving the existing
+  FFN RMSNorm exact-hex slice. Cleanup tracing still shows the read-only mapping
+  released after summary and smoke output.
