@@ -36,6 +36,8 @@
 .equ TOKEN0_FFN_NORM_BYTES, TOKEN0_FFN_NORM_VALUES * 4
 .equ TOKEN0_FFN_GATE_OUTPUT_VALUES, 9216
 .equ TOKEN0_FFN_GATE_OUTPUT_BYTES, TOKEN0_FFN_GATE_OUTPUT_VALUES * 4
+.equ TOKEN0_FFN_UP_OUTPUT_VALUES, 9216
+.equ TOKEN0_FFN_UP_OUTPUT_BYTES, TOKEN0_FFN_UP_OUTPUT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -55,7 +57,7 @@ help_text:
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
-	.ascii "FFN gate matvec smoke, and FFN up descriptor.\n"
+	.ascii "FFN gate and up matvec smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -502,6 +504,10 @@ token0_ffn_gate_matvec_text:
 	.ascii "token0_ffn_gate_matvec: "
 token0_ffn_gate_matvec_text_end:
 
+token0_ffn_up_matvec_text:
+	.ascii "token0_ffn_up_matvec: "
+token0_ffn_up_matvec_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -937,6 +943,10 @@ token0_ffn_norm_status:
 token0_ffn_gate_matvec_status:
 	.skip 8
 
+.balign 8
+token0_ffn_up_matvec_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -976,6 +986,10 @@ token0_ffn_norm_activation:
 .balign 4
 token0_ffn_gate_output:
 	.skip TOKEN0_FFN_GATE_OUTPUT_BYTES
+
+.balign 4
+token0_ffn_up_output:
+	.skip TOKEN0_FFN_UP_OUTPUT_BYTES
 
 .section .text
 
@@ -2730,6 +2744,23 @@ _start:
 
 	call print_token0_ffn_gate_output_slice
 
+	call token0_ffn_up_matvec_smoke
+	mov qword ptr [rip + token0_ffn_up_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_up_matvec_text]
+	mov rdx, token0_ffn_up_matvec_text_end - token0_ffn_up_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_ffn_up_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -4445,5 +4476,95 @@ token0_ffn_gate_matvec_smoke:
 	ret
 
 .size token0_ffn_gate_matvec_smoke, . - token0_ffn_gate_matvec_smoke
+
+.type token0_ffn_up_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 FFN-normalized activation
+# through the retained blk.0.ffn_up.weight matrix.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_ffn_norm_status, and token0_ffn_norm_activation.
+# Outputs: rax = 1 when token0_ffn_norm_activation is available and
+# blk.0.ffn_up.weight is exactly a two-dimensional Q8_0 [3072 x 9216] matrix
+# whose complete payload span fits inside the mapping, after q8_0_matvec_f32
+# writes token0_ffn_up_output; otherwise rax = 0 and no FFN up matrix payload
+# bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
+# q8_0_matvec_f32, reads the static FFN-normalized activation as the shared f32
+# input vector, and writes exactly TOKEN0_FFN_UP_OUTPUT_BYTES into static output
+# storage on success. The mmap remains owned by _start and must be released
+# separately.
+# Error behavior: this is a smoke gate for the first FFN up projection, not
+# final FFN setup. Non-target synthetic GGUF fixtures and shape or bounds
+# mismatches are skipped with status 0.
+token0_ffn_up_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_ffn_norm_status], 1
+	jne .Lffn_up_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_found], 1
+	jne .Lffn_up_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_n_dimensions], 2
+	jne .Lffn_up_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lffn_up_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_dim0], TOKEN0_FFN_NORM_VALUES
+	jne .Lffn_up_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_up_tensor_dim1], TOKEN0_FFN_UP_OUTPUT_VALUES
+	jne .Lffn_up_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# FFN up projection start and prove the complete row-major Q8_0 matrix fits
+	# in the live mapping before handing any payload pointer to the math helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lffn_up_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_ffn_up_tensor_offset]
+	test rdx, rdx
+	js .Lffn_up_smoke_skip
+	add rax, rdx
+	jc .Lffn_up_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lffn_up_smoke_skip
+
+	mov r8, TOKEN0_FFN_NORM_VALUES
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Lffn_up_smoke_skip
+	mov rcx, TOKEN0_FFN_UP_OUTPUT_VALUES
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Lffn_up_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Lffn_up_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Lffn_up_smoke_skip
+	add rdi, rax
+	jc .Lffn_up_smoke_skip
+
+	lea rsi, [rip + token0_ffn_norm_activation]
+	lea rdx, [rip + token0_ffn_up_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Lffn_up_smoke_skip:
+	xor eax, eax
+
+.Lffn_up_smoke_done:
+	ret
+
+.size token0_ffn_up_matvec_smoke, . - token0_ffn_up_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits

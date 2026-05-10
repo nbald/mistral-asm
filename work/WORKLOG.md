@@ -846,3 +846,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `3072 x 9216` at relative offset `521441280` while preserving existing token0
   exact-hex slices. A Python parser cross-check reported the same descriptor,
   and cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T17:49:06Z
+
+- The runtime now runs a guarded token-0 FFN up matvec from
+  `token0_ffn_norm_activation` through `blk.0.ffn_up.weight`, requiring the
+  exact Q8_0 `[3072 x 9216]` shape and a bounded full matrix span before writing
+  static FFN up activation storage.
+- Decision: keep this step status-only, matching the earlier FFN gate workflow.
+  A public exact-hex slice and oracle comparison remain separate reviewable
+  steps.
+- Verification evidence: synthetic fixtures skipped both FFN projections with
+  status 0, while the real local target printed `token0_ffn_up_matvec: 1` and no
+  FFN up exact-hex words. Existing Q/K/V/output/residual/FFN RMSNorm/FFN gate
+  exact slices were preserved, and cleanup tracing still showed `close(3)`
+  before the final `munmap`.
