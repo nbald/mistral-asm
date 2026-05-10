@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle comparison for the token-0 attention key projection
-output slice.
+Retain the fixed `blk.0.attn_v.weight` descriptor in the GGUF summary and print
+it, without reading value-projection payload bytes.
 
 ## Completed Work
 
@@ -33,7 +33,7 @@ output slice.
   print zero smoke statuses while preserving summary behavior.
 - External oracle tooling under `work/oracle/` independently reproduces the
   current scalar f32 token-0 embedding, attention RMSNorm, and first four query
-  projection dot products; those words match the runtime output.
+  and key projection dot products; those words match the runtime output.
 
 ## Known Blockers
 
@@ -52,6 +52,8 @@ None.
 - `work/WORKLOG.md`
 - `work/oracle/token0_attn_q_oracle.py`
 - `work/oracle/token0-attn-q-output.md`
+- `work/oracle/token0_attn_k_oracle.py`
+- `work/oracle/token0-attn-k-output.md`
 
 ## Required Verification
 
@@ -59,9 +61,8 @@ None.
 - Keep `make check`, static-link checks, future CLI usage rejection, GGUF smoke
   checks, cleanup tracing, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
-- Rerun the external `token0_attn_q_oracle.py` comparison when query-projection
-  math or its inputs change. Add a key-projection oracle after key output words
-  are exposed.
+- Rerun the external query/key projection oracle comparisons when projection
+  math or shared token-0 inputs change.
 
 ## Last Verification
 
@@ -94,9 +95,13 @@ None.
   the guarded key output slice, and `munmap(..., 3651679520) = 0`.
 - `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
   and matched the runtime query output words above.
+- `python3 work/oracle/token0_attn_k_oracle.py <target.gguf>` returned status 0
+  and matched the runtime key output words above.
+- `python3 -m py_compile` passed for both projection oracle scripts.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add verification-only oracle tooling for `token0_attn_k_output0_f32_hex`
-through `token0_attn_k_output3_f32_hex` and record the comparison.
+Add fixed `blk.0.attn_v.weight` descriptor plumbing to the GGUF summary and
+runtime output, with synthetic fixtures keeping the descriptor absent and the
+real target printing its type, dimensions, and relative offset.

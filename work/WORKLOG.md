@@ -549,3 +549,17 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: the real local target printed key output words
   `0xc028a3e3`, `0x3daaeb62`, `0xbe8a8c69`, and `0xc01d0994`; cleanup tracing
   showed those lines before the final `munmap`.
+
+## 2026-05-10T15:56:04Z
+
+- Added verification-only oracle tooling for the token-0 first attention key
+  projection. It reuses the direct GGUF parser and scalar f32 helper path from
+  the query oracle, then targets `blk.0.attn_k.weight`.
+- Decision: keep this as a separate key script and note, while sharing helper
+  functions from the existing query oracle. The runtime and build remain pure
+  assembly; Python and numpy are external verification tools only.
+- Verification evidence: the key oracle printed `0xc028a3e3`, `0x3daaeb62`,
+  `0xbe8a8c69`, and `0xc01d0994`, exactly matching the runtime key slice.
+  Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
+  real-model smoke, cleanup tracing, query/key oracles, and whitespace checks
+  passed.
