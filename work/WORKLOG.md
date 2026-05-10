@@ -70,3 +70,11 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Follow-up: autonomous loop now passes the continuation prompt as an explicit
   CLI argument instead of relying on stdin redirection.
 - Verification evidence: `bash -n scripts/autonomous-loop.sh` passed.
+
+## 2026-05-10T12:09:55Z
+
+- Milestone 2 verification evidence: the runtime builds from `.s` sources with
+  `as`/`ld`; `readelf` reports no dynamic section and no program interpreter;
+  `strace` for `--help` shows one stdout `write` followed by `exit(0)`.
+- Decision: keep syscall entry points in `src/sys/` even while they are tiny, so
+  the GGUF loader can add file and memory syscalls without bloating `_start`.

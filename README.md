@@ -75,8 +75,9 @@ runtime.
 
 ## Current State
 
-The implementation has not started yet. The autonomous workflow, project plan,
-operator controls, and review policy are in place.
+The pure ASM executable proof is implemented. `make` assembles the runtime with
+`as`, links it with `ld`, and `./mistral-asm --help` reaches Linux through direct
+`write` and `exit` syscalls.
 
 Read these first:
 
@@ -90,6 +91,9 @@ Read these first:
 Current committed layout:
 
 ```text
+Makefile              as/ld runtime build
+src/entry/            _start and process entry
+src/sys/              Linux syscall wrappers
 scripts/              autonomous loop, status, and control helpers
 work/                 project goal, plan, state, worklog, prompts, reviews
 work/control/         committed docs for operator controls
@@ -99,8 +103,6 @@ work/reviews/         review notes and findings
 Planned runtime layout:
 
 ```text
-src/entry/            _start and process entry
-src/sys/              Linux syscall wrappers
 src/cli/              argument parsing and usage output
 src/util/             small reusable helpers
 src/gguf/             GGUF parser
@@ -111,6 +113,13 @@ src/tokenizer/        encode/decode
 ```
 
 ## Quick Commands
+
+Build and run the current ASM proof:
+
+```sh
+make
+./mistral-asm --help
+```
 
 Inspect status from another terminal:
 
