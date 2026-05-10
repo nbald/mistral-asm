@@ -6,18 +6,19 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Prepare layer iteration by retaining the validated tensor-info directory start
-offset in the GGUF summary and printing it alongside the tensor-data base
-offset.
+Prepare layer iteration by adding a reusable tensor-directory lookup helper that
+can rescan from the retained tensor-info directory start offset and capture one
+requested tensor descriptor without hard-coding another fixed summary slot.
 
 ## Completed Work
 
 - Runtime source remains pure GNU `as` Intel assembly built with `as` and linked
   with `ld`; `_start` uses Linux syscalls directly and no libc.
 - The GGUF loader validates the narrow v3 little-endian target shape, maps the
-  model read-only, records the tensor-data base offset, and summarizes selected
-  Mistral metadata plus token embedding, first-layer attention, and first-layer
-  FFN norm/gate/up/down tensor descriptors.
+  model read-only, records the tensor-info directory start offset and
+  tensor-data base offset, and summarizes selected Mistral metadata plus token
+  embedding, first-layer attention, and first-layer FFN norm/gate/up/down tensor
+  descriptors.
 - Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
   projections, single-token context expansion, attention output projection,
   post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU,
@@ -82,14 +83,12 @@ None.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
-  valid empty input returned status 0 with post-FFN residual status 0, bad
-  magic returned status 3, and a truncated tensor directory returned status 3.
-- A disposable partial-row Q/K/V GGUF fixture under `/tmp` proved the tightened
-  guards: embedding dequantization and attention RMSNorm returned status 1,
-  all three Q/K/V matvec smokes returned status 0, and no Q/K/V public exact-hex
-  slice labels were emitted.
+  valid empty input returned status 0 with `tensor_infos_offset: 24`,
+  `tensor_data_offset: 0`, and post-FFN residual status 0; bad magic returned
+  status 3; a truncated tensor directory returned status 3.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed exact-target Q/K/V matvec status 1 plus
+  status 0, printed `tensor_infos_offset: 7867981`,
+  `tensor_data_offset: 7882016`, exact-target Q/K/V matvec status 1, plus
   `token0_post_ffn_residual: 1`, and preserved the recorded post-FFN residual
   words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`; cleanup
   showed successful `close(3)` and final `munmap`.
@@ -104,6 +103,7 @@ None.
 
 ## Next Exact Step
 
-In `src/gguf/load_header.s` and `src/entry/_start.s`, retain the validated
-tensor-info directory start offset in the GGUF summary and print it alongside
-the tensor-data base offset.
+In `src/gguf/load_header.s`, add a reusable tensor-directory lookup helper that
+rescans from the retained tensor-info directory start offset, matches one
+requested tensor name, and captures its descriptor into a caller-provided slot;
+keep it unused by runtime math until a separate wiring step.

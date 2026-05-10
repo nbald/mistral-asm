@@ -1032,3 +1032,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   Rebuild, no-libc harnesses, CLI/static checks, synthetic malformed checks,
   cleanup tracing, oracle py-compile, runtime purity, tracked-artifact scan,
   and whitespace checks passed.
+
+## 2026-05-10T19:15:44Z
+
+- The GGUF summary now retains the tensor-info directory start offset returned
+  by the metadata walker and prints it before the aligned tensor-data base. The
+  field was appended after the existing summary layout so all retained tensor
+  descriptor offsets stayed stable.
+- Verification evidence: an empty synthetic GGUF printed
+  `tensor_infos_offset: 24` with no tensor-data section, while the local target
+  printed `tensor_infos_offset: 7867981` and `tensor_data_offset: 7882016`.
+  The real-model token-0 post-FFN residual words were unchanged, and cleanup
+  tracing still showed successful `close(3)` before final `munmap`.

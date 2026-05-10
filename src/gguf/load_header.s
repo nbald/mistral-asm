@@ -97,7 +97,8 @@
 .equ GGUF_SUMMARY_FFN_DOWN_TENSOR_OFFSET, 1824
 .equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_FOUND, 1832
 .equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_F32, 1840
-.equ GGUF_SUMMARY_SIZE, 1848
+.equ GGUF_SUMMARY_TENSOR_INFOS_OFFSET, 1848
+.equ GGUF_SUMMARY_SIZE, 1856
 .equ GGUF_MAPPING_BASE, 0
 .equ GGUF_MAPPING_SIZE, 8
 
@@ -199,10 +200,11 @@ ffn_down_tensor_request_end:
 # fixed first-layer FFN gate projection descriptor slot beginning at offset
 # 1352, a fixed first-layer FFN up projection descriptor slot beginning at
 # offset 1512, a fixed first-layer FFN down projection descriptor slot beginning
-# at offset 1672, plus the attention RMSNorm epsilon found flag at offset 1832
-# and raw f32 bits at offset 1840. rdx = pointer to the requested tensor name bytes; rcx = requested tensor
-# name length; r8 = pointer to a 16-byte mapping descriptor whose first word
-# receives the mmap base and whose second word receives the file size.
+# at offset 1672, plus the attention RMSNorm epsilon found flag at offset 1832,
+# raw f32 bits at offset 1840, and tensor-info directory start offset at offset
+# 1848. rdx = pointer to the requested tensor name bytes; rcx = requested
+# tensor name length; r8 = pointer to a 16-byte mapping descriptor whose first
+# word receives the mmap base and whose second word receives the file size.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -218,8 +220,9 @@ ffn_down_tensor_request_end:
 # `blk.0.attn_v.weight`, `blk.0.attn_output.weight`,
 # `blk.0.ffn_norm.weight`, `blk.0.ffn_gate.weight`,
 # `blk.0.ffn_up.weight`, and `blk.0.ffn_down.weight` descriptors when found,
-# the attention RMSNorm epsilon metadata when found, and the aligned tensor-data
-# base offset when the tensor directory is non-empty.
+# the attention RMSNorm epsilon metadata when found, the validated tensor-info
+# directory start offset, and the aligned tensor-data base offset when the tensor
+# directory is non-empty.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -328,6 +331,7 @@ gguf_validate_file:
 	call gguf_walk_metadata
 	test rax, rax
 	jnz .Lmetadata_failed
+	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_INFOS_OFFSET], rdx
 
 	# Tensor infos are also variable-width because names and dimension counts
 	# vary per tensor. Retain the first descriptor in caller-owned storage, then

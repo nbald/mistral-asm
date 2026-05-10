@@ -116,6 +116,10 @@ tensor_data_offset_text:
 	.ascii "tensor_data_offset: "
 tensor_data_offset_text_end:
 
+tensor_infos_offset_text:
+	.ascii "tensor_infos_offset: "
+tensor_infos_offset_text_end:
+
 first_tensor_name_text:
 	.ascii "first_tensor_name: "
 first_tensor_name_text_end:
@@ -1033,6 +1037,9 @@ gguf_summary_attn_norm_rms_epsilon_found:
 	.skip 8
 gguf_summary_attn_norm_rms_epsilon_f32:
 	.skip 4
+.balign 8
+gguf_summary_tensor_infos_offset:
+	.skip 8
 
 .balign 8
 gguf_mapping:
@@ -1184,11 +1191,12 @@ token0_post_ffn_residual:
 # string copies, and selected scalar and array-length metadata values, plus a
 # bounded snapshot
 # of the first tensor descriptor and the first requested tensor-name lookup,
-# including up to four dimension sizes for each retained descriptor, the aligned
-# tensor-data base offset for non-empty tensor directories, and a retained
-# descriptor for the first-layer attention RMSNorm weights, query projection,
-# key projection, value projection, output projection, FFN RMSNorm weights, and
-# FFN gate, FFN up, and FFN down projections.
+# including up to four dimension sizes for each retained descriptor, the
+# tensor-info directory start offset, the aligned tensor-data base offset for
+# non-empty tensor directories, and a retained descriptor for the first-layer
+# attention RMSNorm weights, query projection, key projection, value projection,
+# output projection, FFN RMSNorm weights, and FFN gate, FFN up, and FFN down
+# projections.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -1443,6 +1451,20 @@ _start:
 	mov rdi, 1
 	mov esi, dword ptr [rip + gguf_summary_attn_norm_rms_epsilon_f32]
 	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + tensor_infos_offset_text]
+	mov rdx, tensor_infos_offset_text_end - tensor_infos_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	call write_u64_decimal
 
 	mov rdi, 1
 	lea rsi, [rip + newline_text]
