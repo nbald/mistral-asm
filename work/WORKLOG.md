@@ -105,3 +105,12 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: rebuild passed; help output and both synthetic GGUF
   fixtures behaved as before; `readelf` still showed a static no-interpreter
   executable; syscall traces stayed within the expected direct Linux calls.
+
+## 2026-05-10T12:40:30Z
+
+- Metadata walking now treats GGUF metadata fields as sequential records without
+  padding; tensor-data alignment is deferred until tensor infos have been walked.
+- Verification evidence: synthetic fixtures covered empty metadata, mixed
+  scalar/string-array metadata, truncated metadata, and unsupported metadata
+  type tags. The target GGUF model file was not present locally, so no real-model
+  smoke test ran in this iteration.

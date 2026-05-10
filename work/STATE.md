@@ -6,8 +6,8 @@ Milestone 3: GGUF loader.
 
 ## Current Exact Task
 
-Add a bounds-checked GGUF metadata walker that advances over metadata key/value
-records and validates the aligned tensor-directory start, without dumping values
+Add a bounds-checked GGUF tensor-info directory walker that advances over tensor
+descriptors and validates tensor-data alignment, without dumping tensor names
 yet.
 
 ## Known Blockers
@@ -37,19 +37,24 @@ None.
 ## Last Verification
 
 - `make clean` then `make` passed.
-- `./mistral-asm --help` printed usage with the model-path loader form.
+- `./mistral-asm --help` printed usage with the GGUF metadata validation
+  milestone text.
 - `readelf -d mistral-asm` reported no dynamic section.
 - `readelf -l mistral-asm` showed no program interpreter.
 - `strace -e trace=write,exit,exit_group ./mistral-asm --help` showed direct
-  `write(1, ..., 165)` and `exit(0)`.
-- A 24-byte `/tmp` GGUF v3 header fixture returned `GGUF header ok`.
-- Loader syscall trace on that fixture showed direct `openat`, `fstat`, `mmap`,
-  `munmap`, `close`, `write`, and `exit`.
-- A `/tmp` fixture with a count field above the supported signed range failed
-  with `mistral-asm: unsupported GGUF count field` and exit status 3.
+  `write(1, ..., 167)` and `exit(0)`.
+- A zero-metadata `/tmp` GGUF v3 fixture returned `GGUF metadata ok`.
+- A mixed metadata `/tmp` fixture with a string scalar, fixed scalar, and string
+  array returned `GGUF metadata ok`.
+- Truncated metadata failed with `mistral-asm: malformed GGUF metadata` and exit
+  status 3.
+- An unknown metadata type failed with
+  `mistral-asm: unsupported GGUF metadata type` and exit status 3.
+- Loader syscall trace on the mixed metadata fixture showed direct `openat`,
+  `fstat`, `mmap`, `munmap`, `close`, `write`, and `exit`.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add the metadata walker described above, keeping all parser reads bounded by the
-mapped file length.
+Add the tensor-info directory walker described above, keeping all descriptor
+reads bounded by the mapped file length.

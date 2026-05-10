@@ -14,7 +14,7 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "  mistral-asm <model.gguf> <prompt> --max-tokens <n>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF header validation.\n"
+	.ascii "Current milestone: GGUF metadata validation.\n"
 help_text_end:
 
 usage_error_text:
@@ -22,7 +22,7 @@ usage_error_text:
 usage_error_text_end:
 
 gguf_ok_text:
-	.ascii "GGUF header ok\n"
+	.ascii "GGUF metadata ok\n"
 gguf_ok_text_end:
 
 gguf_open_error_text:
@@ -56,6 +56,14 @@ gguf_munmap_error_text_end:
 gguf_count_error_text:
 	.ascii "mistral-asm: unsupported GGUF count field\n"
 gguf_count_error_text_end:
+
+gguf_metadata_bounds_error_text:
+	.ascii "mistral-asm: malformed GGUF metadata\n"
+gguf_metadata_bounds_error_text_end:
+
+gguf_metadata_type_error_text:
+	.ascii "mistral-asm: unsupported GGUF metadata type\n"
+gguf_metadata_type_error_text_end:
 
 gguf_unknown_error_text:
 	.ascii "mistral-asm: GGUF validation failed\n"
@@ -128,6 +136,10 @@ _start:
 	je .Lgguf_munmap_error
 	cmp rax, 8
 	je .Lgguf_count_error
+	cmp rax, 9
+	je .Lgguf_metadata_bounds_error
+	cmp rax, 10
+	je .Lgguf_metadata_type_error
 
 	lea rsi, [rip + gguf_unknown_error_text]
 	mov rdx, gguf_unknown_error_text_end - gguf_unknown_error_text
@@ -171,6 +183,16 @@ _start:
 .Lgguf_count_error:
 	lea rsi, [rip + gguf_count_error_text]
 	mov rdx, gguf_count_error_text_end - gguf_count_error_text
+	jmp .Lwrite_model_error
+
+.Lgguf_metadata_bounds_error:
+	lea rsi, [rip + gguf_metadata_bounds_error_text]
+	mov rdx, gguf_metadata_bounds_error_text_end - gguf_metadata_bounds_error_text
+	jmp .Lwrite_model_error
+
+.Lgguf_metadata_type_error:
+	lea rsi, [rip + gguf_metadata_type_error_text]
+	mov rdx, gguf_metadata_type_error_text_end - gguf_metadata_type_error_text
 
 .Lwrite_model_error:
 	# Header validation failures are runtime errors, distinct from CLI misuse.
@@ -181,8 +203,9 @@ _start:
 	call sys_exit
 
 .Lgguf_ok:
-	# This milestone validates only the fixed GGUF header fields. Later parser
-	# milestones will replace this with metadata and inference output.
+	# This milestone validates the fixed GGUF header and walks metadata shapes.
+	# Later parser milestones will replace this with metadata and inference
+	# output.
 	mov rdi, 1
 	lea rsi, [rip + gguf_ok_text]
 	mov rdx, gguf_ok_text_end - gguf_ok_text

@@ -86,8 +86,9 @@ mnemonic.
 
 The pure ASM executable proof is implemented, and the first narrow GGUF loader
 path accepts a model path, opens it, stats it, maps it read-only, validates the
-magic, version, and count header fields, then unmaps it. `make` assembles the
-runtime with `as` and links it with `ld`.
+magic, version, and count header fields, walks metadata key/value records with
+bounded offset checks, then unmaps it. `make` assembles the runtime with `as` and
+links it with `ld`.
 
 Read these first:
 
