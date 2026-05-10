@@ -33,6 +33,8 @@
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_OFFSET, 376
 .equ GGUF_SUMMARY_TENSOR_DATA_OFFSET, 384
 .equ GGUF_SUMMARY_SIZE, 392
+.equ GGUF_MAPPING_BASE, 0
+.equ GGUF_MAPPING_SIZE, 8
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -83,17 +85,21 @@ tokenizer_tokens_key_end:
 # ggml_type and relative payload offset as u64 values at offsets 208 and 216,
 # followed by a one-name lookup descriptor slot beginning at offset 224 and the
 # aligned tensor-data base offset at offset 384. rdx = pointer to the requested
-# tensor name bytes; rcx = requested tensor name length.
+# tensor name bytes; rcx = requested tensor name length; r8 = pointer to a
+# 16-byte mapping descriptor whose first word receives the mmap base and whose
+# second word receives the file size.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
 # Ownership/lifetime: opens the model read-only, mmaps the whole file privately,
-# and releases any descriptor/mapping before returning. The caller never owns the
-# descriptor or mapping. The summary buffer remains caller-owned; this function
-# writes header counts, bounded metadata copies, selected scalar metadata, and
-# selected array lengths into it, plus a bounded first tensor descriptor
-# snapshot, the bounded descriptor for the requested tensor when found, and the
-# aligned tensor-data base offset when the tensor directory is non-empty.
+# closes the file descriptor before returning, and transfers the live mapping to
+# the caller on success through the mapping descriptor. Error paths release any
+# mapping they created before returning. The summary buffer remains
+# caller-owned; this function writes header counts, bounded metadata copies,
+# selected scalar metadata, and selected array lengths into it, plus a bounded
+# first tensor descriptor snapshot, the bounded descriptor for the requested
+# tensor when found, and the aligned tensor-data base offset when the tensor
+# directory is non-empty.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -108,12 +114,16 @@ gguf_validate_file:
 	push r14
 	push r15
 	# Linux x86-64 struct stat is 144 bytes on the target ABI. Reserve 160 bytes
-	# to keep a round size and read st_size at STAT_SIZE_OFFSET below, plus two
-	# words for the requested tensor name passed into the tensor-info walker.
-	sub rsp, STAT_BUFFER_SIZE + 16
+	# to keep a round size and read st_size at STAT_SIZE_OFFSET below, plus words
+	# for the requested tensor name and output mapping descriptor passed through
+	# later parser stages.
+	sub rsp, STAT_BUFFER_SIZE + 32
 	mov r15, rsi
 	mov qword ptr [rsp + STAT_BUFFER_SIZE], rdx
 	mov qword ptr [rsp + STAT_BUFFER_SIZE + 8], rcx
+	mov qword ptr [rsp + STAT_BUFFER_SIZE + 16], r8
+	mov qword ptr [r8 + GGUF_MAPPING_BASE], 0
+	mov qword ptr [r8 + GGUF_MAPPING_SIZE], 0
 
 	# openat(AT_FDCWD, path, O_RDONLY, 0). Using openat keeps all file opens in
 	# one syscall wrapper; mode is ignored without O_CREAT but is passed as 0.
@@ -217,13 +227,12 @@ gguf_validate_file:
 
 .Ltensor_data_base_recorded:
 
-	# The success path also unmaps before closing; no mapped pointer escapes.
-	mov rdi, r13
-	mov rsi, r12
-	call sys_munmap
-	test rax, rax
-	js .Lmunmap_failed
-
+	# On success the validated read-only mapping is intentionally kept live for
+	# the caller. Future forward code will read tensor payloads through this
+	# descriptor before calling gguf_release_mapping.
+	mov rax, qword ptr [rsp + STAT_BUFFER_SIZE + 16]
+	mov qword ptr [rax + GGUF_MAPPING_BASE], r13
+	mov qword ptr [rax + GGUF_MAPPING_SIZE], r12
 	mov r14d, GGUF_OK
 	jmp .Lclose_with_code
 
@@ -255,12 +264,6 @@ gguf_validate_file:
 	call sys_munmap
 	jmp .Lclose_with_code
 
-.Lmunmap_failed:
-	# A cleanup failure after a valid header gets its own status so the caller
-	# does not claim success when the mapping could not be released.
-	mov r14d, GGUF_ERR_MUNMAP
-	jmp .Lclose_with_code
-
 .Lmmap_failed:
 	mov r14d, GGUF_ERR_MMAP
 	jmp .Lclose_with_code
@@ -286,7 +289,7 @@ gguf_validate_file:
 	mov eax, GGUF_ERR_OPEN
 
 .Ldone:
-	add rsp, STAT_BUFFER_SIZE + 16
+	add rsp, STAT_BUFFER_SIZE + 32
 	pop r15
 	pop r14
 	pop r13
@@ -296,6 +299,49 @@ gguf_validate_file:
 	ret
 
 .size gguf_validate_file, . - gguf_validate_file
+
+.global gguf_release_mapping
+.type gguf_release_mapping, @function
+
+# Contract: release a GGUF mapping descriptor returned by gguf_validate_file.
+# Inputs: rdi = pointer to a 16-byte descriptor with mmap base at offset 0 and
+# mapping length/file size at offset 8.
+# Outputs: rax = GGUF_OK on success or GGUF_ERR_MUNMAP when munmap(2) fails.
+# Clobbers: caller-saved registers and flags. Preserves rbx.
+# Ownership/lifetime: on success, releases the caller-owned read-only mapping
+# and clears both descriptor words. A zero base or zero length is treated as an
+# already-empty descriptor and is cleared without a syscall. On munmap failure,
+# the descriptor is left intact because the mapping may still be live.
+# Error behavior: returns a stable loader status code instead of raw errno.
+gguf_release_mapping:
+	push rbx
+	mov rbx, rdi
+
+	mov rdi, qword ptr [rbx + GGUF_MAPPING_BASE]
+	mov rsi, qword ptr [rbx + GGUF_MAPPING_SIZE]
+	test rdi, rdi
+	jz .Lrelease_clear
+	test rsi, rsi
+	jz .Lrelease_clear
+
+	call sys_munmap
+	test rax, rax
+	js .Lrelease_failed
+
+.Lrelease_clear:
+	mov qword ptr [rbx + GGUF_MAPPING_BASE], 0
+	mov qword ptr [rbx + GGUF_MAPPING_SIZE], 0
+	xor eax, eax
+	jmp .Lrelease_done
+
+.Lrelease_failed:
+	mov eax, GGUF_ERR_MUNMAP
+
+.Lrelease_done:
+	pop rbx
+	ret
+
+.size gguf_release_mapping, . - gguf_release_mapping
 
 .type gguf_walk_metadata, @function
 

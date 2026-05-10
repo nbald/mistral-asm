@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Refactor the GGUF loader interface so `_start` can obtain a validated read-only
-model mapping descriptor with mmap base and file size, keep it live for tensor
-payload reads, and explicitly unmap it after the current summary path.
+Use the live GGUF mapping descriptor plus the retained `token_embd.weight`
+descriptor to add a guarded runtime dequant smoke for token ID 0 into static
+activation storage, keeping the existing summary output and explicit mapping
+release.
 
 ## Completed Work
 
@@ -74,6 +75,12 @@ payload reads, and explicitly unmap it after the current summary path.
   0 dequantization, last-token row-stride behavior, out-of-range token
   rejection without output writes, and invalid row-shape rejection without
   output writes.
+- `gguf_validate_file` now accepts a caller-owned 16-byte mapping descriptor,
+  clears it before open, and on success returns the validated read-only mmap
+  base plus file size while closing the file descriptor. Validation error paths
+  still unmap internally before returning.
+- `_start` owns the returned mapping descriptor through the current summary
+  output and then releases it explicitly with `gguf_release_mapping`.
 
 ## Known Blockers
 
@@ -100,9 +107,7 @@ None.
 
 ## Last Verification
 
-- `make clean && make && make check` passed, printing `q8_0_dot: ok`; the
-  verifier now includes checked token-embedding fixtures for token 0, the last
-  token row, out-of-range token rejection, and invalid shape rejection.
+- `make clean && make && make check` passed, printing `q8_0_dot: ok`.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary with one lookup and tensor-data base.
 - Synthetic tensor-base fixture `/tmp/mistral_asm_tensor_base_round.gguf`
@@ -123,6 +128,10 @@ None.
   returned status 3 with the malformed tensor-directory diagnostic.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
+- `strace -e trace=mmap,munmap,close` on the synthetic lookup-found fixture
+  showed `mmap`, `close(3) = 0`, then `munmap(..., 192) = 0`, confirming the
+  success path keeps the mapping live after validation and releases it
+  explicitly from `_start`.
 - The target model is present under
   `models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`;
   loading the actual local path returned status 0 and printed
@@ -136,5 +145,6 @@ None.
 
 ## Next Exact Step
 
-Refactor the loader and entry path to return and explicitly release a validated
-read-only GGUF mapping descriptor, without yet reading tensor payload bytes.
+Use the retained mapping descriptor and `token_embd.weight` summary fields to
+validate the Q8_0 embedding tensor shape/type and dequantize token ID 0 into a
+static f32 activation buffer before releasing the mapping.

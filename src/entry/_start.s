@@ -238,6 +238,13 @@ gguf_summary_lookup_tensor_offset:
 gguf_summary_tensor_data_offset:
 	.skip 8
 
+.balign 8
+gguf_mapping:
+gguf_mapping_base:
+	.skip 8
+gguf_mapping_size:
+	.skip 8
+
 .section .text
 
 .global _start
@@ -251,14 +258,16 @@ gguf_summary_tensor_data_offset:
 # with status 0 for help/valid header, 2 for CLI usage errors, or 3 for GGUF
 # validation errors.
 # Clobbers: all general-purpose registers may be clobbered; no caller exists.
-# Ownership/lifetime: argv strings remain kernel-provided process memory. Any
-# model mapping is owned and released inside gguf_validate_file. The GGUF
-# summary buffer is process-owned static storage passed to the loader for scalar
-# header counts, a bounded copy of selected metadata strings, and selected
-# scalar and array-length metadata values, plus a bounded snapshot of the first
-# tensor descriptor and the first requested tensor-name lookup, including up to
-# four dimension sizes for each retained descriptor and the aligned tensor-data
-# base offset for non-empty tensor directories.
+# Ownership/lifetime: argv strings remain kernel-provided process memory. The
+# loader returns a live read-only model mapping descriptor on success; _start
+# keeps it live through the current summary path, then releases it explicitly
+# with gguf_release_mapping before exit. The GGUF summary buffer is
+# process-owned static storage passed to the loader for scalar header counts, a
+# bounded copy of selected metadata strings, and selected scalar and
+# array-length metadata values, plus a bounded snapshot of the first tensor
+# descriptor and the first requested tensor-name lookup, including up to four
+# dimension sizes for each retained descriptor and the aligned tensor-data base
+# offset for non-empty tensor directories.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -286,12 +295,14 @@ _start:
 	call sys_exit
 
 .Lvalidate_model:
-	# The loader owns all file descriptors and mappings it creates. _start only
-	# translates its small status-code enum into user-visible process behavior.
+	# The loader closes the file descriptor after validation and hands back a
+	# read-only mapping descriptor. Keeping the mapping live here is the handoff
+	# needed before tensor payload reads are added.
 	mov rdi, qword ptr [rsp + 16]
 	lea rsi, [rip + gguf_summary]
 	lea rdx, [rip + lookup_tensor_request]
 	mov rcx, lookup_tensor_request_end - lookup_tensor_request
+	lea r8, [rip + gguf_mapping]
 	call gguf_validate_file
 	test rax, rax
 	jz .Lgguf_ok
@@ -743,6 +754,18 @@ _start:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	# The current milestone does not read tensor payload bytes yet, but ownership
+	# of the live mapping is now explicit and must be released before exit.
+	lea rdi, [rip + gguf_mapping]
+	call gguf_release_mapping
+	test rax, rax
+	jz .Lsummary_exit_ok
+
+	lea rsi, [rip + gguf_munmap_error_text]
+	mov rdx, gguf_munmap_error_text_end - gguf_munmap_error_text
+	jmp .Lwrite_model_error
+
+.Lsummary_exit_ok:
 	xor rdi, rdi
 	call sys_exit
 

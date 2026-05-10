@@ -360,3 +360,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   and invalid shape rejection without writes. Clean rebuild, GGUF synthetic
   lookup/base-offset fixtures, future prompt usage rejection, static-link
   checks, whitespace check, and real target-model GGUF summary smoke passed.
+
+## 2026-05-10T14:39:06Z
+
+- The loader success path now transfers mmap ownership to `_start` through a
+  two-word descriptor instead of releasing the mapping before returning. Error
+  paths still unmap internally, so only validated models can escape as live
+  mappings.
+- Decision: release is a dedicated `gguf_release_mapping` helper, not an inline
+  syscall at the call site, so future payload-reading paths can share the same
+  descriptor cleanup contract.
+- Verification evidence: the usual rebuild/check and GGUF smoke fixtures passed.
+  `strace` on a synthetic valid model showed the expected success ordering:
+  `mmap`, `close`, then an explicit `munmap` from `_start`.
