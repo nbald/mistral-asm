@@ -38,12 +38,16 @@
 ## Documentation Policy
 
 - `work/STATE.md` is the compact source of truth for continuation.
-- `work/WORKLOG.md` is append-only history and may become large.
+- `work/WORKLOG.md` is durable context, not a second git log. It is normally
+  append-only, but explicit review commits may compact redundant entries.
 - Agents must not read the whole worklog once it grows; read only its tail.
 - `work/control/INSTRUCTIONS.md` is the operator channel for new instructions
   between autonomous iterations.
 - `work/oracle/` stores small oracle notes, hashes, commands, and excerpts.
 - Large model files, binaries, traces, dumps, logs, and perf output are ignored.
+- Do not duplicate commit hashes, commit messages, changed-file lists, or routine
+  next-step text across `work/` files; git and `work/STATE.md` are authoritative
+  for those.
 
 ## Operator Control Policy
 

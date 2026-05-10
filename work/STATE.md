@@ -9,11 +9,6 @@ Milestone 2: pure ASM proof.
 Add the first pure assembly build skeleton: `Makefile`, `_start`, direct
 `write`/`exit` syscalls, and `--help` output.
 
-## Last Completed Commit
-
-Use `git log --oneline -1` as authority. Last known before this state update:
-`1233feb work: add review and happiness loop policy`
-
 ## Known Blockers
 
 None.
@@ -26,9 +21,11 @@ None.
 - `scripts/status.sh`
 - `scripts/watch-status.sh`
 - `scripts/control.sh`
+- `scripts/autonomous-loop.sh`
 - `work/control/INSTRUCTIONS.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
+- `work/reviews/2026-05-10-bootstrap-review.md`
 
 ## Verification Status
 
@@ -50,6 +47,13 @@ Operator control verification passed:
 - `bash -n scripts/status.sh`
 - `bash -n scripts/watch-status.sh`
 - `git diff --check`
+
+Bootstrap review result:
+
+- Avoid using `work/WORKLOG.md` as a second git log.
+- Avoid keeping stale commit pointers in `work/STATE.md`.
+- Keep only current verification status in state; move durable findings to
+  reviews or concise worklog entries.
 
 ## Next Exact Step
 

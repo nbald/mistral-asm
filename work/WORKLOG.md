@@ -1,41 +1,34 @@
 # WORKLOG
 
-Append-only project history. This file may grow large. Do not treat it as the
-primary continuation source; use `work/STATE.md` for current state and read only
-the recent tail of this file when resuming.
+Durable project context. This is not a second git log. Do not record routine
+commit messages, changed-file lists, or next steps that already live in git or
+`work/STATE.md`.
+
+This file is normally append-only, but explicit review commits may compact
+redundant entries. Do not treat it as the primary continuation source; use
+`work/STATE.md` for current state and read only the recent tail when resuming.
 
 ## 2026-05-10T11:36:12Z
 
-- Change: added autonomous loop script, durable continuation prompt, project
-  goal, plan, compact state, worklog, and ignore rules.
-- Verification: `bash -n scripts/autonomous-loop.sh` passed; script marked
-  executable.
-- Commit message: `work: bootstrap autonomous project method`.
-- Next: implement the minimal pure ASM binary for Milestone 2.
+- Initialized autonomous project method and durable continuation files.
+- Verification evidence: shell syntax passed for the autonomous loop script.
 
 ## 2026-05-10T11:40:00Z
 
-- Change: added periodic review policy and final "are you happy?" loop to the
-  autonomous continuation prompt and plan; corrected state after initial commit.
-- Verification: `git diff --check` passed.
-- Commit message: `work: add review and happiness loop policy`.
-- Next: implement the minimal pure ASM binary for Milestone 2.
-
-## 2026-05-10T11:41:00Z
-
-- Change: added external status/watch scripts and ignored transient
-  `work/runs/` outputs.
-- Verification: `bash -n scripts/status.sh` and
-  `bash -n scripts/watch-status.sh` passed; both scripts marked executable.
-- Commit message: `work: add autonomous loop controls`.
-- Next: implement the minimal pure ASM binary for Milestone 2.
+- Added periodic review policy and final "are you happy?" loop.
+- Decision: review notes live under `work/reviews/` when they contain actionable
+  findings or an explicit clean result.
 
 ## 2026-05-10T11:42:00Z
 
-- Change: set autonomous loop defaults to `gpt-5.5` with xhigh reasoning, added
-  operator instruction channel, pause/stop files, and current-process interrupt
-  helper.
-- Verification: `bash -n` passed for autonomous loop, control, status, and
-  watch scripts; `git diff --check` passed.
-- Commit message: `work: add autonomous loop controls`.
-- Next: implement the minimal pure ASM binary for Milestone 2.
+- Added operator control channel, external status scripts, and gpt-5.5/xhigh
+  defaults for autonomous runs.
+- Verification evidence: shell syntax passed for loop/control/status/watch
+  scripts; `git diff --check` passed.
+
+## 2026-05-10T11:43:23Z
+
+- Review finding: `WORKLOG.md` was duplicating git by recording commit messages
+  and routine next steps; `STATE.md` held a stale commit pointer.
+- Decision: git is authoritative for commits and changed files; `STATE.md` is
+  authoritative for next action; `WORKLOG.md` keeps only durable context.

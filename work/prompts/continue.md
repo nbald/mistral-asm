@@ -45,8 +45,11 @@ Work loop:
 4. After editing, run the relevant verification for that step.
 5. Update `work/STATE.md` with current milestone, completed work, verification
    status, blockers, relevant files, and the next exact step.
-6. Append a short entry to `work/WORKLOG.md` with date, change, verification,
-   commit message, and next step. Keep entries concise.
+6. Normally append a short entry to `work/WORKLOG.md` with durable context that
+   is not already in git: decisions, verification evidence, blockers, or review
+   notes. Do not duplicate commit hashes, commit messages, changed-file lists, or
+   the next exact step unless that detail is needed to understand a decision.
+   Explicit review commits may compact redundant worklog entries.
 7. If an operator instruction was handled, record that fact in `work/STATE.md`
    and `work/WORKLOG.md` without deleting the instruction.
 8. Commit the completed step with a short narrative commit message.

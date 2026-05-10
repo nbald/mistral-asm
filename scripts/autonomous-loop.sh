@@ -14,6 +14,7 @@ stop_file="$control_dir/STOP"
 pid_file="$out_dir/current.pid"
 
 mkdir -p "$out_dir" "$control_dir"
+trap 'rm -f "$pid_file"' EXIT
 
 if [[ ! "$iterations" =~ ^[0-9]+$ ]] || [[ "$iterations" -lt 1 ]]; then
   echo "usage: $0 [iterations]" >&2
@@ -98,5 +99,3 @@ for ((i = 1; i <= iterations; i++)); do
 
   echo "== last message: $output_file"
 done
-
-rm -f "$pid_file"
