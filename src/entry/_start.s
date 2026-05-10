@@ -58,6 +58,8 @@
 .equ TOKEN0_LAYER1_ATTN_K_OUTPUT_BYTES, TOKEN0_LAYER1_ATTN_K_OUTPUT_VALUES * 4
 .equ TOKEN0_LAYER1_ATTN_V_OUTPUT_VALUES, TOKEN0_ATTN_V_OUTPUT_VALUES
 .equ TOKEN0_LAYER1_ATTN_V_OUTPUT_BYTES, TOKEN0_LAYER1_ATTN_V_OUTPUT_VALUES * 4
+.equ TOKEN0_LAYER1_ATTN_CONTEXT_VALUES, TOKEN0_LAYER1_ATTN_Q_OUTPUT_VALUES
+.equ TOKEN0_LAYER1_ATTN_CONTEXT_BYTES, TOKEN0_LAYER1_ATTN_CONTEXT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -80,7 +82,7 @@ help_text:
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
 	.ascii "FFN down matvec smoke, post-FFN residual smoke, "
 	.ascii "reusable descriptor lookup smoke, "
-	.ascii "and layer-1 attention RMSNorm/query/key/value smoke "
+	.ascii "and layer-1 attention RMSNorm/query/key/value/context smoke "
 	.ascii "plus output descriptor lookup.\n"
 help_text_end:
 
@@ -735,6 +737,10 @@ token0_layer1_attn_k_matvec_text_end:
 token0_layer1_attn_v_matvec_text:
 	.ascii "token0_layer1_attn_v_matvec: "
 token0_layer1_attn_v_matvec_text_end:
+
+token0_layer1_attn_context_text:
+	.ascii "token0_layer1_attn_context: "
+token0_layer1_attn_context_text_end:
 
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
@@ -1457,6 +1463,10 @@ token0_layer1_attn_k_matvec_status:
 token0_layer1_attn_v_matvec_status:
 	.skip 8
 
+.balign 8
+token0_layer1_attn_context_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1528,6 +1538,10 @@ token0_layer1_attn_k_output:
 .balign 4
 token0_layer1_attn_v_output:
 	.skip TOKEN0_LAYER1_ATTN_V_OUTPUT_BYTES
+
+.balign 4
+token0_layer1_attn_context:
+	.skip TOKEN0_LAYER1_ATTN_CONTEXT_BYTES
 
 .section .text
 
@@ -3712,6 +3726,23 @@ _start:
 	call sys_write
 
 	call print_token0_layer1_attn_v_output_slice
+
+	call token0_layer1_attn_context_smoke
+	mov qword ptr [rip + token0_layer1_attn_context_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_context_text]
+	mov rdx, token0_layer1_attn_context_text_end - token0_layer1_attn_context_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer1_attn_context_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -7204,5 +7235,75 @@ token0_layer1_attn_v_matvec_smoke:
 	ret
 
 .size token0_layer1_attn_v_matvec_smoke, . - token0_layer1_attn_v_matvec_smoke
+
+.type token0_layer1_attn_context_smoke, @function
+
+# Contract: derive the token-0 layer-1 single-token attention context from the
+# retained layer-1 value projection output.
+# Inputs: no register inputs. Reads token0_layer1_attn_v_matvec_status,
+# token0_layer1_attn_v_output, and the reusable layer-1 value and output
+# projection tensor descriptors.
+# Outputs: rax = 1 after writing a 4096-f32 token0_layer1_attn_context by
+# repeating each 128-f32 KV-head value block four times for the associated query
+# heads; otherwise rax = 0 and no layer-1 context bytes are written.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: reads only process-owned static layer-1 value-output
+# storage and writes only process-owned static layer-1 context storage. The
+# blk.1.attn_output.weight descriptor is used as a shape guard, but this
+# function does not read any output-projection payload bytes.
+# Error behavior: this smoke gate returns status only; invalid inputs and shape
+# mismatches are skipped with status 0.
+token0_layer1_attn_context_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer1_attn_v_matvec_status], 1
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_v_tensor_dim1], TOKEN0_LAYER1_ATTN_V_OUTPUT_VALUES
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_output_tensor_found], 1
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_output_tensor_n_dimensions], 2
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_output_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_output_tensor_dim0], TOKEN0_LAYER1_ATTN_CONTEXT_VALUES
+	jne .Llayer1_attn_context_done
+	cmp qword ptr [rip + layer1_attn_output_tensor_dim1], TOKEN0_LAYER1_ATTN_NORM_VALUES
+	jne .Llayer1_attn_context_done
+
+	# With a one-token layer-local sequence, every query head attends to a single
+	# key/value entry. Softmax is exactly 1, so grouped-query context
+	# expansion is a pure copy from each KV head into its four query heads.
+	lea rsi, [rip + token0_layer1_attn_v_output]
+	lea rdi, [rip + token0_layer1_attn_context]
+	mov r8, TOKEN0_ATTN_KV_HEADS
+
+.Llayer1_attn_context_kv_head_loop:
+	mov r9, TOKEN0_ATTN_QUERY_HEADS_PER_KV_HEAD
+
+.Llayer1_attn_context_repeat_loop:
+	mov rcx, TOKEN0_ATTN_HEAD_DIM_VALUES
+	mov r10, rsi
+
+.Llayer1_attn_context_copy_loop:
+	mov eax, dword ptr [r10]
+	mov dword ptr [rdi], eax
+	add r10, 4
+	add rdi, 4
+	dec rcx
+	jnz .Llayer1_attn_context_copy_loop
+
+	dec r9
+	jnz .Llayer1_attn_context_repeat_loop
+
+	add rsi, TOKEN0_ATTN_HEAD_DIM_VALUES * 4
+	dec r8
+	jnz .Llayer1_attn_context_kv_head_loop
+
+	mov eax, 1
+
+.Llayer1_attn_context_done:
+	ret
+
+.size token0_layer1_attn_context_smoke, . - token0_layer1_attn_context_smoke
 
 .section .note.GNU-stack,"",@progbits

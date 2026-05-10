@@ -1266,3 +1266,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer1_attn_output*` labels. Build, harness, oracle py-compile,
   runtime purity, static-link, tracked-artifact, help, and whitespace checks
   passed.
+
+## 2026-05-10T21:09:14Z
+
+- Added the status-only layer-1 attention context smoke. It mirrors the
+  layer-0 grouped-query expansion but reads from the private layer-1 value
+  projection buffer and uses `blk.1.attn_output.weight` only as an exact
+  Q8_0 `4096x3072` shape guard.
+- Verification evidence: the real target printed
+  `token0_layer1_attn_context: 1` while the established layer-1 norm/query/key
+  and value exact-hex slices stayed unchanged. A temporary empty valid GGUF kept
+  the new context gate at 0. Static inspection of the new function found no
+  references to the output-projection offset, mapping base, or matvec helper,
+  confirming this step did not add output-projection payload reads.

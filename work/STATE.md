@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a status-only layer-1 attention context smoke.
+Publish a small layer-1 attention context slice.
 
 ## Completed Work
 
@@ -50,6 +50,11 @@ Add a status-only layer-1 attention context smoke.
 - External oracle tooling now independently recomputes the published
   `token0_layer1_attn_v_output` slice from the full layer-0 FFN and layer-1
   attention RMSNorm chain. The oracle matches the runtime value words exactly.
+- The guarded `token0_layer1_attn_context_smoke` consumes the layer-1 value
+  projection output and uses `blk.1.attn_output.weight` only as an exact Q8_0
+  `4096x3072` shape guard. It expands the `1024` f32 grouped-query value output
+  into a private `4096` f32 context buffer, prints status only, and does not
+  resolve the output-projection payload offset or mapping pointer.
 
 ## Known Blockers
 
@@ -85,22 +90,19 @@ None.
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
   `layer1_attn_output_tensor_found: 1`, dimensions `4096x3072`, type `8`,
-  offset `554876928`. Existing layer-1 norm/query/key/value status and public
-  exact-hex slices stayed unchanged.
-- An external descriptor parser confirmed `blk.1.attn_output.weight` as Q8_0
-  dimensions `4096x3072` at relative offset `554876928` without reading tensor
-  payload bytes.
-- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields,
-  kept layer-1 norm/query/key/value gates at 0, and emitted no
-  `token0_layer1_attn_output*` labels.
+  offset `554876928`, and `token0_layer1_attn_context: 1`. Existing layer-1
+  norm/query/key/value status and public exact-hex slices stayed unchanged.
+- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields
+  and kept layer-1 norm/query/key/value/context gates at 0.
+- A static check of `token0_layer1_attn_context_smoke` found no references to
+  `layer1_attn_output_tensor_offset`, `gguf_mapping_base`, `q8_0_matvec`, or
+  `rmsnorm`, confirming this step does not read output-projection payload bytes.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add a guarded `token0_layer1_attn_context_smoke` that expands the layer-1 value
-projection into grouped-query attention context using the
-`blk.1.attn_output.weight` descriptor as a shape guard, print status only, and
-verify the real target plus an empty valid GGUF without reading output
-projection payload bytes.
+Publish the first four raw f32 words of `token0_layer1_attn_context` behind the
+existing context status gate and verify the real target plus an empty valid GGUF
+without adding output-projection payload reads.
