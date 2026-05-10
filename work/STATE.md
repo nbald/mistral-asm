@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 FFN RMSNorm smoke using the retained
-`blk.0.ffn_norm.weight` descriptor and `token0_post_attn_residual`, validate the
-f32 `[3072]` shape and mapping bounds, and print only a status line.
+Print a guarded four-word exact-hex slice from `token0_ffn_norm_activation` when
+`token0_ffn_norm_status` is 1, without changing the FFN RMSNorm math path.
 
 ## Completed Work
 
@@ -22,12 +21,13 @@ f32 `[3072]` shape and mapping bounds, and print only a status line.
   descriptors, `blk.0.ffn_norm.weight`, and attention RMSNorm epsilon bits.
 - Token-0 smokes currently cover embedding dequantization, attention RMSNorm,
   query/key/value projections, single-token context expansion, attention output
-  projection, and post-attention residual. The query/key/value/output/residual
-  exact-hex slices have external oracle notes.
-- The latest step retained and printed `blk.0.ffn_norm.weight` as descriptor
-  plumbing only. Static search shows the new FFN norm symbols are used only for
-  tensor-name comparison, summary copy, and summary printing; no FFN norm payload
-  bytes are read yet.
+  projection, post-attention residual, and FFN RMSNorm. The
+  query/key/value/output/residual exact-hex slices have external oracle notes.
+- The latest step added a guarded FFN RMSNorm smoke. It consumes
+  `blk.0.ffn_norm.weight` only after `token0_post_attn_residual` is available,
+  validates the retained descriptor as f32 `[3072]`, proves the mapped payload
+  span is in bounds, writes `token0_ffn_norm_activation`, and prints only
+  `token0_ffn_norm`.
 
 ## Known Blockers
 
@@ -72,7 +72,7 @@ None.
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and reported the FFN norm descriptor
+- `./mistral-asm --help` returned status 0 and reported the FFN RMSNorm smoke
   milestone; the current unsupported prompt generation form returned status 2
   with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
@@ -80,7 +80,8 @@ None.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
-  `ffn_norm_tensor_found: 0`, and kept all token-0 smoke statuses at 0.
+  `ffn_norm_tensor_found: 0`, and kept `token0_post_attn_residual: 0` and
+  `token0_ffn_norm: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
@@ -88,19 +89,16 @@ None.
 - The real target model under `models/` returned status 0, printed
   `blk.0.ffn_norm.weight` as f32 with dimension 3072 at relative offset
   521428992, kept the existing token-0 attention and residual statuses at 1,
-  and preserved the previous exact-hex slices through post-attention residual.
+  printed `token0_ffn_norm: 1`, and preserved the previous exact-hex slices
+  through post-attention residual.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed the full-file read-only `mmap`, `close(3) = 0`, printed the new FFN
-  norm descriptor and existing smoke slices, then showed final `munmap`.
-- `rg -n "ffn_norm|FFN_NORM" src/entry/_start.s src/gguf/load_header.s`
-  confirmed the new descriptor is not consumed by any payload smoke path yet.
+  showed the full-file read-only `mmap`, `close(3) = 0`, printed the FFN norm
+  descriptor and `token0_ffn_norm: 1`, then showed final `munmap`.
 - The external projection/residual oracles were not rerun because this step
-  changed descriptor plumbing and summary output only, not math or shared
-  token-0 inputs.
+  did not change their math or shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a guarded token-0 FFN RMSNorm smoke using the retained
-`blk.0.ffn_norm.weight` descriptor and `token0_post_attn_residual`, validate the
-f32 `[3072]` shape and mapping bounds, and print only a status line.
+Print a guarded four-word exact-hex slice from `token0_ffn_norm_activation` when
+`token0_ffn_norm_status` is 1, without changing the FFN RMSNorm math path.

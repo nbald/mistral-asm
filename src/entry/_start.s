@@ -30,6 +30,8 @@
 .equ TOKEN0_ATTN_OUTPUT_BYTES, TOKEN0_ATTN_OUTPUT_VALUES * 4
 .equ TOKEN0_POST_ATTN_RESIDUAL_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
 .equ TOKEN0_POST_ATTN_RESIDUAL_BYTES, TOKEN0_POST_ATTN_RESIDUAL_VALUES * 4
+.equ TOKEN0_FFN_NORM_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
+.equ TOKEN0_FFN_NORM_BYTES, TOKEN0_FFN_NORM_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -48,7 +50,7 @@ help_text:
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
-	.ascii "output projection, residual smoke, and FFN norm descriptor.\n"
+	.ascii "output projection, residual smoke, and FFN RMSNorm smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -415,6 +417,10 @@ token0_post_attn_residual_text:
 	.ascii "token0_post_attn_residual: "
 token0_post_attn_residual_text_end:
 
+token0_ffn_norm_text:
+	.ascii "token0_ffn_norm: "
+token0_ffn_norm_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -774,6 +780,10 @@ token0_attn_output_matvec_status:
 token0_post_attn_residual_status:
 	.skip 8
 
+.balign 8
+token0_ffn_norm_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -805,6 +815,10 @@ token0_attn_output:
 .balign 4
 token0_post_attn_residual:
 	.skip TOKEN0_POST_ATTN_RESIDUAL_BYTES
+
+.balign 4
+token0_ffn_norm_activation:
+	.skip TOKEN0_FFN_NORM_BYTES
 
 .section .text
 
@@ -2264,6 +2278,23 @@ _start:
 
 	call print_token0_post_attn_residual_slice
 
+	call token0_ffn_norm_smoke
+	mov qword ptr [rip + token0_ffn_norm_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_norm_text]
+	mov rdx, token0_ffn_norm_text_end - token0_ffn_norm_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_ffn_norm_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -3652,5 +3683,84 @@ token0_post_attn_residual_smoke:
 	ret
 
 .size token0_post_attn_residual_smoke, . - token0_post_attn_residual_smoke
+
+.type token0_ffn_norm_smoke, @function
+
+# Contract: opportunistically apply the retained first-layer FFN RMSNorm weights
+# to the token-0 post-attention residual activation.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_post_attn_residual_status, and token0_post_attn_residual.
+# Outputs: rax = 1 when the residual is available, the RMSNorm epsilon metadata
+# was captured, and blk.0.ffn_norm.weight is exactly a one-dimensional f32
+# [3072] tensor whose full payload span fits inside the mapping, after
+# rmsnorm_f32 writes token0_ffn_norm_activation; otherwise rax = 0 and no FFN
+# norm payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2, xmm3 and flags.
+# Ownership/lifetime: reads mapped weight bytes only during rmsnorm_f32, reads
+# the static post-attention residual twice through that helper, and writes
+# exactly TOKEN0_FFN_NORM_BYTES into separate static output storage on success.
+# The mmap remains owned by _start and must be released separately.
+# Error behavior: this is a smoke gate for the first FFN-normalized activation,
+# not final graph setup. Non-target synthetic GGUF fixtures and shape or bounds
+# mismatches are skipped with status 0.
+token0_ffn_norm_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_post_attn_residual_status], 1
+	jne .Lffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_rms_epsilon_found], 1
+	jne .Lffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_norm_tensor_found], 1
+	jne .Lffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_norm_tensor_n_dimensions], 1
+	jne .Lffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_norm_tensor_ggml_type], GGML_TYPE_F32
+	jne .Lffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_norm_tensor_dim0], TOKEN0_FFN_NORM_VALUES
+	jne .Lffn_norm_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve and
+	# bound the complete 3072-f32 FFN norm span before passing any mmap pointer to
+	# the shared RMSNorm helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lffn_norm_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_ffn_norm_tensor_offset]
+	test rdx, rdx
+	js .Lffn_norm_smoke_skip
+	add rax, rdx
+	jc .Lffn_norm_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lffn_norm_smoke_skip
+
+	mov r9, TOKEN0_FFN_NORM_BYTES
+	mov r11, r10
+	sub r11, rax
+	cmp r11, r9
+	jb .Lffn_norm_smoke_skip
+
+	mov rsi, qword ptr [rip + gguf_mapping_base]
+	test rsi, rsi
+	jz .Lffn_norm_smoke_skip
+	add rsi, rax
+	jc .Lffn_norm_smoke_skip
+
+	lea rdi, [rip + token0_post_attn_residual]
+	lea rdx, [rip + token0_ffn_norm_activation]
+	mov rcx, TOKEN0_FFN_NORM_VALUES
+	vmovss xmm0, dword ptr [rip + gguf_summary_attn_norm_rms_epsilon_f32]
+	call rmsnorm_f32
+
+	mov eax, 1
+	ret
+
+.Lffn_norm_smoke_skip:
+	xor eax, eax
+
+.Lffn_norm_smoke_done:
+	ret
+
+.size token0_ffn_norm_smoke, . - token0_ffn_norm_smoke
 
 .section .note.GNU-stack,"",@progbits

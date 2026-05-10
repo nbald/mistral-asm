@@ -747,3 +747,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `[3072]` at relative offset 521428992 while preserving the existing token-0
   attention and residual exact-hex slices. Cleanup tracing still showed the
   read-only mapping released after summary and smoke output.
+
+## 2026-05-10T17:08:07Z
+
+- The runtime now runs a guarded token-0 FFN RMSNorm smoke from
+  `token0_post_attn_residual` through the retained `blk.0.ffn_norm.weight`
+  descriptor. The new gate requires the residual status, captured RMSNorm
+  epsilon, f32 `[3072]` descriptor shape, and a bounded mapped payload span
+  before `rmsnorm_f32` writes static FFN-normalized activation storage.
+- Decision: print only `token0_ffn_norm` in this step. The first exact-hex FFN
+  norm words and external oracle note remain separate so the first payload read
+  and first public value slice stay independently reviewable.
+- Verification evidence: narrow synthetic fixtures kept the new status at 0;
+  the real local target printed `token0_ffn_norm: 1` while preserving existing
+  Q/K/V/output/residual slices. Cleanup tracing still showed `close(3)` before
+  the final `munmap`.
