@@ -48,7 +48,7 @@ from token0_ffn_swiglu_oracle import (
 from token0_ffn_up_oracle import FFN_UP, FFN_UP_OUTPUT_WIDTH
 
 
-def run_oracle(path):
+def run_oracle(path, down_rows=4):
     fd = os.open(path, os.O_RDONLY)
     try:
         with mmap.mmap(fd, 0, access=mmap.ACCESS_READ) as buf:
@@ -95,6 +95,8 @@ def run_oracle(path):
                     "FFN down input width mismatch")
             require(ffn_down["dims"][1] == OUTPUT_WIDTH,
                     "FFN down output width mismatch")
+            require(0 <= down_rows <= OUTPUT_WIDTH,
+                    "requested FFN down row count outside output width")
 
             token_row_bytes = q8_0_row_bytes(width)
             token_start = tensor_pointer(buf, tensor_data_offset, token_embd,
@@ -161,7 +163,7 @@ def run_oracle(path):
                 swiglu_outputs[row] = swiglu_scalar(gate, up)
 
             down_outputs = []
-            for row in range(4):
+            for row in range(down_rows):
                 row_start = ffn_down_start + row * ffn_down_row_bytes
                 down_outputs.append(q8_0_dot_row(buf, row_start,
                                                  swiglu_outputs))
@@ -177,6 +179,7 @@ def run_oracle(path):
                 FFN_GATE: ffn_gate,
                 FFN_UP: ffn_up,
                 FFN_DOWN: ffn_down,
+                "post_attn_residual": post_attn_residual.copy(),
                 "post_attn_residual_words": post_attn_residual[:4].copy(),
                 "ffn_norm_words": ffn_norm_output[:4].copy(),
                 "gate_outputs": gate_outputs[:4].copy(),

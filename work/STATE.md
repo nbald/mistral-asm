@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external oracle comparison for the token-0 layer-1 attention RMSNorm
-exact-hex slice.
+Retain and print the `blk.1.attn_q.weight` descriptor through reusable GGUF
+lookup plumbing, without reading its payload bytes or extending layer-1 math.
 
 ## Completed Work
 
@@ -33,6 +33,10 @@ exact-hex slice.
 - The layer-1 attention RMSNorm smoke now prints a guarded four-word exact-hex
   activation slice after status 1. The real target printed
   `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`.
+- External oracle tooling now recomputes the full token-0 layer-0 post-FFN
+  residual, applies `blk.1.attn_norm.weight`, and confirms the layer-1
+  attention RMSNorm words exactly: `0xc05ae197`, `0xc1210d34`, `0x426154e8`,
+  and `0xc0a7934a`.
 
 ## Known Blockers
 
@@ -52,15 +56,16 @@ None.
 - `Makefile`
 - `work/oracle/token0_post_ffn_residual_oracle.py`
 - `work/oracle/token0-post-ffn-residual.md`
+- `work/oracle/token0_layer1_attn_norm_oracle.py`
+- `work/oracle/token0-layer1-attn-norm.md`
 - `work/reviews/2026-05-10-token0-forward-review.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-- `make clean` and `make` passed.
-- `make check` passed; the harnesses printed `q8_0_dot: ok`, `rmsnorm: ok`,
-  `swiglu: ok`, and `gguf_lookup: ok`.
+- `make clean`, `make`, and `make check` passed; the harnesses printed
+  `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm --help` returned status 0. The unsupported prompt-generation
   form returned status 2 with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
@@ -77,17 +82,20 @@ None.
   `token0_layer1_attn_norm: 1`, printed layer-1 attention RMSNorm words
   `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`, and cleanup
   showed successful `close(3)` and final `munmap`.
+- `python3 work/oracle/token0_post_ffn_residual_oracle.py ...` preserved its
+  public four-word output while the helper now supports full-row callers.
+- `python3 work/oracle/token0_layer1_attn_norm_oracle.py ...` printed
+  oracle layer-1 attention RMSNorm words `0xc05ae197`, `0xc1210d34`,
+  `0x426154e8`, and `0xc0a7934a`, matching the runtime exact-hex slice.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
 - `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
   dumps.
 - `git diff --check` passed.
-- No external oracle script was rerun because the new public exact-hex output is
-  intentionally awaiting a separate oracle comparison step.
 
 ## Next Exact Step
 
-Add external oracle tooling and a comparison note for
-`token0_layer1_attn_norm_activation`, reusing the existing post-FFN residual
-oracle path and comparing the four runtime words now printed by `mistral-asm`.
+Retain and print a separate reusable lookup descriptor for
+`blk.1.attn_q.weight`, keeping it descriptor-only so synthetic fixtures still
+skip layer-1 query math until the descriptor is externally confirmed.

@@ -1093,3 +1093,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer1_attn_norm: 0` and no layer-1 exact-hex labels. The real local
   target printed layer-1 words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and
   `0xc0a7934a`; cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T19:51:31Z
+
+- Added external layer-1 attention RMSNorm oracle tooling and a comparison note.
+  The post-FFN residual oracle path now has an exact full-row mode for later
+  consumers while preserving its default four-word public output.
+- Verification evidence: the layer-1 oracle matched the runtime's post-FFN
+  residual slice and layer-1 attention RMSNorm slice exactly:
+  `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`. Rebuild,
+  no-libc harnesses, CLI/static checks, synthetic GGUF checks, real-model
+  cleanup tracing, oracle py-compile, runtime purity, and exact runtime
+  extraction passed.

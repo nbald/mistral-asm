@@ -9,6 +9,8 @@ performs for the first four output words.
 
 import argparse
 
+import numpy as np
+
 from token0_attn_q_oracle import f32, f32_bits
 from token0_ffn_down_oracle import (
     ATTN_NORM,
@@ -23,14 +25,14 @@ from token0_ffn_down_oracle import (
 )
 
 
-def run_oracle(path):
-    result = run_ffn_down_oracle(path)
-    post_attn = result["post_attn_residual_words"]
+def run_oracle(path, residual_words=4):
+    result = run_ffn_down_oracle(path, down_rows=residual_words)
+    post_attn = result["post_attn_residual"]
     down = result["down_outputs"]
-    result["post_ffn_residuals"] = [
-        f32(post_attn[index] + down[index])
-        for index in range(4)
-    ]
+    result["post_ffn_residuals"] = np.empty(residual_words, dtype=np.float32)
+    for index in range(residual_words):
+        result["post_ffn_residuals"][index] = f32(post_attn[index] +
+                                                  down[index])
     return result
 
 
