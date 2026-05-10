@@ -957,3 +957,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   with no FFN down output word labels. The real local target printed FFN down
   words `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`; cleanup
   tracing showed those lines before the final `munmap`.
+
+## 2026-05-10T18:44:06Z
+
+- Added external FFN down oracle tooling and a comparison note. The oracle
+  recomputes the full token-0 path through FFN norm, all 9216 FFN gate/up rows,
+  the full SwiGLU activation, and the first four `blk.0.ffn_down.weight` rows.
+- Verification evidence: the exact scalar oracle took 2:45.27 and printed FFN
+  down words `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`. A
+  direct extraction check matched runtime and oracle FFN norm, gate, up,
+  SwiGLU, and down slices exactly. Rebuild, no-libc harnesses, CLI/static
+  checks, synthetic GGUF checks, real-model cleanup tracing, oracle py-compile,
+  runtime purity, and whitespace checks passed.
