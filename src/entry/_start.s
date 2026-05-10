@@ -9,6 +9,7 @@
 .equ GGUF_SUMMARY_ATTN_Q_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_ATTN_K_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_ATTN_V_TENSOR_NAME_CAP, 96
+.equ GGUF_SUMMARY_ATTN_OUTPUT_TENSOR_NAME_CAP, 96
 .equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
@@ -36,7 +37,7 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
-	.ascii "RMSNorm, and attention query/key/value smoke.\n"
+	.ascii "RMSNorm, attention query/key/value smoke, and output descriptor.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -299,6 +300,42 @@ attn_v_tensor_offset_text:
 	.ascii "attn_v_tensor_offset: "
 attn_v_tensor_offset_text_end:
 
+attn_output_tensor_found_text:
+	.ascii "attn_output_tensor_found: "
+attn_output_tensor_found_text_end:
+
+attn_output_tensor_name_text:
+	.ascii "attn_output_tensor_name: "
+attn_output_tensor_name_text_end:
+
+attn_output_tensor_n_dimensions_text:
+	.ascii "attn_output_tensor_n_dimensions: "
+attn_output_tensor_n_dimensions_text_end:
+
+attn_output_tensor_dim0_text:
+	.ascii "attn_output_tensor_dim0: "
+attn_output_tensor_dim0_text_end:
+
+attn_output_tensor_dim1_text:
+	.ascii "attn_output_tensor_dim1: "
+attn_output_tensor_dim1_text_end:
+
+attn_output_tensor_dim2_text:
+	.ascii "attn_output_tensor_dim2: "
+attn_output_tensor_dim2_text_end:
+
+attn_output_tensor_dim3_text:
+	.ascii "attn_output_tensor_dim3: "
+attn_output_tensor_dim3_text_end:
+
+attn_output_tensor_ggml_type_text:
+	.ascii "attn_output_tensor_ggml_type: "
+attn_output_tensor_ggml_type_text_end:
+
+attn_output_tensor_offset_text:
+	.ascii "attn_output_tensor_offset: "
+attn_output_tensor_offset_text_end:
+
 token0_embedding_dequant_text:
 	.ascii "token0_embedding_dequant: "
 token0_embedding_dequant_text_end:
@@ -549,6 +586,24 @@ gguf_summary_attn_v_tensor_dim3:
 gguf_summary_attn_v_tensor_ggml_type:
 	.skip 8
 gguf_summary_attn_v_tensor_offset:
+	.skip 8
+gguf_summary_attn_output_tensor_found:
+	.skip 8
+gguf_summary_attn_output_tensor_name:
+	.skip GGUF_SUMMARY_ATTN_OUTPUT_TENSOR_NAME_CAP
+gguf_summary_attn_output_tensor_n_dimensions:
+	.skip 8
+gguf_summary_attn_output_tensor_dim0:
+	.skip 8
+gguf_summary_attn_output_tensor_dim1:
+	.skip 8
+gguf_summary_attn_output_tensor_dim2:
+	.skip 8
+gguf_summary_attn_output_tensor_dim3:
+	.skip 8
+gguf_summary_attn_output_tensor_ggml_type:
+	.skip 8
+gguf_summary_attn_output_tensor_offset:
 	.skip 8
 gguf_summary_attn_norm_rms_epsilon_found:
 	.skip 8
@@ -1645,6 +1700,133 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_attn_v_tensor_offset]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_found_text]
+	mov rdx, attn_output_tensor_found_text_end - attn_output_tensor_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_name_text]
+	mov rdx, attn_output_tensor_name_text_end - attn_output_tensor_name_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + gguf_summary_attn_output_tensor_name]
+	mov rdx, GGUF_SUMMARY_ATTN_OUTPUT_TENSOR_NAME_CAP
+	call write_bounded_c_string
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_n_dimensions_text]
+	mov rdx, attn_output_tensor_n_dimensions_text_end - attn_output_tensor_n_dimensions_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_dim0_text]
+	mov rdx, attn_output_tensor_dim0_text_end - attn_output_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_dim1_text]
+	mov rdx, attn_output_tensor_dim1_text_end - attn_output_tensor_dim1_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_dim1]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_dim2_text]
+	mov rdx, attn_output_tensor_dim2_text_end - attn_output_tensor_dim2_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_dim2]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_dim3_text]
+	mov rdx, attn_output_tensor_dim3_text_end - attn_output_tensor_dim3_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_dim3]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_ggml_type_text]
+	mov rdx, attn_output_tensor_ggml_type_text_end - attn_output_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_output_tensor_offset_text]
+	mov rdx, attn_output_tensor_offset_text_end - attn_output_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_output_tensor_offset]
 	call write_u64_decimal
 
 	mov rdi, 1

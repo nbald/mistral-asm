@@ -619,3 +619,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   value slice. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF
   checks, real-model smoke, cleanup tracing, query/key/value oracles, and
   whitespace checks passed.
+
+## 2026-05-10T16:22:35Z
+
+- The tensor directory summary now retains and prints the fixed
+  `blk.0.attn_output.weight` descriptor after the Q/K/V descriptor group. This
+  is descriptor plumbing only; no output-projection payload bytes are read.
+- Decision: keep the output descriptor in the same 160-byte fixed-slot format as
+  the existing first-layer attention descriptors, and shift the RMSNorm epsilon
+  fields after it so the summary remains a simple linear ABI between the loader
+  and `_start`.
+- Verification evidence: synthetic fixtures report `attn_output_tensor_found: 0`
+  and still skip payload smokes; the real local target reports Q8_0 dimensions
+  4096 by 3072 at relative offset 431185920. Existing Q/K/V output words stayed
+  unchanged, and cleanup tracing still shows the read-only mapping released
+  after summary and smoke output.
