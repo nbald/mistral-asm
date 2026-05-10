@@ -1520,3 +1520,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   status `0`. Build, no-libc harnesses, help, oracle py-compile, whitespace,
   runtime purity, static-link, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T01:02:21+02:00
+
+- Treated the still-present transient split instruction as active and made it a
+  continuing split-first state before any new layer-1 FFN up behavior. The
+  behavior-preserving extraction moved the existing layer-1 FFN RMSNorm smoke
+  body into the focused FFN inference module; `_start.s` now exports only the
+  handoff slots that the moved routine was already reading and writing
+  logically.
+- Verification evidence: the real target still reported the same layer-1 FFN
+  norm words `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and `0xbfe2ec8e`,
+  followed by layer-1 FFN gate matvec status `1`. A temporary empty valid GGUF
+  kept both layer-1 FFN norm and gate statuses at `0`. Build, no-libc
+  harnesses, help, oracle py-compile, whitespace, runtime purity, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.

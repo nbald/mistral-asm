@@ -1,8 +1,10 @@
 .intel_syntax noprefix
 
+.equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ Q8_0_BLOCK_BYTES, 34
 .equ TOKEN0_LAYER1_FFN_NORM_VALUES, 3072
+.equ TOKEN0_LAYER1_FFN_NORM_BYTES, TOKEN0_LAYER1_FFN_NORM_VALUES * 4
 .equ TOKEN0_LAYER1_FFN_GATE_OUTPUT_VALUES, 9216
 .equ TOKEN0_LAYER1_FFN_GATE_OUTPUT_BYTES, TOKEN0_LAYER1_FFN_GATE_OUTPUT_VALUES * 4
 
@@ -29,6 +31,88 @@ token0_layer1_ffn_gate_output:
 	.skip TOKEN0_LAYER1_FFN_GATE_OUTPUT_BYTES
 
 .section .text
+
+.global token0_layer1_ffn_norm_smoke
+.type token0_layer1_ffn_norm_smoke, @function
+
+# Contract: opportunistically apply the reusable layer-1 FFN RMSNorm weights to
+# the token-0 layer-1 post-attention residual activation.
+# Inputs: no register inputs. Reads the process-owned layer1_ffn_norm tensor
+# slot, live mapping descriptor, retained RMSNorm epsilon metadata,
+# token0_layer1_post_attn_residual_status, and
+# token0_layer1_post_attn_residual.
+# Outputs: rax = 1 when the layer-1 post-attention residual is available, the
+# epsilon metadata was captured, and blk.1.ffn_norm.weight is exactly a
+# one-dimensional f32 [3072] tensor whose full payload span fits inside the
+# mapping, after rmsnorm_f32 writes token0_layer1_ffn_norm_activation;
+# otherwise rax = 0 and no layer-1 FFN norm payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2, xmm3 and flags.
+# Ownership/lifetime: reads mapped weight bytes only during rmsnorm_f32, reads
+# the static layer-1 post-attention residual twice through that helper, and
+# writes exactly TOKEN0_LAYER1_FFN_NORM_BYTES into shared handoff output storage
+# on success. The mmap remains owned by _start and must be released separately.
+# Error behavior: this is a status-only smoke gate for the layer-1
+# FFN-normalized activation, not final graph setup. Non-target synthetic GGUF
+# fixtures and shape or bounds mismatches are skipped with status 0.
+token0_layer1_ffn_norm_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer1_post_attn_residual_status], 1
+	jne .Llayer1_ffn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_rms_epsilon_found], 1
+	jne .Llayer1_ffn_norm_smoke_done
+	cmp qword ptr [rip + layer1_ffn_norm_tensor_found], 1
+	jne .Llayer1_ffn_norm_smoke_done
+	cmp qword ptr [rip + layer1_ffn_norm_tensor_n_dimensions], 1
+	jne .Llayer1_ffn_norm_smoke_done
+	cmp qword ptr [rip + layer1_ffn_norm_tensor_ggml_type], GGML_TYPE_F32
+	jne .Llayer1_ffn_norm_smoke_done
+	cmp qword ptr [rip + layer1_ffn_norm_tensor_dim0], TOKEN0_LAYER1_FFN_NORM_VALUES
+	jne .Llayer1_ffn_norm_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve and
+	# bound the complete f32 weight span before passing the mapped address to the
+	# shared RMSNorm helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Llayer1_ffn_norm_smoke_skip
+	mov rdx, qword ptr [rip + layer1_ffn_norm_tensor_offset]
+	test rdx, rdx
+	js .Llayer1_ffn_norm_smoke_skip
+	add rax, rdx
+	jc .Llayer1_ffn_norm_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Llayer1_ffn_norm_smoke_skip
+
+	mov r9, TOKEN0_LAYER1_FFN_NORM_BYTES
+	mov r11, r10
+	sub r11, rax
+	cmp r11, r9
+	jb .Llayer1_ffn_norm_smoke_skip
+
+	mov rsi, qword ptr [rip + gguf_mapping_base]
+	test rsi, rsi
+	jz .Llayer1_ffn_norm_smoke_skip
+	add rsi, rax
+	jc .Llayer1_ffn_norm_smoke_skip
+
+	lea rdi, [rip + token0_layer1_post_attn_residual]
+	lea rdx, [rip + token0_layer1_ffn_norm_activation]
+	mov rcx, TOKEN0_LAYER1_FFN_NORM_VALUES
+	vmovss xmm0, dword ptr [rip + gguf_summary_attn_norm_rms_epsilon_f32]
+	call rmsnorm_f32
+
+	mov eax, 1
+	ret
+
+.Llayer1_ffn_norm_smoke_skip:
+	xor eax, eax
+
+.Llayer1_ffn_norm_smoke_done:
+	ret
+
+.size token0_layer1_ffn_norm_smoke, . - token0_layer1_ffn_norm_smoke
 
 .global run_token0_layer1_ffn_gate_matvec_status
 .type run_token0_layer1_ffn_gate_matvec_status, @function

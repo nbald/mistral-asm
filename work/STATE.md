@@ -6,10 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a status-only token-0 layer-1 FFN up matvec smoke through
-`blk.1.ffn_up.weight`, consuming the private
-`token0_layer1_ffn_norm_activation`, writing a private layer-1 FFN up output
-buffer in focused inference code, and printing only the status label.
+Continue the independent `_start.s` split by moving the layer-1 FFN norm status
+printing and exact-hex slice printer into `src/infer/token0_layer1_ffn.s`,
+preserving output order and all current labels before adding new runtime
+behavior.
 
 ## Completed Work
 
@@ -44,10 +44,15 @@ buffer in focused inference code, and printing only the status label.
   descriptor/type/shape/bounds checks, writes a private layer-1 FFN gate output
   buffer, stores a private status word, and prints only
   `token0_layer1_ffn_gate_matvec`.
+- The un-cleared transient operator instruction to split `_start.s` before new
+  feature work was treated as active, encoded durably here, and handled for this
+  iteration by moving the existing token-0 layer-1 FFN RMSNorm smoke routine
+  into `src/infer/token0_layer1_ffn.s`. `_start.s` now exports the handoff slots
+  that the focused inference code already consumed logically.
 
 ## Known Blockers
 
-- No current blocker for the next status-only layer-1 FFN up matvec step.
+- No current blocker for the next behavior-preserving `_start.s` split.
 - Residual maintainability risk remains: `src/entry/_start.s` still owns entry
   dispatch, descriptor lookup sequencing, descriptor/slice printing, static
   runtime buffers, and token-0 smoke orchestration. Keep new subsystem-specific
@@ -74,21 +79,21 @@ buffer in focused inference code, and printing only the status label.
 
 ## Last Verification
 
-- Focused layer-1 FFN gate matvec status verification passed:
-  `make clean && make`; `make check`; `./mistral-asm --help`; real target
-  smoke showed `token0_layer1_ffn_gate_matvec: 1` after
-  `token0_layer1_ffn_norm: 1` with unchanged FFN norm words
-  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, and descriptor
-  summaries still showed gate/up dimensions `3072 x 9216`, type `8`, offsets
-  `615038976` and `645132288`. A temporary empty valid GGUF printed
-  `token0_layer1_ffn_gate_matvec: 0`. `python3 -m py_compile
-  work/oracle/*.py`, `git diff --check`, runtime source purity scan,
-  static-link inspection, exported-symbol inspection, tracked-artifact scan,
-  and tracked large-file scan passed.
+- Behavior-preserving layer-1 FFN norm smoke extraction verification passed:
+  `make clean && make`; `make check`; `./mistral-asm --help`; real target smoke
+  still showed `token0_layer1_ffn_norm: 1` with unchanged FFN norm words
+  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, followed by
+  `token0_layer1_ffn_gate_matvec: 1`, and descriptor summaries still showed
+  layer-1 FFN norm/gate/up descriptors with expected dimensions, types, and
+  offsets. A temporary empty valid GGUF printed `token0_layer1_ffn_norm: 0` and
+  `token0_layer1_ffn_gate_matvec: 0`. `python3 -m py_compile work/oracle/*.py`,
+  `git diff --check`, runtime source purity scan, static-link inspection,
+  undefined-symbol inspection, exported-symbol inspection, tracked-artifact
+  scan, and tracked large-file scan passed.
 
 ## Next Exact Step
 
-Add a status-only token-0 layer-1 FFN up matvec smoke through
-`blk.1.ffn_up.weight`, consuming the private
-`token0_layer1_ffn_norm_activation`, writing a private layer-1 FFN up output
-buffer in focused inference code, and printing only the status label.
+Continue the independent `_start.s` split by moving the layer-1 FFN norm status
+printing and exact-hex slice printer into `src/infer/token0_layer1_ffn.s`,
+preserving output order and all current labels before adding new runtime
+behavior.
