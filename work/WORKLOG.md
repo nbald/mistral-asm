@@ -810,3 +810,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_ffn_gate_matvec: 1` while preserving the existing Q/K/V/output,
   residual, and FFN RMSNorm exact-hex slices. Cleanup tracing still showed
   `close(3)` before the final `munmap`.
+
+## 2026-05-10T17:32:26Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_gate_output` after `token0_ffn_gate_matvec_status` is 1. The FFN
+  gate math and shape/bounds checks were left unchanged.
+- Decision: preserve the status-only synthetic skip path. Fixtures with no real
+  gate tensor still print `token0_ffn_gate_matvec: 0` and no gate output word
+  labels.
+- Verification evidence: the real local target printed gate output words
+  `0xbf5c7417`, `0xbfa9b30c`, `0xbfecdf2f`, and `0xbfa6fe18`; merged cleanup
+  tracing showed those lines between `close(3)` and the final `munmap`.
