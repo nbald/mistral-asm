@@ -6,9 +6,9 @@ Milestone 3: GGUF loader.
 
 ## Current Exact Task
 
-Document the existing assembly runtime before adding more loader logic. Add
-human-readable contract comments to exported functions and explanatory comments
-for non-obvious register, syscall, GGUF layout, and cleanup decisions.
+Add a bounds-checked GGUF metadata walker that advances over metadata key/value
+records and validates the aligned tensor-directory start, without dumping values
+yet.
 
 ## Known Blockers
 
@@ -36,7 +36,7 @@ None.
 
 ## Last Verification
 
-- `make clean && make` passed.
+- `make clean` then `make` passed.
 - `./mistral-asm --help` printed usage with the model-path loader form.
 - `readelf -d mistral-asm` reported no dynamic section.
 - `readelf -l mistral-asm` showed no program interpreter.
@@ -51,5 +51,5 @@ None.
 
 ## Next Exact Step
 
-Add audit-oriented comments to the existing assembly files, then resume metadata
-walker work.
+Add the metadata walker described above, keeping all parser reads bounded by the
+mapped file length.

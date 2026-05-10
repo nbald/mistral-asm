@@ -96,3 +96,12 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: a synthetic `/tmp` GGUF v3 header fixture passed and a
   high-count fixture failed with the intended loader error; loader `strace`
   showed direct file, map, unmap, close, write, and exit syscalls.
+
+## 2026-05-10T12:31:27Z
+
+- Audit comment pass completed for current assembly runtime. The contracts now
+  state syscall ABI ownership, register clobbers, GGUF header assumptions, and
+  cleanup-path intent before parser scope grows.
+- Verification evidence: rebuild passed; help output and both synthetic GGUF
+  fixtures behaved as before; `readelf` still showed a static no-interpreter
+  executable; syscall traces stayed within the expected direct Linux calls.
