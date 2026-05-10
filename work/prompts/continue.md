@@ -46,6 +46,26 @@ Work loop:
    commit message, and next step. Keep entries concise.
 7. Commit the completed step with a short narrative commit message.
 
+Review loop:
+
+- If `work/STATE.md` says the next step is a review pass, switch to code-review
+  stance for exactly one atomic step.
+- Review generated code and working docs for bugs, audit gaps, purity violations,
+  weak verification, stale state, and unclear comments.
+- Commit concise review notes under `work/reviews/` when there are findings or a
+  useful explicit clean result.
+- If review finds issues, update `work/STATE.md` so the next exact step fixes the
+  highest-impact issue instead of continuing feature work.
+
+Final happiness loop:
+
+- Near final acceptance, ask yourself exactly: "are you happy?"
+- If the honest answer is not yes, write the reason in `work/STATE.md`, fix or
+  document the highest-impact reason, verify, commit, and ask again in a later
+  iteration.
+- Stop the final loop only after `work/STATE.md` and `work/WORKLOG.md` record a
+  yes answer with the verification that justifies it.
+
 If blocked:
 
 - Stop after updating `work/STATE.md` with the blocker and the next proposed
@@ -58,4 +78,3 @@ Report at the end:
 - Commit hash, if a commit was made.
 - Verification result.
 - Next exact step from `work/STATE.md`.
-

@@ -11,7 +11,7 @@ Add the first pure assembly build skeleton: `Makefile`, `_start`, direct
 
 ## Last Completed Commit
 
-Pending first commit: repository-method bootstrap.
+`a7f725b work: bootstrap autonomous project method`
 
 ## Known Blockers
 
@@ -34,5 +34,4 @@ Bootstrap verification passed:
 
 ## Next Exact Step
 
-Commit the repository-method bootstrap, then implement the minimal pure ASM
-binary for Milestone 2.
+Implement the minimal pure ASM binary for Milestone 2.
