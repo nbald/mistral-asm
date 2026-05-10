@@ -219,3 +219,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   truncated tensor descriptors, bad high-bit counts, malformed token arrays,
   future prompt-form rejection, and static-link checks. The target model file
   was not present locally.
+
+## 2026-05-10T13:37:31Z
+
+- First tensor descriptor retention now includes the raw u64 dimension values
+  for up to four dimensions. The summary keeps fixed `first_tensor_dim0..3`
+  fields so empty tensor directories and tensors with fewer than four dimensions
+  naturally show zero-filled unused slots from the existing summary clear.
+- Decision: dimension values are copied only after the full first-tensor
+  dimension span is bounds-checked, preserving the previous malformed-directory
+  behavior while making the retained shape auditable.
+- Verification evidence: rebuild and help passed; synthetic fixtures covered
+  empty tensor zero-fill, two-dimension and four-dimension first tensor output,
+  metadata summary preservation, continued second-descriptor walking,
+  misaligned second-offset rejection, and truncated dimension-array rejection.
+  The future prompt form remained a usage error, and static-link plus whitespace
+  checks passed.

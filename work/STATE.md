@@ -2,12 +2,12 @@
 
 ## Current Milestone
 
-Milestone 6: Tensor directory.
+Milestone 7: Review pass.
 
 ## Current Exact Task
 
-Extend first tensor descriptor retention to store and print up to four dimension
-sizes, zero-filling unused slots when `n_dimensions` is smaller.
+Run the planned review pass over GGUF parsing, tensor-directory retention,
+error handling, runtime purity, verification coverage, and assembly comments.
 
 ## Completed Work
 
@@ -24,9 +24,11 @@ sizes, zero-filling unused slots when `n_dimensions` is smaller.
   tensor count, architecture, context length, vocabulary size, and layer/block
   count.
 - The tensor directory walker captures only the first tensor descriptor's
-  bounded name, dimension count, ggml type, and relative payload offset in
-  caller-owned summary storage, while still applying bounds and alignment checks
-  to remaining tensor descriptors.
+  bounded name, dimension count, up to four dimension sizes, ggml type, and
+  relative payload offset in caller-owned summary storage, while still applying
+  bounds and alignment checks to remaining tensor descriptors.
+- Unused first-tensor dimension summary slots remain zero-filled when
+  `n_dimensions` is smaller than four or when the tensor directory is empty.
 
 ## Known Blockers
 
@@ -36,29 +38,28 @@ None.
 
 - `src/entry/_start.s`
 - `src/gguf/load_header.s`
+- `work/reviews/`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Required Verification
 
-- `make clean && make`
-- `./mistral-asm --help`
-- Synthetic GGUF fixtures still pass/fail the relevant loader paths.
-- Static executable check with `readelf`.
-- `git diff --check`
+- Inspect generated assembly and working docs for correctness, auditability,
+  runtime purity, stale comments, stale state, and verification gaps.
+- Run targeted rebuild, CLI, fixture, static-link, and whitespace checks if the
+  review changes code or finds a risk that needs proof.
 
 ## Last Verification
 
 - `make clean && make` passed.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary milestone.
-- Synthetic GGUF fixtures verified successful summary output for empty metadata,
-  full architecture/context/block/token metadata, wrong-typed token metadata
-  skip, first tensor descriptor capture, a two-tensor directory where the second
-  descriptor is still walked, and long first tensor name truncation to 95 bytes.
-- Synthetic failure fixtures still reject bad high-bit counts, truncated
-  metadata, malformed token arrays, a misaligned second tensor offset, and a
-  truncated tensor descriptor with status 3.
+- Synthetic GGUF fixtures verified empty tensor summary zero-fill, first tensor
+  dimension capture for two-dimension and four-dimension descriptors, zero-fill
+  of unused dimension slots, metadata summary preservation, and continued
+  walking of a second tensor descriptor.
+- Synthetic failure fixtures still reject a misaligned second tensor offset and
+  a truncated first tensor dimension array with status 3 diagnostics.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
 - `readelf` reported no dynamic section and no interpreter or dynamic program
@@ -68,6 +69,6 @@ None.
 
 ## Next Exact Step
 
-Extend the first tensor descriptor summary to retain and print up to four u64
-dimension sizes, copying only the validated dimension entries for the first
-tensor and leaving unused slots as zero.
+Run the Milestone 7 review pass and commit concise notes under `work/reviews/`;
+if findings are discovered, make the next exact step fix the highest-impact
+issue.

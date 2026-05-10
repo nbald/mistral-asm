@@ -21,9 +21,10 @@
 .equ GGUF_SUMMARY_FIRST_TENSOR_NAME, 72
 .equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_FIRST_TENSOR_N_DIMS, 168
-.equ GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE, 176
-.equ GGUF_SUMMARY_FIRST_TENSOR_OFFSET, 184
-.equ GGUF_SUMMARY_SIZE, 192
+.equ GGUF_SUMMARY_FIRST_TENSOR_DIMS, 176
+.equ GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE, 208
+.equ GGUF_SUMMARY_FIRST_TENSOR_OFFSET, 216
+.equ GGUF_SUMMARY_SIZE, 224
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -69,9 +70,9 @@ tokenizer_tokens_key_end:
 # metadata_kv_count at offset 8, a 32-byte NUL-terminated architecture string
 # at offset 16, context_length as a u64 at offset 48, and block_count as a u64
 # at offset 56, vocab_size as a u64 at offset 64, a 96-byte NUL-terminated
-# first tensor name at offset 72, and the first tensor's dimension count,
-# ggml_type, and relative payload offset as u64 values at offsets 168, 176, and
-# 184.
+# first tensor name at offset 72, the first tensor's dimension count at offset
+# 168, up to four u64 dimension sizes at offset 176, and the first tensor's
+# ggml_type and relative payload offset as u64 values at offsets 208 and 216.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -631,8 +632,8 @@ gguf_capture_string_to_fixed:
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15).
 # Ownership/lifetime: reads only from the caller-owned mapping. The first tensor
-# name is copied into fixed-size caller-owned summary storage; no mapped-file
-# pointer is retained.
+# name and up to four dimension sizes are copied into fixed-size caller-owned
+# summary storage; no mapped-file pointer is retained.
 # Error behavior: returns malformed-tensor status before any out-of-bounds read.
 # Tensor payload offsets with the high bit set or not divisible by the current
 # default alignment are rejected in this narrow parser.
@@ -684,16 +685,33 @@ gguf_walk_tensor_infos:
 	ja .Ltensor_bad
 	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_N_DIMS], rax
 
-	# Dimension values are not retained in this step; the next tensor-directory
-	# slice will copy the validated first-tensor shape.
-	mov r8, rax
-	shl r8, 3
-	mov rsi, r14
-	mov rdx, r12
-	call gguf_skip_fixed_bytes
-	test rax, rax
-	jnz .Ltensor_bad
-	mov r12, rdx
+	# The summary has exactly four dimension slots, matching the GGUF max dims
+	# accepted above. Bounds-check the whole in-file span before copying any
+	# dimension value, so unused summary slots can safely remain zero-filled.
+	mov rcx, rax
+	mov r11, rax
+	shl r11, 3
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, r11
+	jb .Ltensor_bad
+	mov r8, r13
+	add r8, r12
+	lea r9, [r15 + GGUF_SUMMARY_FIRST_TENSOR_DIMS]
+	xor edx, edx
+
+.Ltensor_first_dim_loop:
+	cmp rdx, rcx
+	je .Ltensor_first_dims_done
+	mov r10, qword ptr [r8 + rdx * 8]
+	mov qword ptr [r9 + rdx * 8], r10
+	inc rdx
+	jmp .Ltensor_first_dim_loop
+
+.Ltensor_first_dims_done:
+	add r12, r11
 
 	# ggml_type is a u32 enum in GGUF. Keep the raw value for the first tensor so
 	# later type validation can be audited against the original directory entry.

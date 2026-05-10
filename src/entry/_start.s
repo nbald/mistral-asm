@@ -60,6 +60,22 @@ first_tensor_n_dimensions_text:
 	.ascii "first_tensor_n_dimensions: "
 first_tensor_n_dimensions_text_end:
 
+first_tensor_dim0_text:
+	.ascii "first_tensor_dim0: "
+first_tensor_dim0_text_end:
+
+first_tensor_dim1_text:
+	.ascii "first_tensor_dim1: "
+first_tensor_dim1_text_end:
+
+first_tensor_dim2_text:
+	.ascii "first_tensor_dim2: "
+first_tensor_dim2_text_end:
+
+first_tensor_dim3_text:
+	.ascii "first_tensor_dim3: "
+first_tensor_dim3_text_end:
+
 first_tensor_ggml_type_text:
 	.ascii "first_tensor_ggml_type: "
 first_tensor_ggml_type_text_end:
@@ -144,6 +160,14 @@ gguf_summary_first_tensor_name:
 	.skip GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
 gguf_summary_first_tensor_n_dimensions:
 	.skip 8
+gguf_summary_first_tensor_dim0:
+	.skip 8
+gguf_summary_first_tensor_dim1:
+	.skip 8
+gguf_summary_first_tensor_dim2:
+	.skip 8
+gguf_summary_first_tensor_dim3:
+	.skip 8
 gguf_summary_first_tensor_ggml_type:
 	.skip 8
 gguf_summary_first_tensor_offset:
@@ -167,7 +191,7 @@ gguf_summary_first_tensor_offset:
 # summary buffer is process-owned static storage passed to the loader for scalar
 # header counts, a bounded copy of selected metadata strings, and selected
 # scalar and array-length metadata values, plus a bounded snapshot of the first
-# tensor descriptor.
+# tensor descriptor, including up to four dimension sizes.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -417,6 +441,62 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_first_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_dim0_text]
+	mov rdx, first_tensor_dim0_text_end - first_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_dim1_text]
+	mov rdx, first_tensor_dim1_text_end - first_tensor_dim1_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_dim1]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_dim2_text]
+	mov rdx, first_tensor_dim2_text_end - first_tensor_dim2_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_dim2]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + first_tensor_dim3_text]
+	mov rdx, first_tensor_dim3_text_end - first_tensor_dim3_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_first_tensor_dim3]
 	call write_u64_decimal
 
 	mov rdi, 1
