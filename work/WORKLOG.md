@@ -1069,3 +1069,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   fields; the real target printed one dimension of `3072`, type `0`, and
   relative offset `554864640`. A Python parser cross-check reported the same
   descriptor, and the post-FFN residual exact words stayed unchanged.
+
+## 2026-05-10T19:35:49Z
+
+- Added the first layer-1 math smoke: `blk.1.attn_norm.weight` now normalizes
+  `token0_post_ffn_residual` into separate static storage and prints only a
+  status flag. The output bytes remain private until the next exact-hex slice
+  step.
+- Verification evidence: an empty valid GGUF stayed status-only with
+  `token0_layer1_attn_norm: 0`, while the real local target printed
+  `token0_layer1_attn_norm: 1` and preserved the recorded post-FFN residual
+  words. Rebuild, no-libc harnesses, CLI/static checks, malformed synthetic
+  checks, cleanup tracing, oracle py-compile, runtime purity, tracked-artifact
+  scan, and whitespace checks passed.
