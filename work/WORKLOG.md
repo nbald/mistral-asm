@@ -689,3 +689,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`; cleanup tracing
   showed those words before the final `munmap`. The next durable comparison
   should be an external oracle note for these words.
+
+## 2026-05-10T16:46:23Z
+
+- Added verification-only oracle tooling for the token-0 attention output
+  projection. It recomputes token 0 through attention RMSNorm, all value rows,
+  the grouped-query context expansion, and the first four output projection
+  rows outside the runtime.
+- Decision: keep this as external Python/numpy tooling under `work/oracle/`.
+  The runtime and build remain pure assembly, and no runtime files changed.
+- Verification evidence: the new oracle matched the runtime context words
+  `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, plus output
+  words `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`.
+  Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
+  real-model smoke, cleanup tracing, and whitespace checks passed.

@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add verification-only oracle tooling and comparison notes for the token-0
-attention output-projection slice. Keep runtime changes out of that step unless
-the oracle exposes a concrete mismatch.
+Add a guarded token-0 post-attention residual smoke that sums
+`token_embedding_activation` and `token0_attn_output` into a 3072-f32 static
+buffer, prints a status and the first four exact-hex words, and does not add new
+tensor payload reads.
 
 ## Completed Work
 
@@ -22,9 +23,9 @@ the oracle exposes a concrete mismatch.
   `blk.0.attn_k.weight`, `blk.0.attn_v.weight`,
   `blk.0.attn_output.weight`, and the attention RMSNorm epsilon bits.
 - Scalar Q8_0 helpers, token-0 embedding dequantization, scalar f32 RMSNorm,
-  query projection, key projection, and value projection smokes are wired.
-  Query/key/value output slices have external oracle notes and exact-hex
-  comparisons.
+  query projection, key projection, value projection, single-token context, and
+  output projection smokes are wired. Query/key/value/output slices have
+  external oracle notes and exact-hex comparisons.
 - The token-0 single-token attention context smoke expands the computed
   1024-f32 value projection into a 4096-f32 static context by repeating each
   128-f32 KV-head block for its four query heads. It uses
@@ -38,6 +39,10 @@ the oracle exposes a concrete mismatch.
   static 4096-f32 context into a 3072-f32 static buffer, and prints
   `token0_attn_output_matvec` plus guarded `token0_attn_output0..3_f32_hex`
   words.
+- The verification-only output projection oracle parses the target GGUF
+  externally, recomputes token 0 attention RMSNorm, all 1024 value rows, the
+  repeated 4096-f32 single-token context, and the first four output projection
+  rows. Its context and output words match the runtime exact-hex slices.
 
 ## Known Blockers
 
@@ -60,6 +65,8 @@ None.
 - `work/oracle/token0-attn-k-output.md`
 - `work/oracle/token0_attn_v_oracle.py`
 - `work/oracle/token0-attn-v-output.md`
+- `work/oracle/token0_attn_output_oracle.py`
+- `work/oracle/token0-attn-output.md`
 
 ## Required Verification
 
@@ -69,6 +76,8 @@ None.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Rerun the external query/key/value projection oracle comparisons when
   projection math or shared token-0 inputs change.
+- Rerun the external output projection oracle comparison when value projection,
+  context expansion, output projection math, or shared token-0 inputs change.
 
 ## Last Verification
 
@@ -99,13 +108,18 @@ None.
   showed `close(3) = 0`, printed the guarded value, context, and output words
   plus `token0_attn_output_matvec: 1` before final cleanup, and showed
   `munmap(..., 3651679520) = 0`.
+- `python3 work/oracle/token0_attn_output_oracle.py` on the real target printed
+  context words `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`,
+  and output words `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and
+  `0x3d799d1a`, exactly matching the runtime slices.
 - The external query/key/value projection oracles were not rerun because this
-  step changed only guarded printing of an already-computed output buffer, not
+  step added only output-projection verification tooling and notes, not runtime
   projection math or shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add verification-only oracle tooling and comparison notes for the token-0
-attention output-projection slice. Keep runtime changes out of that step unless
-the oracle exposes a concrete mismatch.
+Add a guarded token-0 post-attention residual smoke that sums
+`token_embedding_activation` and `token0_attn_output` into a 3072-f32 static
+buffer, prints a status and the first four exact-hex words, and does not add new
+tensor payload reads.
