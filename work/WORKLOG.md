@@ -1058,3 +1058,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   tracing, oracle py-compile, runtime purity, tracked-artifact scan, and
   whitespace checks passed. The real-model post-FFN residual words were
   unchanged, so external oracle scripts were not rerun.
+
+## 2026-05-10T19:29:24Z
+
+- Wired the reusable lookup helper into the runtime as a non-math later-layer
+  descriptor smoke. It captures `blk.1.attn_norm.weight` into separate scratch
+  storage, prints found/dimension/type/offset fields, and does not feed the
+  token-0 layer-0 math path.
+- Verification evidence: an empty synthetic GGUF printed zeroed layer-1 lookup
+  fields; the real target printed one dimension of `3072`, type `0`, and
+  relative offset `554864640`. A Python parser cross-check reported the same
+  descriptor, and the post-FFN residual exact words stayed unchanged.

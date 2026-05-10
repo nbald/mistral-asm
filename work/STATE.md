@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Wire the reusable tensor-directory lookup helper into a non-math runtime smoke
-that captures one later-layer descriptor into a separate scratch slot, leaving
-the existing token-0 math path on the fixed descriptors for this step.
+Use the captured `blk.1.attn_norm.weight` descriptor for a status-only
+layer-1 attention RMSNorm smoke over `token0_post_ffn_residual`, leaving exact
+hex output and oracle comparison for a later step.
 
 ## Completed Work
 
@@ -43,6 +43,11 @@ the existing token-0 math path on the fixed descriptors for this step.
   caller-owned 160-byte slot without adding another fixed summary slot.
 - A pure assembly `gguf_lookup` harness covers successful descriptor capture,
   absent-name clearing, and malformed unaligned relative-offset rejection.
+- The runtime uses the reusable lookup helper after validation to capture
+  `blk.1.attn_norm.weight` into a separate scratch descriptor slot and prints
+  found, dimension, type, and relative-offset summary fields. This smoke is
+  non-math and leaves the existing token-0 layer-0 path on the fixed
+  descriptors.
 
 ## Known Blockers
 
@@ -91,14 +96,24 @@ None.
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with `tensor_infos_offset: 24`,
-  `tensor_data_offset: 0`, and post-FFN residual status 0; bad magic returned
-  status 3; a truncated tensor directory returned status 3.
+  `tensor_data_offset: 0`, zeroed layer-1 lookup fields, and post-FFN residual
+  status 0; bad magic returned status 3; a truncated tensor directory returned
+  status 3.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
   status 0, printed `tensor_infos_offset: 7867981`,
-  `tensor_data_offset: 7882016`, exact-target Q/K/V matvec status 1, plus
-  `token0_post_ffn_residual: 1`, and preserved the recorded post-FFN residual
-  words `0xbe256913`, `0xbf15734b`, `0x40402562`, and `0xbe4c5582`; cleanup
-  showed successful `close(3)` and final `munmap`.
+  `tensor_data_offset: 7882016`,
+  `layer1_attn_norm_tensor_found: 1`,
+  `layer1_attn_norm_tensor_n_dimensions: 1`,
+  `layer1_attn_norm_tensor_dim0: 3072`,
+  `layer1_attn_norm_tensor_ggml_type: 0`, and
+  `layer1_attn_norm_tensor_offset: 554864640`; it also preserved
+  exact-target Q/K/V matvec status 1, `token0_post_ffn_residual: 1`, and the
+  recorded post-FFN residual words `0xbe256913`, `0xbf15734b`, `0x40402562`,
+  and `0xbe4c5582`; cleanup showed successful `close(3)` and final `munmap`.
+- A Python parser cross-check reported the same `blk.1.attn_norm.weight`
+  descriptor: one dimension `3072`, type `0`, relative offset `554864640`.
+- A final filtered real-target smoke after relink preserved the same layer-1
+  descriptor fields and post-FFN residual exact words.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -110,7 +125,7 @@ None.
 
 ## Next Exact Step
 
-In `src/entry/_start.s`, add a non-math smoke call to
-`gguf_lookup_tensor_info` after successful model validation to capture
-`blk.1.attn_norm.weight` into a new scratch descriptor slot and print a minimal
-found/dimension/type/offset summary, without changing the token-0 math path.
+In `src/entry/_start.s`, add a guarded layer-1 attention RMSNorm smoke that
+uses `token0_post_ffn_residual` as input and the reusable
+`blk.1.attn_norm.weight` descriptor as weights, records a status flag, and
+prints only the status for this first math step.

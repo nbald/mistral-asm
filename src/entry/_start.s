@@ -14,6 +14,7 @@
 .equ GGUF_SUMMARY_FFN_GATE_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_FFN_UP_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_FFN_DOWN_TENSOR_NAME_CAP, 96
+.equ LAYER1_ATTN_NORM_TENSOR_NAME_CAP, 96
 .equ GGML_TYPE_F32, 0
 .equ GGML_TYPE_Q8_0, 8
 .equ TOKEN_EMBEDDING_ACTIVATION_VALUES, 3072
@@ -65,12 +66,17 @@ help_text:
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
-	.ascii "FFN down matvec smoke, post-FFN residual smoke.\n"
+	.ascii "FFN down matvec smoke, post-FFN residual smoke, "
+	.ascii "and reusable descriptor lookup smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
 	.ascii "token_embd.weight"
 lookup_tensor_request_end:
+
+layer1_attn_norm_tensor_request:
+	.ascii "blk.1.attn_norm.weight"
+layer1_attn_norm_tensor_request_end:
 
 usage_error_text:
 	.ascii "mistral-asm: use --help or provide a GGUF file\n"
@@ -187,6 +193,26 @@ lookup_tensor_ggml_type_text_end:
 lookup_tensor_offset_text:
 	.ascii "lookup_tensor_offset: "
 lookup_tensor_offset_text_end:
+
+layer1_attn_norm_tensor_found_text:
+	.ascii "layer1_attn_norm_tensor_found: "
+layer1_attn_norm_tensor_found_text_end:
+
+layer1_attn_norm_tensor_n_dimensions_text:
+	.ascii "layer1_attn_norm_tensor_n_dimensions: "
+layer1_attn_norm_tensor_n_dimensions_text_end:
+
+layer1_attn_norm_tensor_dim0_text:
+	.ascii "layer1_attn_norm_tensor_dim0: "
+layer1_attn_norm_tensor_dim0_text_end:
+
+layer1_attn_norm_tensor_ggml_type_text:
+	.ascii "layer1_attn_norm_tensor_ggml_type: "
+layer1_attn_norm_tensor_ggml_type_text_end:
+
+layer1_attn_norm_tensor_offset_text:
+	.ascii "layer1_attn_norm_tensor_offset: "
+layer1_attn_norm_tensor_offset_text_end:
 
 attn_norm_tensor_found_text:
 	.ascii "attn_norm_tensor_found: "
@@ -1049,6 +1075,27 @@ gguf_mapping_size:
 	.skip 8
 
 .balign 8
+layer1_attn_norm_tensor_slot:
+layer1_attn_norm_tensor_found:
+	.skip 8
+layer1_attn_norm_tensor_name:
+	.skip LAYER1_ATTN_NORM_TENSOR_NAME_CAP
+layer1_attn_norm_tensor_n_dimensions:
+	.skip 8
+layer1_attn_norm_tensor_dim0:
+	.skip 8
+layer1_attn_norm_tensor_dim1:
+	.skip 8
+layer1_attn_norm_tensor_dim2:
+	.skip 8
+layer1_attn_norm_tensor_dim3:
+	.skip 8
+layer1_attn_norm_tensor_ggml_type:
+	.skip 8
+layer1_attn_norm_tensor_offset:
+	.skip 8
+
+.balign 8
 token0_embedding_dequant_status:
 	.skip 8
 
@@ -1183,21 +1230,21 @@ token0_post_ffn_residual:
 # retained FFN norm weights, and projects that activation through the retained
 # FFN gate and up matrices before deriving the first FFN SwiGLU activation,
 # projecting it through the retained FFN down matrix, and adding the guarded
-# post-FFN residual from process-owned static buffers. The
-# mapping is released explicitly with gguf_release_mapping before exit. The
-# GGUF summary buffer is
-# process-owned static storage passed to the loader for scalar header counts,
-# bounded metadata
-# string copies, and selected scalar and array-length metadata values, plus a
-# bounded snapshot
-# of the first tensor descriptor and the first requested tensor-name lookup,
-# including up to four dimension sizes for each retained descriptor, the
-# tensor-info directory start offset, the aligned tensor-data base offset for
-# non-empty tensor directories, and a retained descriptor for the first-layer
-# attention RMSNorm weights, query projection, key projection, value projection,
-# output projection, FFN RMSNorm weights, and FFN gate, FFN up, and FFN down
-# projections.
-# Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
+# post-FFN residual from process-owned static buffers. It also performs a
+# non-math reusable descriptor lookup for `blk.1.attn_norm.weight` into a
+# separate process-owned scratch slot before the token-0 math path. The mapping
+# is released explicitly with gguf_release_mapping before exit. The GGUF summary
+# buffer is process-owned static storage passed to the loader for scalar header
+# counts, bounded metadata string copies, and selected scalar and array-length
+# metadata values, plus a bounded snapshot of the first tensor descriptor and
+# the first requested tensor-name lookup, including up to four dimension sizes
+# for each retained descriptor, the tensor-info directory start offset, the
+# aligned tensor-data base offset for non-empty tensor directories, and a
+# retained descriptor for the first-layer attention RMSNorm weights, query
+# projection, key projection, value projection, output projection, FFN RMSNorm
+# weights, and FFN gate, FFN up, and FFN down projections.
+# Error behavior: maps gguf_validate_file and post-validation tensor lookup
+# status codes to stderr diagnostics after releasing any live mapping.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
 	# accepts exactly one user argument: either "--help" or a model path.
@@ -1327,7 +1374,8 @@ _start:
 	mov rdx, gguf_tensor_alignment_error_text_end - gguf_tensor_alignment_error_text
 
 .Lwrite_model_error:
-	# Header validation failures are runtime errors, distinct from CLI misuse.
+	# Loader and post-validation lookup failures are runtime errors, distinct
+	# from CLI misuse.
 	mov rdi, 2
 	call sys_write
 
@@ -1335,6 +1383,48 @@ _start:
 	call sys_exit
 
 .Lgguf_ok:
+	# Exercise the reusable tensor-info lookup on a later-layer descriptor while
+	# leaving the fixed first-layer summary slots as the only inputs to the
+	# token-0 math smoke path below.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer1_attn_norm_tensor_request]
+	mov r9, layer1_attn_norm_tensor_request_end - layer1_attn_norm_tensor_request
+	lea r10, [rip + layer1_attn_norm_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
+	jz .Lsummary_print
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_tensor_alignment_error:
+	lea rdi, [rip + gguf_mapping]
+	call gguf_release_mapping
+	lea rsi, [rip + gguf_tensor_alignment_error_text]
+	mov rdx, gguf_tensor_alignment_error_text_end - gguf_tensor_alignment_error_text
+	jmp .Lwrite_model_error
+
+.Llookup_tensor_bounds_error:
+	lea rdi, [rip + gguf_mapping]
+	call gguf_release_mapping
+	lea rsi, [rip + gguf_tensor_bounds_error_text]
+	mov rdx, gguf_tensor_bounds_error_text_end - gguf_tensor_bounds_error_text
+	jmp .Lwrite_model_error
+
+.Llookup_unknown_error:
+	lea rdi, [rip + gguf_mapping]
+	call gguf_release_mapping
+	lea rsi, [rip + gguf_unknown_error_text]
+	mov rdx, gguf_unknown_error_text_end - gguf_unknown_error_text
+	jmp .Lwrite_model_error
+
+.Lsummary_print:
 	# This milestone validates the fixed GGUF header, metadata shapes, and
 	# tensor-info directory bounds, then exposes header counts, selected metadata,
 	# the aligned tensor-data base, and retained tensor descriptors in
@@ -1484,6 +1574,8 @@ _start:
 	lea rsi, [rip + newline_text]
 	mov rdx, newline_text_end - newline_text
 	call sys_write
+
+	call print_layer1_attn_norm_lookup_summary
 
 	mov rdi, 1
 	lea rsi, [rip + first_tensor_name_text]
@@ -3340,6 +3432,95 @@ write_bounded_c_string:
 	ret
 
 .size write_bounded_c_string, . - write_bounded_c_string
+
+.type print_layer1_attn_norm_lookup_summary, @function
+
+# Contract: print the reusable descriptor-lookup smoke slot for
+# `blk.1.attn_norm.weight`.
+# Inputs: no register inputs. Reads the process-owned generic descriptor slot
+# filled by gguf_lookup_tensor_info after model validation.
+# Outputs: writes found flag, dimension count, first dimension, ggml_type, and
+# relative payload offset to stdout.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u64_decimal.
+# Ownership/lifetime: reads static scratch storage only during this call and
+# does not retain mapped-file pointers.
+# Error behavior: this is diagnostic summary output; write failures are not
+# surfaced separately.
+print_layer1_attn_norm_lookup_summary:
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_norm_tensor_found_text]
+	mov rdx, layer1_attn_norm_tensor_found_text_end - layer1_attn_norm_tensor_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_norm_tensor_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_norm_tensor_n_dimensions_text]
+	mov rdx, layer1_attn_norm_tensor_n_dimensions_text_end - layer1_attn_norm_tensor_n_dimensions_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_norm_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_norm_tensor_dim0_text]
+	mov rdx, layer1_attn_norm_tensor_dim0_text_end - layer1_attn_norm_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_norm_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_norm_tensor_ggml_type_text]
+	mov rdx, layer1_attn_norm_tensor_ggml_type_text_end - layer1_attn_norm_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_norm_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer1_attn_norm_tensor_offset_text]
+	mov rdx, layer1_attn_norm_tensor_offset_text_end - layer1_attn_norm_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer1_attn_norm_tensor_offset]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size print_layer1_attn_norm_lookup_summary, . - print_layer1_attn_norm_lookup_summary
 
 .type print_token0_attn_q_output_slice, @function
 
