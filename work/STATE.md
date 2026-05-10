@@ -2,13 +2,13 @@
 
 ## Current Milestone
 
-Milestone 8: Q8_0 matvec.
+Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Extend the scalar Q8_0 math slice from a verified row/span dot primitive to a
-small matvec routine that computes multiple output rows from one f32 activation
-vector.
+Begin forward-pass setup by extending the GGUF tensor-directory path from a
+first-tensor summary toward a small bounded tensor descriptor lookup that can
+resolve named tensor payloads needed by the one-token path.
 
 ## Completed Work
 
@@ -42,9 +42,13 @@ vector.
 - `src/math/q8_0_dot.s` also exports `q8_0_dot_f32_row`, a scalar multi-block
   row/span dot primitive that accumulates over `32 * block_count` f32
   activations and returns +0.0 for a zero block count.
+- `src/math/q8_0_dot.s` exports `q8_0_matvec_f32`, a scalar row-major GGML Q8_0
+  matrix times f32 activation-vector routine that writes f32 row outputs and
+  writes nothing for a zero row count.
 - `make check-q8_0-dot` builds a separate no-libc assembly verifier that checks
   exact f32 result bits for one-block fixtures, two-block row fixtures, row
-  pointer advancement, and zero-block behavior.
+  pointer advancement, zero-block behavior, a two-row/two-block matvec fixture,
+  and zero-row matvec no-write behavior.
 
 ## Known Blockers
 
@@ -63,17 +67,21 @@ None.
 
 ## Required Verification
 
-- Define focused Q8_0 matvec fixtures with known expected row outputs.
+- Define focused synthetic GGUF tensor-directory fixtures for the lookup shape,
+  including a found descriptor, absent descriptor/default state, and malformed
+  later descriptor rejection.
 - Rebuild with `as`/`ld`.
-- Verify the assembly matvec routine against expected scalar results.
-- Keep existing GGUF loader smoke checks passing.
+- Keep `make check`, existing GGUF loader smoke checks, and static-link checks
+  passing.
+- Smoke-test the real target GGUF when the ignored local model remains present.
 
 ## Last Verification
 
 - `make clean && make && make check` passed.
 - `make check` passed and printed `q8_0_dot: ok`, covering exact f32 bits for
-  one-block dots, two-block row dots, row pointer advancement, and zero-block
-  return.
+  one-block dots, two-block row dots, row pointer advancement, zero-block row
+  return, a two-row/two-block matvec output pair of 512.0 and 28.0, and
+  zero-row matvec no-write behavior.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary milestone.
 - Synthetic GGUF fixture `/tmp/mistral_asm_tensor_valid.gguf` with one tensor,
@@ -86,11 +94,16 @@ None.
   2.
 - `readelf` reported no dynamic section and no interpreter or dynamic program
   headers.
-- Target model file was not present locally.
+- The target model is present under
+  `models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`;
+  loading it returned status 0 and printed `tensor_count: 236`,
+  `architecture: mistral3`, `context_length: 262144`, `block_count: 26`, and
+  `vocab_size: 131072`.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a scalar Q8_0 matvec routine that loops over output rows, reuses
-`q8_0_dot_f32_row` or its inner logic for each row, stores f32 row outputs, and
-has no-libc fixtures covering at least two rows with two blocks per row.
+Extend the GGUF tensor-directory walker with a caller-owned, bounded descriptor
+lookup slot for one requested tensor name: retain matched name/type/dimensions
+and relative payload offset while still validating every descriptor in the
+directory.

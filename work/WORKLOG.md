@@ -290,3 +290,15 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: local SHA256 is
   `920163471715241a9d99367d507e2ad94d1ebc34d0d169d25e5d97a49ec72556`, matching
   the upstream Hugging Face file record used for the download.
+
+## 2026-05-10T14:05:02Z
+
+- Scalar Q8_0 math now includes a row-major matvec routine over multiple output
+  rows sharing one f32 activation span. It delegates each row to the existing
+  row dot primitive, stores f32 outputs immediately, and documents that output
+  storage must not overlap unread input spans.
+- Verification evidence: the no-libc verifier now checks a two-row/two-block
+  matvec with exact f32 outputs 512.0 and 28.0, plus a zero-row no-write case.
+  The main runtime rebuild, GGUF valid/beyond-EOF smoke fixtures, future prompt
+  usage rejection, static-link checks, whitespace check, and real target-model
+  GGUF summary smoke passed.

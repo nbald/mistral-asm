@@ -11,6 +11,8 @@
 .type q8_0_dot_f32_block, @function
 .global q8_0_dot_f32_row
 .type q8_0_dot_f32_row, @function
+.global q8_0_matvec_f32
+.type q8_0_matvec_f32, @function
 
 # Contract: compute one scalar dot product between a GGML Q8_0 weight block and
 # a 32-element f32 activation span.
@@ -106,5 +108,67 @@ q8_0_dot_f32_row:
 	ret
 
 .size q8_0_dot_f32_row, . - q8_0_dot_f32_row
+
+# Contract: compute a scalar matrix-vector product for a row-major GGML Q8_0
+# weight matrix and one contiguous f32 activation vector.
+# Inputs: rdi = pointer to row 0 of the Q8_0 matrix; rsi = pointer to the f32
+# activation span shared by every output row; rdx = pointer to caller-owned f32
+# output storage; rcx = number of output rows; r8 = number of Q8_0 blocks per
+# row, where each block covers 32 activation values.
+# Outputs: writes `row_count` f32 results to `output[i]` in row order. A zero
+# row count writes nothing.
+# Clobbers: rax, rcx, rdi, rsi, rdx, r8, r9, r10, xmm0, xmm1, xmm2 and flags.
+# The callee-saved registers used to hold loop state are restored before return.
+# Ownership/lifetime: reads `row_count * block_count * 34` bytes from the Q8_0
+# matrix and `block_count * 128` bytes from the activation span during the call;
+# writes `row_count * 4` bytes to the output span; retains no pointers. Output
+# storage must not overlap unread matrix or activation data because rows are
+# written immediately after their dot product is computed.
+# Error behavior: none; callers must provide valid, non-overflowing spans after
+# loader and graph setup have checked tensor bounds, types, and shapes.
+q8_0_matvec_f32:
+	# Keep matvec loop state in callee-saved registers because each row dot owns
+	# the usual caller-saved registers while it streams over Q8_0 blocks.
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
+
+	mov r12, rdi
+	mov r13, rsi
+	mov r14, rdx
+	mov r15, rcx
+	mov rbx, r8
+	test r15, r15
+	je .Lmatvec_done
+
+.Lmatvec_row_loop:
+	mov rdi, r12
+	mov rsi, r13
+	mov rdx, rbx
+	call q8_0_dot_f32_row
+	vmovss dword ptr [r14], xmm0
+
+	# Each row is a tight sequence of Q8_0 blocks. Recompute the byte stride
+	# after the call so the matvec loop does not depend on caller-saved state
+	# surviving across the row-dot helper.
+	mov rax, rbx
+	shl rax, 5
+	lea rax, [rax + rbx * 2]
+	add r12, rax
+	add r14, 4
+	dec r15
+	jne .Lmatvec_row_loop
+
+.Lmatvec_done:
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+	ret
+
+.size q8_0_matvec_f32, . - q8_0_matvec_f32
 
 .section .note.GNU-stack,"",@progbits
