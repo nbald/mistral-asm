@@ -6,10 +6,11 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Expose a guarded four-word f32 hex slice from `token0_attn_context`, verify the
-first context words match the first value-projection words for the real target,
-and keep `blk.0.attn_output.weight` as descriptor-only until the later output
-projection smoke.
+Add a guarded scalar Q8_0 smoke for `blk.0.attn_output.weight`: validate the
+context status and descriptor shape/bounds, multiply `token0_attn_context`
+through the output projection into a 3072-f32 static buffer, and print only a
+status line. Leave output-projection word slices and oracle notes for later
+atomic steps.
 
 ## Completed Work
 
@@ -26,14 +27,13 @@ projection smoke.
   query projection, key projection, and value projection smokes are wired.
   Query/key/value output slices have external oracle notes and exact-hex
   comparisons.
-- The output projection descriptor step is descriptor plumbing only: the runtime
-  prints the retained `blk.0.attn_output.weight` directory entry but does not
-  read its payload.
 - The token-0 single-token attention context smoke expands the computed
   1024-f32 value projection into a 4096-f32 static context by repeating each
-  128-f32 KV-head block for its four query heads. It prints only
-  `token0_attn_context` status and uses the output projection descriptor only as
-  a shape guard.
+  128-f32 KV-head block for its four query heads. It uses
+  `blk.0.attn_output.weight` only as a descriptor shape guard.
+- The context smoke now exposes guarded `token0_attn_context0..3_f32_hex`
+  words. On the real target, those four words exactly match
+  `token0_attn_v_output0..3_f32_hex`.
 
 ## Known Blockers
 
@@ -70,35 +70,35 @@ None.
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 with the context milestone text; the
-  future prompt generation form returned status 2 with the usage diagnostic.
-- `readelf -d` reported no dynamic section, and `readelf -l` reported no
-  interpreter or dynamic program headers.
+- `./mistral-asm --help` returned status 0; the current unsupported prompt
+  generation form returned status 2 with the usage diagnostic.
+- `readelf -d` reported no dynamic section, and `readelf -l` had no interpreter
+  or dynamic program header matches.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
-  `attn_output_tensor_found: 0`, and kept token-0 payload and context smoke
-  statuses at 0.
+  `attn_output_tensor_found: 0`, and kept `token0_attn_context: 0` with no
+  context word slice.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
   alignment or tensor directory diagnostics.
-- The real target model under `models/` returned status 0, kept token-0
-  embedding, RMSNorm, query, key, value, and context smoke statuses at 1,
-  printed `blk.0.attn_output.weight` as Q8_0 with dimensions 4096 and 3072 at
-  relative offset 431185920, and kept the existing Q/K/V output words
-  unchanged.
+- The real target model under `models/` returned status 0, printed
+  `blk.0.attn_output.weight` as Q8_0 with dimensions 4096 and 3072 at relative
+  offset 431185920, kept `token0_attn_context: 1`, and printed context words
+  `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, matching the
+  first four value-projection words exactly.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed `close(3) = 0`, printed the guarded value output words and
-  `token0_attn_context: 1` before final cleanup, and showed
-  `munmap(..., 3651679520) = 0`.
+  showed `close(3) = 0`, printed the guarded value and context words before
+  final cleanup, and showed `munmap(..., 3651679520) = 0`.
 - The external query/key/value projection oracles still matched the runtime
   Q/K/V slices exactly.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Expose a guarded four-word f32 hex slice from `token0_attn_context`, verify the
-first context words match the first value-projection words for the real target,
-and keep `blk.0.attn_output.weight` as descriptor-only until the later output
-projection smoke.
+Add a guarded scalar Q8_0 smoke for `blk.0.attn_output.weight`: validate the
+context status and descriptor shape/bounds, multiply `token0_attn_context`
+through the output projection into a 3072-f32 static buffer, and print only a
+status line. Leave output-projection word slices and oracle notes for later
+atomic steps.

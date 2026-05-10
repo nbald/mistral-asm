@@ -649,3 +649,18 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: synthetic fixtures kept `token0_attn_context: 0`; the
   real local target printed `token0_attn_context: 1` and unchanged Q/K/V oracle
   words; cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T16:30:54Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_attn_context` after the context smoke succeeds. Synthetic fixtures
+  with no retained output descriptor still print only `token0_attn_context: 0`
+  and no context word slice.
+- Decision: this is still a descriptor-only step for
+  `blk.0.attn_output.weight`; the new output reads only static context storage
+  already produced by the value-projection expansion.
+- Verification evidence: the real local target printed context words
+  `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, exactly matching
+  the first four `token0_attn_v_output` words. Cleanup tracing showed those
+  lines before the final `munmap`, and the external Q/K/V oracle words still
+  matched their runtime slices.
