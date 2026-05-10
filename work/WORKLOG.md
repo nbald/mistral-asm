@@ -493,3 +493,17 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: the real local target printed the four guarded words
   `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`; `strace` showed
   those lines before the final `munmap`.
+
+## 2026-05-10T15:37:07Z
+
+- Added verification-only oracle tooling for the token-0 first attention query
+  projection. It parses the ignored target GGUF directly, applies the same
+  scalar f32 rounding order as the assembly smoke path, and computes only the
+  first four query rows needed for the current milestone check.
+- Decision: keep the oracle under `work/oracle/` and outside the build. It uses
+  Python and numpy as external comparison tooling only; runtime source and build
+  inputs remain pure `.s`, `as`, and `ld`.
+- Verification evidence: the oracle printed `0xbf9945a5`, `0xbf0612bc`,
+  `0xbe09ed5f`, and `0xbf155e8e`, exactly matching the runtime slice. Rebuild,
+  no-libc harnesses, static-link inspection, synthetic GGUF checks, real-model
+  smoke, cleanup tracing, and whitespace checks also passed.

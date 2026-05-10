@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Build and record an external oracle comparison for the first four
-`token0_attn_q_output` f32 hex words, using only external tooling, so the
-Milestone 9 query projection smoke has an independent numerical check.
+Retain and print the `blk.0.attn_k.weight` descriptor so the first-layer
+attention key projection can be wired as a separate guarded smoke.
 
 ## Completed Work
 
@@ -36,6 +35,10 @@ Milestone 9 query projection smoke has an independent numerical check.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
   print zero smoke statuses while preserving summary behavior and emit no query
   output slice.
+- External oracle tooling under `work/oracle/` now parses the target GGUF
+  independently and reproduces the current scalar f32 token-0 embedding,
+  attention RMSNorm, and first four query projection dot products. The oracle
+  exactly matches the runtime `token0_attn_q_output[0..3]` f32 hex words.
 
 ## Known Blockers
 
@@ -52,6 +55,8 @@ None.
 - `Makefile`
 - `work/STATE.md`
 - `work/WORKLOG.md`
+- `work/oracle/token0_attn_q_oracle.py`
+- `work/oracle/token0-attn-q-output.md`
 
 ## Required Verification
 
@@ -60,11 +65,16 @@ None.
   checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Verify explicit cleanup of any live model mapping.
+- Rerun the external `token0_attn_q_oracle.py` comparison when query-projection
+  math or its inputs change.
 
 ## Last Verification
 
 - `make clean`, `make`, and `make check` passed; the harnesses printed
   `q8_0_dot: ok` and `rmsnorm: ok`.
+- `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
+  and printed oracle query output words `0xbf9945a5`, `0xbf0612bc`,
+  `0xbe09ed5f`, and `0xbf155e8e`.
 - `./mistral-asm --help` returned status 0 and showed the attention query smoke
   milestone text; the future prompt generation form returned status 2 with the
   usage diagnostic.
@@ -84,21 +94,18 @@ None.
   alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
   `attn_norm_rms_epsilon_found: 1`,
-  `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, retained
-  `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, retained
-  `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
+  `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, `tensor_data_offset: 7882016`,
+  retained `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
   `blk.0.attn_q.weight` as Q8_0 with dimensions 3072 and 4096 at relative
-  offset 444555264, and printed `token0_embedding_dequant: 1` plus
-  `token0_attn_norm: 1` plus `token0_attn_q_matvec: 1` plus query output slice
+  offset 444555264, and printed `token0_embedding_dequant: 1`,
+  `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, plus query output slice
   words `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, successful summary/smoke output including the retained
-  query projection descriptor, `token0_attn_q_matvec: 1`, and the four query
-  output slice words, then `munmap(..., 3651679520) = 0`.
+  `close(3) = 0`, successful query smoke output and the four query output slice
+  words, then `munmap(..., 3651679520) = 0`.
 - `git diff --check` passed after the final work-file updates.
 
 ## Next Exact Step
 
-Build and record an external oracle comparison for the first four
-`token0_attn_q_output` f32 hex words, using only external tooling, so the
-Milestone 9 query projection smoke has an independent numerical check.
+Retain and print the `blk.0.attn_k.weight` descriptor so the first-layer
+attention key projection can be wired as a separate guarded smoke.
