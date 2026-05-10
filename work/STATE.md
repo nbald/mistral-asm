@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Begin forward-pass setup by extending the GGUF tensor-directory path from a
-first-tensor summary toward a small bounded tensor descriptor lookup that can
-resolve named tensor payloads needed by the one-token path.
+Prepare resolved tensor descriptors for payload access by retaining the aligned
+GGUF tensor-data base offset in caller-owned summary storage.
 
 ## Completed Work
 
@@ -49,6 +48,12 @@ resolve named tensor payloads needed by the one-token path.
   exact f32 result bits for one-block fixtures, two-block row fixtures, row
   pointer advancement, zero-block behavior, a two-row/two-block matvec fixture,
   and zero-row matvec no-write behavior.
+- The GGUF tensor-info walker accepts one caller-specified tensor name and fills
+  a caller-owned lookup descriptor slot when that name is found, while still
+  walking and validating every descriptor in the directory.
+- The runtime currently requests `token_embd.weight`; the real target GGUF
+  resolves it as a two-dimensional Q8_0 tensor with dimensions 3072 and 131072
+  and relative payload offset 12288.
 
 ## Known Blockers
 
@@ -67,43 +72,41 @@ None.
 
 ## Required Verification
 
-- Define focused synthetic GGUF tensor-directory fixtures for the lookup shape,
-  including a found descriptor, absent descriptor/default state, and malformed
-  later descriptor rejection.
+- Add a synthetic GGUF fixture proving the retained tensor-data base offset is
+  the descriptor cursor rounded up to 32 bytes.
 - Rebuild with `as`/`ld`.
-- Keep `make check`, existing GGUF loader smoke checks, and static-link checks
-  passing.
+- Keep `make check`, existing GGUF loader lookup smoke checks, future CLI usage
+  rejection, static-link checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 
 ## Last Verification
 
-- `make clean && make && make check` passed.
-- `make check` passed and printed `q8_0_dot: ok`, covering exact f32 bits for
-  one-block dots, two-block row dots, row pointer advancement, zero-block row
-  return, a two-row/two-block matvec output pair of 512.0 and 28.0, and
-  zero-row matvec no-write behavior.
+- `make clean && make && make check` passed, printing `q8_0_dot: ok`.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
-  summary milestone.
-- Synthetic GGUF fixture `/tmp/mistral_asm_tensor_valid.gguf` with one tensor,
-  aligned offset 0, and one payload byte returned status 0 and printed the first
-  tensor summary.
-- Synthetic GGUF fixture `/tmp/mistral_asm_tensor_offset_beyond_file.gguf` with
-  one tensor and aligned relative offset 1024 returned status 3 with the
-  malformed tensor-directory diagnostic.
-- Invoking the future prompt generation form returned the usage error with status
-  2.
-- `readelf` reported no dynamic section and no interpreter or dynamic program
-  headers.
+  summary with one lookup.
+- Synthetic lookup fixture `/tmp/mistral_asm_lookup_found.gguf` returned status
+  0, kept `first_tensor_name: other.weight`, and filled the lookup slot for
+  `token_embd.weight` with dimensions 4 and 5, ggml type 8, and relative offset
+  32.
+- Synthetic lookup fixture `/tmp/mistral_asm_lookup_absent.gguf` returned status
+  0 and left the lookup slot at the zero/default state.
+- Synthetic lookup fixture `/tmp/mistral_asm_lookup_malformed_later.gguf`
+  returned status 3 with the misaligned tensor-data diagnostic even though the
+  requested tensor appeared before the malformed later descriptor.
+- Invoking the future prompt generation form returned the usage error with
+  status 2.
 - The target model is present under
   `models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`;
-  loading it returned status 0 and printed `tensor_count: 236`,
-  `architecture: mistral3`, `context_length: 262144`, `block_count: 26`, and
-  `vocab_size: 131072`.
+  loading it returned status 0 and printed `lookup_tensor_found: 1`,
+  `lookup_tensor_name: token_embd.weight`, `lookup_tensor_dim0: 3072`,
+  `lookup_tensor_dim1: 131072`, `lookup_tensor_ggml_type: 8`, and
+  `lookup_tensor_offset: 12288`.
+- `readelf` reported no dynamic section and no interpreter or dynamic program
+  headers.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Extend the GGUF tensor-directory walker with a caller-owned, bounded descriptor
-lookup slot for one requested tensor name: retain matched name/type/dimensions
-and relative payload offset while still validating every descriptor in the
-directory.
+Extend the GGUF summary with the aligned tensor-data base offset and print it,
+so the retained relative tensor offsets can be audited as file-relative payload
+starts before persistent model mappings are introduced.

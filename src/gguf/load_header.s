@@ -24,7 +24,14 @@
 .equ GGUF_SUMMARY_FIRST_TENSOR_DIMS, 176
 .equ GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE, 208
 .equ GGUF_SUMMARY_FIRST_TENSOR_OFFSET, 216
-.equ GGUF_SUMMARY_SIZE, 224
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_FOUND, 224
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_NAME, 232
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP, 96
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_N_DIMS, 328
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_DIMS, 336
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_GGML_TYPE, 368
+.equ GGUF_SUMMARY_LOOKUP_TENSOR_OFFSET, 376
+.equ GGUF_SUMMARY_SIZE, 384
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -72,7 +79,9 @@ tokenizer_tokens_key_end:
 # at offset 56, vocab_size as a u64 at offset 64, a 96-byte NUL-terminated
 # first tensor name at offset 72, the first tensor's dimension count at offset
 # 168, up to four u64 dimension sizes at offset 176, and the first tensor's
-# ggml_type and relative payload offset as u64 values at offsets 208 and 216.
+# ggml_type and relative payload offset as u64 values at offsets 208 and 216,
+# followed by a one-name lookup descriptor slot beginning at offset 224. rdx =
+# pointer to the requested tensor name bytes; rcx = requested tensor name length.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -81,7 +90,7 @@ tokenizer_tokens_key_end:
 # descriptor or mapping. The summary buffer remains caller-owned; this function
 # writes header counts, bounded metadata copies, selected scalar metadata, and
 # selected array lengths into it, plus a bounded first tensor descriptor
-# snapshot.
+# snapshot and the bounded descriptor for the requested tensor when found.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -96,9 +105,12 @@ gguf_validate_file:
 	push r14
 	push r15
 	# Linux x86-64 struct stat is 144 bytes on the target ABI. Reserve 160 bytes
-	# to keep a round size and read st_size at STAT_SIZE_OFFSET below.
-	sub rsp, STAT_BUFFER_SIZE
+	# to keep a round size and read st_size at STAT_SIZE_OFFSET below, plus two
+	# words for the requested tensor name passed into the tensor-info walker.
+	sub rsp, STAT_BUFFER_SIZE + 16
 	mov r15, rsi
+	mov qword ptr [rsp + STAT_BUFFER_SIZE], rdx
+	mov qword ptr [rsp + STAT_BUFFER_SIZE + 8], rcx
 
 	# openat(AT_FDCWD, path, O_RDONLY, 0). Using openat keeps all file opens in
 	# one syscall wrapper; mode is ignored without O_CREAT but is passed as 0.
@@ -191,6 +203,8 @@ gguf_validate_file:
 	mov rsi, r12
 	mov rcx, qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT]
 	mov r8, r15
+	mov r9, qword ptr [rsp + STAT_BUFFER_SIZE]
+	mov r10, qword ptr [rsp + STAT_BUFFER_SIZE + 8]
 	call gguf_walk_tensor_infos
 	test rax, rax
 	jnz .Ltensor_failed
@@ -264,7 +278,7 @@ gguf_validate_file:
 	mov eax, GGUF_ERR_OPEN
 
 .Ldone:
-	add rsp, STAT_BUFFER_SIZE
+	add rsp, STAT_BUFFER_SIZE + 16
 	pop r15
 	pop r14
 	pop r13
@@ -620,19 +634,61 @@ gguf_capture_string_to_fixed:
 
 .size gguf_capture_string_to_fixed, . - gguf_capture_string_to_fixed
 
+.type gguf_copy_bytes_to_fixed, @function
+
+# Contract: copy checked bytes into fixed-size caller-owned storage as a bounded
+# NUL-terminated string.
+# Inputs: rdi = source byte pointer, rsi = source byte length, rdx =
+# destination buffer, rcx = destination capacity in bytes.
+# Outputs: none.
+# Clobbers: rax, r8, r9 and flags.
+# Ownership/lifetime: reads only the source byte range during this call and
+# writes only to the destination buffer. Long source strings are truncated to
+# capacity - 1 so the destination remains NUL-terminated.
+# Error behavior: none. Callers must validate the source byte range and provide
+# a real destination when capacity is non-zero.
+gguf_copy_bytes_to_fixed:
+	test rcx, rcx
+	jz .Lcopy_bytes_done
+
+	mov r8, rsi
+	mov r9, rcx
+	dec r9
+	cmp r8, r9
+	cmova r8, r9
+	xor eax, eax
+
+.Lcopy_bytes_loop:
+	cmp rax, r8
+	je .Lcopy_bytes_terminate
+	mov r9b, byte ptr [rdi + rax]
+	mov byte ptr [rdx + rax], r9b
+	inc rax
+	jmp .Lcopy_bytes_loop
+
+.Lcopy_bytes_terminate:
+	mov byte ptr [rdx + r8], 0
+
+.Lcopy_bytes_done:
+	ret
+
+.size gguf_copy_bytes_to_fixed, . - gguf_copy_bytes_to_fixed
+
 .type gguf_walk_tensor_infos, @function
 
-# Contract: advance over the GGUF tensor-info directory and retain a bounded
-# snapshot of only the first descriptor.
+# Contract: advance over the GGUF tensor-info directory, retain a bounded
+# snapshot of the first descriptor, and retain a bounded descriptor snapshot for
+# one requested tensor name when it is present.
 # Inputs: rdi = mapping base, rsi = mapped file length, rdx = tensor-info start
-# offset, rcx = tensor count from the GGUF header, r8 = summary buffer.
+# offset, rcx = tensor count from the GGUF header, r8 = summary buffer, r9 =
+# requested tensor name bytes, r10 = requested tensor name length.
 # Outputs: rax = GGUF_OK on success or a GGUF_ERR_TENSOR_* code; rdx = aligned
 # tensor-data start offset on success when tensors exist, or the unchanged cursor
 # when tensor_count is zero.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, rbp, r12, r13, r14, r15).
-# Ownership/lifetime: reads only from the caller-owned mapping. The first tensor
-# name and up to four dimension sizes are copied into fixed-size caller-owned
+# Ownership/lifetime: reads only from the caller-owned mapping. Retained tensor
+# names and up to four dimension sizes are copied into fixed-size caller-owned
 # summary storage; no mapped-file pointer is retained.
 # Error behavior: returns malformed-tensor status before any out-of-bounds read.
 # Tensor payload offsets with the high bit set, not divisible by the current
@@ -645,6 +701,7 @@ gguf_walk_tensor_infos:
 	push r13
 	push r14
 	push r15
+	sub rsp, 48
 
 	# rbp tracks the largest relative payload offset seen in the directory. Once
 	# the tensor-data base is aligned, one bounds check proves every retained
@@ -655,6 +712,8 @@ gguf_walk_tensor_infos:
 	mov r12, rdx
 	mov rbx, rcx
 	mov r15, r8
+	mov qword ptr [rsp], r9
+	mov qword ptr [rsp + 8], r10
 
 	# A no-tensor synthetic fixture has no tensor-data section to align. It is
 	# still useful for header/metadata smoke tests, so leave the cursor unchanged.
@@ -662,18 +721,46 @@ gguf_walk_tensor_infos:
 	jz .Ltensor_empty_success
 
 .Ltensor_first:
-	# Retain only the first descriptor. Later descriptors are still walked below
-	# so malformed names, shapes, type tags, or offsets cannot hide behind the
-	# first successful capture.
-	mov rdi, r13
-	mov rsi, r14
-	mov rdx, r12
-	lea r8, [r15 + GGUF_SUMMARY_FIRST_TENSOR_NAME]
-	mov r9, GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
-	call gguf_capture_string_to_fixed
-	test rax, rax
-	jnz .Ltensor_bad
-	mov r12, rdx
+	# Parse the first descriptor name directly so the same checked name bytes can
+	# feed both the first-tensor summary and the requested-name lookup.
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Ltensor_bad
+	mov r8, qword ptr [r13 + r12]
+	test r8, r8
+	js .Ltensor_bad
+	add r12, 8
+
+	mov rax, r14
+	sub rax, r12
+	cmp rax, r8
+	jb .Ltensor_bad
+	lea rax, [r13 + r12]
+	mov qword ptr [rsp + 24], rax
+	mov qword ptr [rsp + 32], r8
+	add r12, r8
+
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [r15 + GGUF_SUMMARY_FIRST_TENSOR_NAME]
+	mov rcx, GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP
+	call gguf_copy_bytes_to_fixed
+
+	xor eax, eax
+	mov qword ptr [rsp + 16], rax
+	cmp qword ptr [rsp + 8], 0
+	je .Ltensor_first_name_compared
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	mov rdx, qword ptr [rsp]
+	mov rcx, qword ptr [rsp + 8]
+	call gguf_bytes_eq_literal
+	mov qword ptr [rsp + 16], rax
+
+.Ltensor_first_name_compared:
 
 	# n_dimensions is recorded as a u64 in the summary, but its in-file encoding
 	# is a u32 followed by that many u64 dimension sizes.
@@ -690,6 +777,15 @@ gguf_walk_tensor_infos:
 	cmp eax, GGUF_MAX_DIMS
 	ja .Ltensor_bad
 	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_N_DIMS], rax
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_first_n_dims_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_N_DIMS], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 8], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 16], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 24], 0
+
+.Ltensor_first_n_dims_recorded:
 
 	# The summary has exactly four dimension slots, matching the GGUF max dims
 	# accepted above. Bounds-check the whole in-file span before copying any
@@ -713,6 +809,11 @@ gguf_walk_tensor_infos:
 	je .Ltensor_first_dims_done
 	mov r10, qword ptr [r8 + rdx * 8]
 	mov qword ptr [r9 + rdx * 8], r10
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_first_dim_next
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + rdx * 8], r10
+
+.Ltensor_first_dim_next:
 	inc rdx
 	jmp .Ltensor_first_dim_loop
 
@@ -729,6 +830,11 @@ gguf_walk_tensor_infos:
 	jb .Ltensor_bad
 	mov eax, dword ptr [r13 + r12]
 	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_GGML_TYPE], rax
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_first_type_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_GGML_TYPE], rax
+
+.Ltensor_first_type_recorded:
 	add r12, 4
 
 	# Tensor offsets are relative to the aligned tensor-data section, not the
@@ -744,7 +850,20 @@ gguf_walk_tensor_infos:
 	js .Ltensor_bad
 	test al, GGUF_DEFAULT_ALIGNMENT - 1
 	jnz .Ltensor_bad_alignment
+	mov qword ptr [rsp + 40], rax
 	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_OFFSET], rax
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_first_offset_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_OFFSET], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_FOUND], 1
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_NAME]
+	mov rcx, GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP
+	call gguf_copy_bytes_to_fixed
+
+.Ltensor_first_offset_recorded:
+	mov rax, qword ptr [rsp + 40]
 	mov rbp, rax
 	add r12, 8
 
@@ -754,13 +873,38 @@ gguf_walk_tensor_infos:
 .Ltensor_loop:
 	# Tensor names use the same GGUF string encoding as metadata keys: u64 byte
 	# length followed by raw bytes, with no padding before the dimension count.
-	mov rdi, r13
-	mov rsi, r14
-	mov rdx, r12
-	call gguf_skip_string
-	test rax, rax
-	jnz .Ltensor_bad
-	mov r12, rdx
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 8
+	jb .Ltensor_bad
+	mov r8, qword ptr [r13 + r12]
+	test r8, r8
+	js .Ltensor_bad
+	add r12, 8
+
+	mov rax, r14
+	sub rax, r12
+	cmp rax, r8
+	jb .Ltensor_bad
+	lea rax, [r13 + r12]
+	mov qword ptr [rsp + 24], rax
+	mov qword ptr [rsp + 32], r8
+	add r12, r8
+
+	xor eax, eax
+	mov qword ptr [rsp + 16], rax
+	cmp qword ptr [rsp + 8], 0
+	je .Ltensor_name_compared
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	mov rdx, qword ptr [rsp]
+	mov rcx, qword ptr [rsp + 8]
+	call gguf_bytes_eq_literal
+	mov qword ptr [rsp + 16], rax
+
+.Ltensor_name_compared:
 
 	# n_dimensions is a u32 followed by that many u64 dimension sizes. GGUF
 	# tensors are capped by GGML_MAX_DIMS, four dimensions in this target format.
@@ -776,24 +920,55 @@ gguf_walk_tensor_infos:
 	jz .Ltensor_bad
 	cmp eax, GGUF_MAX_DIMS
 	ja .Ltensor_bad
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_n_dims_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_N_DIMS], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 8], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 16], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + 24], 0
 
+.Ltensor_n_dims_recorded:
 	mov r8, rax
 	shl r8, 3
-	mov rsi, r14
-	mov rdx, r12
-	call gguf_skip_fixed_bytes
-	test rax, rax
-	jnz .Ltensor_bad
-	mov r12, rdx
+	cmp r12, r14
+	ja .Ltensor_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, r8
+	jb .Ltensor_bad
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_dims_done
+	mov r11, r13
+	add r11, r12
+	xor edx, edx
 
-	# Remaining tensor type tags are consumed but not retained in this step; they
-	# are still bounds-checked so the descriptor cursor remains trustworthy.
+.Ltensor_dim_loop:
+	cmp rdx, qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_N_DIMS]
+	je .Ltensor_dims_done
+	mov r10, qword ptr [r11 + rdx * 8]
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_DIMS + rdx * 8], r10
+	inc rdx
+	jmp .Ltensor_dim_loop
+
+.Ltensor_dims_done:
+	add r12, r8
+
+	# Tensor type tags are consumed for every descriptor and retained only for a
+	# requested-name match. The bounds check keeps the descriptor cursor
+	# trustworthy even when the descriptor is otherwise not interesting yet.
 	cmp r12, r14
 	ja .Ltensor_bad
 	mov rax, r14
 	sub rax, r12
 	cmp rax, 4
 	jb .Ltensor_bad
+	mov eax, dword ptr [r13 + r12]
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_type_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_GGML_TYPE], rax
+
+.Ltensor_type_recorded:
 	add r12, 4
 
 	# Tensor offsets are relative to the aligned tensor-data section. Rejecting
@@ -809,6 +984,19 @@ gguf_walk_tensor_infos:
 	js .Ltensor_bad
 	test al, GGUF_DEFAULT_ALIGNMENT - 1
 	jnz .Ltensor_bad_alignment
+	mov qword ptr [rsp + 40], rax
+	cmp qword ptr [rsp + 16], 0
+	je .Ltensor_lookup_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_OFFSET], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_FOUND], 1
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [r15 + GGUF_SUMMARY_LOOKUP_TENSOR_NAME]
+	mov rcx, GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP
+	call gguf_copy_bytes_to_fixed
+
+.Ltensor_lookup_recorded:
+	mov rax, qword ptr [rsp + 40]
 	cmp rbp, rax
 	cmovb rbp, rax
 	add r12, 8
@@ -852,6 +1040,7 @@ gguf_walk_tensor_infos:
 	mov eax, GGUF_ERR_TENSOR_BOUNDS
 
 .Ltensor_epilogue:
+	add rsp, 48
 	pop r15
 	pop r14
 	pop r13

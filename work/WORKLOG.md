@@ -302,3 +302,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   The main runtime rebuild, GGUF valid/beyond-EOF smoke fixtures, future prompt
   usage rejection, static-link checks, whitespace check, and real target-model
   GGUF summary smoke passed.
+
+## 2026-05-10T14:16:21Z
+
+- Tensor-info walking now fills a second, caller-owned descriptor slot when a
+  requested tensor name is found. The runtime requests `token_embd.weight` as
+  the first payload needed for token-ID forward setup; the slot stores a bounded
+  name copy, found flag, dimension count, up to four dimensions, ggml type, and
+  relative payload offset.
+- Decision: the lookup match does not short-circuit the directory walk. A
+  synthetic file with a valid requested tensor followed by a malformed later
+  descriptor still fails validation, preserving the prior whole-directory
+  malformed-file behavior.
+- Verification evidence: synthetic fixtures covered lookup found on a later
+  descriptor, absent lookup/default zero state, and malformed-later rejection.
+  The local target GGUF resolves `token_embd.weight` as Q8_0 with dimensions
+  3072 and 131072 and relative payload offset 12288.
