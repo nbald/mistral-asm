@@ -480,3 +480,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   parser fixtures printed `token0_attn_q_matvec: 0`; the real local target
   printed `token0_attn_q_matvec: 1`; `strace` still showed the read-only
   mapping released after summary and smoke output.
+
+## 2026-05-10T15:30:19Z
+
+- The query projection smoke now exposes a fixed four-word f32 bit slice from
+  `token0_attn_q_output`, guarded by `token0_attn_q_matvec_status == 1`. Skipped
+  synthetic payload paths still stop at the zero smoke status and do not print
+  partial output storage.
+- Decision: print raw f32 bits with the existing u32 hex writer instead of
+  decimal floats. The next oracle step can compare exact words without adding a
+  float formatter to the runtime.
+- Verification evidence: the real local target printed the four guarded words
+  `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`; `strace` showed
+  those lines before the final `munmap`.

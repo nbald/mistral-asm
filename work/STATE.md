@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Expose a small, guarded exact-hex slice of `token0_attn_q_output` after a
-successful query projection smoke, so the external oracle comparison has stable
-runtime values to compare in a later atomic step.
+Build and record an external oracle comparison for the first four
+`token0_attn_q_output` f32 hex words, using only external tooling, so the
+Milestone 9 query projection smoke has an independent numerical check.
 
 ## Completed Work
 
@@ -30,10 +30,12 @@ runtime values to compare in a later atomic step.
   through guarded token ID 0 embedding dequantization and first attention
   RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, prints the
   retained first-layer attention query projection descriptor, runs a guarded
-  token ID 0 attention query projection matvec into static output storage, then
-  calls `gguf_release_mapping`.
+  token ID 0 attention query projection matvec into static output storage,
+  prints the first four output f32 words as exact hex bits when that smoke
+  succeeds, then calls `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
-  print zero smoke statuses while preserving summary behavior.
+  print zero smoke statuses while preserving summary behavior and emit no query
+  output slice.
 
 ## Known Blockers
 
@@ -87,15 +89,16 @@ None.
   `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
   `blk.0.attn_q.weight` as Q8_0 with dimensions 3072 and 4096 at relative
   offset 444555264, and printed `token0_embedding_dequant: 1` plus
-  `token0_attn_norm: 1` plus `token0_attn_q_matvec: 1`.
+  `token0_attn_norm: 1` plus `token0_attn_q_matvec: 1` plus query output slice
+  words `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
   `close(3) = 0`, successful summary/smoke output including the retained
-  query projection descriptor and `token0_attn_q_matvec: 1`, then
-  `munmap(..., 3651679520) = 0`.
+  query projection descriptor, `token0_attn_q_matvec: 1`, and the four query
+  output slice words, then `munmap(..., 3651679520) = 0`.
 - `git diff --check` passed after the final work-file updates.
 
 ## Next Exact Step
 
-Expose a small, guarded exact-hex slice of `token0_attn_q_output` after a
-successful query projection smoke, so the external oracle comparison has stable
-runtime values to compare in a later atomic step.
+Build and record an external oracle comparison for the first four
+`token0_attn_q_output` f32 hex words, using only external tooling, so the
+Milestone 9 query projection smoke has an independent numerical check.
