@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first four raw f32 words of `token0_layer1_attn_q_output`, guarded
-by the existing `token0_layer1_attn_q_matvec` status, without adding the
-external oracle comparison yet.
+Add a verification-only external oracle comparison for
+`token0_layer1_attn_q_output[0..3]`, without changing runtime assembly unless
+the comparison exposes a mismatch.
 
 ## Completed Work
 
@@ -29,12 +29,13 @@ external oracle comparison yet.
   160-byte scratch descriptor and prints descriptor-only fields. The real target
   reports dimensions `3072x4096`, GGML type `8` (`Q8_0`), and relative offset
   `568246272`; empty synthetic GGUFs print zeroed layer-1 query fields.
-- A status-only `token0_layer1_attn_q_matvec` smoke now consumes the layer-1
-  attention RMSNorm activation and the reusable `blk.1.attn_q.weight`
-  descriptor. It requires exact `3072x4096` Q8_0 shape, bounds the full mapped
-  matrix payload, writes a private static output buffer, and prints only the
-  status flag. The real target reports status 1; empty synthetic GGUFs report
-  status 0 and publish no layer-1 query output words.
+- A guarded `token0_layer1_attn_q_matvec` smoke consumes the layer-1 attention
+  RMSNorm activation and the reusable `blk.1.attn_q.weight` descriptor. It
+  requires exact `3072x4096` Q8_0 shape, bounds the full mapped matrix payload,
+  writes a private static output buffer, and publishes the first four raw f32
+  words only when the status is 1. The real target reports status 1 and words
+  `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`; empty synthetic
+  GGUFs report status 0 and publish no layer-1 query output words.
 
 ## Known Blockers
 
@@ -70,18 +71,18 @@ None.
   GNU_STACK program headers, with no interpreter or dynamic program header.
 - Synthetic valid and malformed GGUF fixtures preserved expected behavior:
   valid empty input returned status 0 with `tensor_infos_offset: 24`,
-  `tensor_data_offset: 0`, zeroed layer-1 norm and query lookup fields,
-  `token0_post_ffn_residual: 0`, `token0_layer1_attn_norm: 0`, and no layer-1
-  exact-hex labels; bad magic returned status 3; a truncated tensor directory
-  returned status 3.
+  `tensor_data_offset: 0`, zeroed layer-1 query lookup fields,
+  `token0_layer1_attn_norm: 0`, `token0_layer1_attn_q_matvec: 0`, and no
+  `token0_layer1_attn_q_output*_f32_hex` labels; bad magic returned status 3;
+  a truncated tensor directory returned status 3.
+- The real target model returned status 0, printed
+  `layer1_attn_q_tensor_found: 1`, `layer1_attn_q_tensor_n_dimensions: 2`,
+  dimensions `3072` and `4096`, type `8`, offset `568246272`, printed
+  `token0_layer1_attn_q_matvec: 1`, preserved the recorded post-FFN residual
+  and layer-1 attention RMSNorm words, and printed layer-1 query words
+  `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`.
 - The real target model under `strace -e trace=mmap,munmap,close` returned
-  status 0, printed `layer1_attn_q_tensor_found: 1`,
-  `layer1_attn_q_tensor_n_dimensions: 2`, dimensions `3072` and `4096`, type
-  `8`, offset `568246272`, printed `token0_layer1_attn_q_matvec: 1`, preserved
-  the recorded post-FFN residual and layer-1 attention RMSNorm words, and
-  cleanup showed successful `close(3)` and final `munmap`.
-- The external GGUF parser in `work/oracle/token0_attn_q_oracle.py` reported
-  the same `blk.1.attn_q.weight` type, dimensions, and relative offset.
+  status 0 and cleanup showed successful `close(3)` before final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -91,6 +92,7 @@ None.
 
 ## Next Exact Step
 
-Add a guarded exact-hex print helper for `token0_layer1_attn_q_output[0..3]`,
-wire it after the status-only layer-1 query matvec, and verify that synthetic
-fixtures still omit the labels while the real target prints four words.
+Add external oracle comparison for `token0_layer1_attn_q_output[0..3]` under
+`work/oracle/`, recomputing from the existing layer-1 attention RMSNorm
+activation and `blk.1.attn_q.weight` without changing runtime assembly unless a
+mismatch is found.

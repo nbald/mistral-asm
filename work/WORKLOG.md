@@ -1131,3 +1131,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer1_attn_q_matvec: 1`. The recorded post-FFN residual and layer-1
   attention RMSNorm exact words stayed unchanged, and cleanup tracing still
   showed `close(3)` before the final `munmap`.
+
+## 2026-05-10T20:04:49Z
+
+- Published the first four raw f32 words of the token-0 layer-1 query
+  projection behind the existing `token0_layer1_attn_q_matvec` status gate. This
+  keeps the assembly change separate from the external oracle comparison.
+- Verification evidence: the empty valid synthetic GGUF kept
+  `token0_layer1_attn_q_matvec: 0` and emitted no new query-output labels. The
+  real local target printed layer-1 query words `0x3f98c6d6`, `0x3e72aeb6`,
+  `0x3e641287`, and `0x3e76b8f1`; cleanup tracing still showed `close(3)`
+  before the final `munmap`.

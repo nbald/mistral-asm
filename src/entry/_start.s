@@ -844,6 +844,22 @@ token0_layer1_attn_norm3_f32_text:
 	.ascii "token0_layer1_attn_norm3_f32_hex: "
 token0_layer1_attn_norm3_f32_text_end:
 
+token0_layer1_attn_q_output0_f32_text:
+	.ascii "token0_layer1_attn_q_output0_f32_hex: "
+token0_layer1_attn_q_output0_f32_text_end:
+
+token0_layer1_attn_q_output1_f32_text:
+	.ascii "token0_layer1_attn_q_output1_f32_hex: "
+token0_layer1_attn_q_output1_f32_text_end:
+
+token0_layer1_attn_q_output2_f32_text:
+	.ascii "token0_layer1_attn_q_output2_f32_hex: "
+token0_layer1_attn_q_output2_f32_text_end:
+
+token0_layer1_attn_q_output3_f32_text:
+	.ascii "token0_layer1_attn_q_output3_f32_hex: "
+token0_layer1_attn_q_output3_f32_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -1325,9 +1341,10 @@ token0_layer1_attn_q_output:
 # retained FFN norm weights, and projects that activation through the retained
 # FFN gate and up matrices before deriving the first FFN SwiGLU activation,
 # projecting it through the retained FFN down matrix, adding the guarded post-FFN
-# residual from process-owned static buffers, then applying status-only layer-1
+# residual from process-owned static buffers, then applying guarded layer-1
 # attention RMSNorm and query projection smokes through reusable layer-1
-# descriptors. It also performs non-math reusable descriptor lookups for
+# descriptors and publishing status-gated exact-hex slices from their output
+# buffers. It also performs non-math reusable descriptor lookups for
 # `blk.1.attn_norm.weight` and `blk.1.attn_q.weight` into separate process-owned
 # scratch slots before the token-0 math path. The mapping is released explicitly
 # with gguf_release_mapping before exit. The GGUF summary buffer is process-owned
@@ -3380,6 +3397,8 @@ _start:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_layer1_attn_q_output_slice
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -4806,6 +4825,85 @@ print_token0_layer1_attn_norm_slice:
 	ret
 
 .size print_token0_layer1_attn_norm_slice, . - print_token0_layer1_attn_norm_slice
+
+.type print_token0_layer1_attn_q_output_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-1 attention
+# query projection when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer1_attn_q_matvec_status and the
+# first four f32 words of token0_layer1_attn_q_output.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer1_attn_q_matvec_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads process-owned static layer-1 query projection
+# storage only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer1_attn_q_output_slice:
+	cmp qword ptr [rip + token0_layer1_attn_q_matvec_status], 1
+	jne .Lprint_layer1_attn_q_output_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_q_output0_f32_text]
+	mov rdx, token0_layer1_attn_q_output0_f32_text_end - token0_layer1_attn_q_output0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer1_attn_q_output]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_q_output1_f32_text]
+	mov rdx, token0_layer1_attn_q_output1_f32_text_end - token0_layer1_attn_q_output1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer1_attn_q_output + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_q_output2_f32_text]
+	mov rdx, token0_layer1_attn_q_output2_f32_text_end - token0_layer1_attn_q_output2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer1_attn_q_output + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_attn_q_output3_f32_text]
+	mov rdx, token0_layer1_attn_q_output3_f32_text_end - token0_layer1_attn_q_output3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer1_attn_q_output + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer1_attn_q_output_slice_done:
+	ret
+
+.size print_token0_layer1_attn_q_output_slice, . - print_token0_layer1_attn_q_output_slice
 
 .type dequant_token0_embedding_smoke, @function
 
