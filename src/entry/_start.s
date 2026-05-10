@@ -91,8 +91,7 @@ help_text:
 	.ascii "reusable descriptor lookup smoke, "
 	.ascii "and layer-1 attention RMSNorm/query/key/value/context/output "
 	.ascii "smoke plus layer-1 post-attention residual smoke and "
-	.ascii "FFN RMSNorm status, FFN gate matvec status, "
-	.ascii "and FFN up descriptor smoke.\n"
+	.ascii "FFN RMSNorm status and FFN gate/up matvec status.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -1217,6 +1216,12 @@ gguf_unknown_error_text_end:
 .global layer1_ffn_gate_tensor_dim1
 .global layer1_ffn_gate_tensor_ggml_type
 .global layer1_ffn_gate_tensor_offset
+.global layer1_ffn_up_tensor_found
+.global layer1_ffn_up_tensor_n_dimensions
+.global layer1_ffn_up_tensor_dim0
+.global layer1_ffn_up_tensor_dim1
+.global layer1_ffn_up_tensor_ggml_type
+.global layer1_ffn_up_tensor_offset
 .global token0_layer1_post_attn_residual_status
 .global token0_layer1_post_attn_residual
 .global token0_layer1_ffn_norm_status
@@ -4111,6 +4116,7 @@ _start:
 	call run_token0_layer1_ffn_norm_status
 
 	call run_token0_layer1_ffn_gate_matvec_status
+	call run_token0_layer1_ffn_up_matvec_status
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.

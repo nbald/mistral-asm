@@ -1550,3 +1550,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T01:11:21+02:00
+
+- Added status-only layer-1 FFN up matvec coverage in the focused FFN inference
+  module. The up path mirrors the existing gate path: descriptor, type, shape,
+  and complete Q8_0 payload bounds are checked before reading mapped tensor
+  bytes, and the new diagnostic line is appended after the existing gate status.
+- Verification evidence: the real target reported
+  `token0_layer1_ffn_up_matvec: 1` after the unchanged layer-1 FFN norm words
+  and gate status. A temporary empty valid GGUF kept the norm, gate, and up
+  statuses at `0`. Build,
+  no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.

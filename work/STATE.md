@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-1 FFN up matvec coverage in
-`src/infer/token0_layer1_ffn.s`, exporting only the needed
-`blk.1.ffn_up.weight` descriptor handoff slots from `_start.s` and preserving
-the existing output order.
+Add a guarded first-four exact-hex slice printer for
+`token0_layer1_ffn_gate_output` in `src/infer/token0_layer1_ffn.s`,
+preserving the existing output order.
 
 ## Completed Work
 
@@ -53,10 +52,14 @@ the existing output order.
   live beside the FFN norm smoke in `src/infer/token0_layer1_ffn.s`. `_start.s`
   preserves the same output position through a single focused wrapper call, and
   all public diagnostic labels and values are unchanged.
+- Status-only layer-1 FFN up matvec coverage now lives beside the gate path in
+  `src/infer/token0_layer1_ffn.s`. `_start.s` exports only the needed
+  `blk.1.ffn_up.weight` descriptor handoff fields and calls the focused up
+  status wrapper immediately after the existing gate status line.
 
 ## Known Blockers
 
-- No current blocker for the next focused layer-1 FFN up matvec smoke step.
+- No current blocker for the next focused layer-1 FFN gate output slice step.
 - Residual maintainability risk remains: `src/entry/_start.s` still owns entry
   dispatch, descriptor lookup sequencing, descriptor/slice printing, static
   runtime buffers, and token-0 smoke orchestration. Keep new subsystem-specific
@@ -83,21 +86,20 @@ the existing output order.
 
 ## Last Verification
 
-- Behavior-preserving layer-1 FFN norm status/slice printer relocation passed:
-  `make clean && make`; `make check`; `./mistral-asm --help`; real target smoke
-  still showed `token0_layer1_ffn_norm: 1` with unchanged FFN norm words
+- Status-only layer-1 FFN up matvec coverage passed: `make clean && make`;
+  `make check`; `./mistral-asm --help`; real target smoke showed the expected
+  layer-1 FFN norm/gate/up descriptors, unchanged FFN norm words
   `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, followed by
-  `token0_layer1_ffn_gate_matvec: 1`, and descriptor summaries still showed
-  layer-1 FFN norm/gate/up descriptors with expected dimensions, types, and
-  offsets. A temporary empty valid GGUF printed `token0_layer1_ffn_norm: 0` and
-  `token0_layer1_ffn_gate_matvec: 0`. `python3 -m py_compile work/oracle/*.py`,
-  `git diff --check`, runtime source purity scan, static-link inspection,
-  undefined-symbol inspection, exported-symbol inspection, tracked-artifact
-  scan, and tracked large-file scan passed.
+  `token0_layer1_ffn_gate_matvec: 1` and `token0_layer1_ffn_up_matvec: 1`. A
+  temporary empty valid GGUF printed `token0_layer1_ffn_norm: 0`,
+  `token0_layer1_ffn_gate_matvec: 0`, and `token0_layer1_ffn_up_matvec: 0`.
+  `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
+  purity scan, static-link inspection, undefined-symbol inspection,
+  exported-symbol inspection, tracked-artifact scan, and tracked large-file
+  scan passed.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-1 FFN up matvec coverage in
-`src/infer/token0_layer1_ffn.s`, exporting only the needed
-`blk.1.ffn_up.weight` descriptor handoff slots from `_start.s` and preserving
-the existing output order.
+Add a guarded first-four exact-hex slice printer for
+`token0_layer1_ffn_gate_output` in `src/infer/token0_layer1_ffn.s`,
+preserving the existing output order.
