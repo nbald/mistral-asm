@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded first-four exact-hex slice printer for
+Resume feature work by adding a guarded first-four exact-hex slice printer for
 `token0_layer1_ffn_up_output` in `src/infer/token0_layer1_ffn.s`,
 preserving the existing output order.
 
@@ -61,19 +61,25 @@ preserving the existing output order.
   its status is 1. The new gate output words appear after
   `token0_layer1_ffn_gate_matvec: 1` and before the existing up status line,
   matching the layer-0 FFN diagnostic order.
+- The oversized entry source has been split without behavior changes:
+  `src/entry/_start.s` is now an 8-line include driver, and the former contents
+  live under `src/entry/start/` as responsibility-named fragments. The fragments
+  are still assembled as one translation unit, so local labels and diagnostic
+  ordering are preserved.
 
 ## Known Blockers
 
 - No current blocker for the next focused layer-1 FFN up output slice step.
-- Residual maintainability risk remains: `src/entry/_start.s` still owns entry
-  dispatch, descriptor lookup sequencing, descriptor/slice printing, static
-  runtime buffers, and token-0 smoke orchestration. Keep new subsystem-specific
-  logic, buffers, and printers in focused modules when practical, and prefer
-  further behavior-preserving splits before large graph expansions.
+- Residual maintainability risk remains in the entry fragments:
+  `src/entry/start/main.inc`, `token0_smokes.inc`, `output_slices.inc`, and
+  `rodata.inc` are still large and should be reduced before large graph
+  expansions. `src/gguf/load_header.s` is also a good next structural split
+  candidate.
 
 ## Relevant Files
 
 - `src/entry/_start.s`
+- `src/entry/start/*.inc`
 - `src/gguf/load_header.s`
 - `src/infer/token0_layer1_ffn.s`
 - `src/math/q8_0_dot.s`
@@ -91,18 +97,9 @@ preserving the existing output order.
 
 ## Last Verification
 
-- Layer-1 FFN gate output slice passed: `make clean all`; `make check`;
-  `./mistral-asm --help`; real target smoke showed unchanged FFN norm words
-  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`, then
-  `token0_layer1_ffn_gate_matvec: 1`, gate output words `0xbe34ea97`,
-  `0xbfcc8119`, `0xbf150238`, `0xbf882cef`, and then
-  `token0_layer1_ffn_up_matvec: 1`. A temporary empty valid GGUF printed the
-  layer-1 FFN norm/gate/up statuses as `0` and emitted no gate output word
-  labels. A one-off external Python oracle recomputed the upstream layer-1 path
-  and matched the four new gate words exactly. `python3 -m py_compile
-  work/oracle/*.py`, `git diff --check`, runtime source purity scan,
-  static-link inspection, undefined-symbol inspection, exported-symbol
-  inspection, tracked-artifact scan, and tracked large-file scan passed.
+- Entry split verification passed: `make`; `make check`; exact reconstruction
+  comparison between the pre-split `src/entry/_start.s` and the concatenated
+  `src/entry/start/*.inc` fragments reported `reconstruction matches`.
 
 ## Next Exact Step
 

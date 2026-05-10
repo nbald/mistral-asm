@@ -23,6 +23,16 @@ ASM_SOURCES := \
 	src/sys/openat.s \
 	src/sys/write.s
 
+ENTRY_START_INCLUDES := \
+	src/entry/start/constants.inc \
+	src/entry/start/rodata.inc \
+	src/entry/start/state.inc \
+	src/entry/start/main.inc \
+	src/entry/start/lookup_summary.inc \
+	src/entry/start/output_slices.inc \
+	src/entry/start/token0_smokes.inc \
+	src/entry/start/gnu_stack.inc
+
 OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)
 Q8_0_DOT_CHECK := $(BUILD_DIR)/tests/q8_0_dot_check
 RMSNORM_CHECK := $(BUILD_DIR)/tests/rmsnorm_check
@@ -94,6 +104,8 @@ $(GGUF_LOOKUP_CHECK): $(GGUF_LOOKUP_CHECK_OBJECTS)
 $(BUILD_DIR)/%.o: src/%.s
 	mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -o $@ $<
+
+$(BUILD_DIR)/entry/_start.o: $(ENTRY_START_INCLUDES)
 
 $(BUILD_DIR)/tests/%.o: tests/%.s
 	mkdir -p $(dir $@)

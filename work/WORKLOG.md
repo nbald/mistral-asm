@@ -1578,3 +1578,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   words exactly. Build, no-libc harnesses, help, oracle py-compile, whitespace,
   runtime purity, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T01:34:10+02:00
+
+- Entry-source refactor decision: keep `_start` as one assembled translation
+  unit for now, but split the 8k-line source into responsibility-named include
+  fragments under `src/entry/start/`. This reduces the editing surface without
+  changing local-label reachability, output order, or symbol ownership.
+- Follow-up risk: the physical split is only the first maintainability pass.
+  The largest remaining fragments are entry orchestration, token-0 smoke logic,
+  output slice printers, and rodata; `src/gguf/load_header.s` is also still
+  large enough to deserve a later structural split.
+- Verification evidence: the runtime rebuilt, all no-libc harness checks
+  passed, and concatenating the new entry fragments reproduced the prior
+  `_start.s` exactly.
