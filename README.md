@@ -3,6 +3,10 @@
 `mistral-asm` is an experiment in building a Ministral 3 3B inference engine
 from scratch in GNU `as` Intel assembly.
 
+The project is run in full autonomous mode: a Codex loop continues from the
+tracked working state, makes small auditable commits, verifies each step, and
+records the methodology in the repository.
+
 The purpose is not to beat existing runtimes first. The purpose is to produce an
 auditable repository where a language model builds a working inference engine
 step by step, with no hidden runtime dependency on C, libc, Python, Rust, or
