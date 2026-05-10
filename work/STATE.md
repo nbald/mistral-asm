@@ -6,121 +6,33 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only runtime coverage for the layer-1 FFN gate and up tensors.
+Complete repository-wide review gate pass 2 for the operator instruction dated
+2026-05-10T22:24:01Z.
 
 ## Completed Work
 
 - Runtime source remains pure GNU `as` Intel assembly built with `as` and linked
   with `ld`; `_start` uses Linux syscalls directly and no libc.
-- The GGUF loader validates the narrow v3 little-endian target shape, records
-  tensor-info and tensor-data offsets, keeps fixed layer-0 descriptor summaries,
-  and exposes reusable descriptor lookup through `gguf_lookup_tensor_info`.
-- Token-0 layer-0 smokes run through embedding dequantization, attention, FFN,
-  post-FFN residual, and exact public slices matched by external oracle notes.
-- Layer-1 attention RMSNorm uses `token0_post_ffn_residual` plus the reusable
-  `blk.1.attn_norm.weight` descriptor. The real target prints status 1 and
-  exact words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`,
-  matching the external oracle.
-- The runtime captures reusable layer-1 descriptors for `blk.1.attn_q.weight`,
-  `blk.1.attn_k.weight`, `blk.1.attn_v.weight`, and
-  `blk.1.attn_output.weight`. The real target reports query dimensions
-  `3072x4096`, type `8`, offset `568246272`; key dimensions `3072x1024`,
-  type `8`, offset `551522304`; value dimensions `3072x1024`, type `8`,
-  offset `581615616`; and output dimensions `4096x3072`, type `8`, offset
-  `554876928`.
-- The guarded `token0_layer1_attn_q_matvec` smoke writes a private output buffer
-  and publishes the first four raw f32 words only when status is 1. The real
-  target reports `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`,
-  matching the external oracle.
-- The guarded `token0_layer1_attn_k_matvec` smoke consumes the layer-1 attention
-  RMSNorm activation and reusable `blk.1.attn_k.weight` descriptor. It requires
-  exact `3072x1024` Q8_0 shape, bounds the full mapped matrix payload, writes a
-  private output buffer, and publishes the first four raw f32 words only when
-  status is 1. The real target reports `0x3fb2a129`, `0x405dbdbe`,
-  `0x3f5611d3`, and `0x3f1e325d`.
-- External oracle tooling now independently recomputes the published
-  `token0_layer1_attn_k_output` slice from the full layer-0 FFN and layer-1
-  attention RMSNorm chain. The oracle matches the runtime key words exactly.
-- The guarded `token0_layer1_attn_v_matvec` smoke consumes the layer-1
-  attention RMSNorm activation and reusable `blk.1.attn_v.weight` descriptor.
-  It requires exact `3072x1024` Q8_0 shape, bounds the full mapped matrix
-  payload, writes a private output buffer, and publishes the first four raw f32
-  words only when status is 1. The real target reports `0x3d6bd91b`,
-  `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`.
-- External oracle tooling now independently recomputes the published
-  `token0_layer1_attn_v_output` slice from the full layer-0 FFN and layer-1
-  attention RMSNorm chain. The oracle matches the runtime value words exactly.
-- The guarded `token0_layer1_attn_context_smoke` consumes the layer-1 value
-  projection output and uses `blk.1.attn_output.weight` only as an exact Q8_0
-  `4096x3072` shape guard. It expands the `1024` f32 grouped-query value output
-  into a private `4096` f32 context buffer and publishes the first four raw f32
-  words only when status is 1. The real target reports `0x3d6bd91b`,
-  `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`, matching the first four
-  layer-1 value projection words because the first query head receives the
-  first KV-head value block unchanged.
-- An external oracle note now documents the one-token grouped-query context
-  rule for `token0_layer1_attn_context`: softmax over a single key/value entry
-  is 1, each KV-head value block is copied into four query heads, and the first
-  four published context words therefore equal the first four independently
-  recomputed layer-1 value projection words.
-- The guarded `token0_layer1_attn_output_matvec` smoke consumes the private
-  `token0_layer1_attn_context` buffer and reusable
-  `blk.1.attn_output.weight` descriptor. It requires exact Q8_0 `4096x3072`
-  shape, bounds the complete mapped matrix payload, writes a private
-  `3072`-f32 output buffer, and publishes the first four raw f32 words only when
-  status is 1. The real target reports `0x3deaa744`, `0x3cb6f294`,
-  `0xbf14cf4f`, and `0xbced5550`.
-- External oracle tooling now independently recomputes the published
-  `token0_layer1_attn_output` slice from the full layer-1 value projection,
-  one-token grouped-query context, and `blk.1.attn_output.weight`. The oracle
-  matches the runtime output-projection words exactly.
-- The guarded `token0_layer1_post_attn_residual` smoke consumes the private
-  `token0_post_ffn_residual` and `token0_layer1_attn_output` buffers, requires
-  the layer-1 output descriptor to retain the exact 3072-row hidden width, and
-  writes a private 3072-f32 residual buffer only when prerequisites are present.
-  It now publishes the first four raw f32 words only when status is 1. The real
-  target reports `0xbd4055c4`, `0xbf0fbbb6`, `0x401af18e`, and `0xbe6a002c`;
-  an empty valid GGUF reports status 0 and emits no layer-1 post-attention
-  residual word labels.
-- External oracle tooling now independently recomputes the published
-  `token0_layer1_post_attn_residual` slice from the full layer-0 post-FFN
-  residual plus the first four layer-1 attention output-projection words. The
-  oracle matches the runtime residual words exactly.
-- The runtime now captures a reusable descriptor slot for
-  `blk.1.ffn_norm.weight` without reading its tensor payload. The real target
-  reports found `1`, dimensions `3072`, type `0`, and offset `645120000`,
-  matching an independent GGUF parser cross-check.
-- The guarded status-only `token0_layer1_ffn_norm_smoke` consumes the private
-  `token0_layer1_post_attn_residual` buffer and reusable
-  `blk.1.ffn_norm.weight` descriptor, requires exact f32 `[3072]` shape, bounds
-  the complete mapped weight span, writes a private 3072-f32 activation buffer,
-  and prints only `token0_layer1_ffn_norm: 1` on the real target. An empty valid
-  GGUF reports status 0 and emits no layer-1 FFN norm word labels.
-- The runtime now publishes the first four raw f32 words of the token-0 layer-1
-  FFN RMSNorm activation behind the existing `token0_layer1_ffn_norm` status
-  gate. The real target reports `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and
-  `0xbfe2ec8e`. A 24-byte empty valid GGUF reports status 0 and emits no
-  `token0_layer1_ffn_norm*_f32_hex` labels.
-- Operator inbox entry dated 2026-05-10T22:09:43Z stopped feature work and
-  started a committed two-pass review gate. Review pass 1 found no blocking
-  runtime correctness issue in the committed layer-1 FFN norm status path and
-  recorded the clean result in
-  `work/reviews/2026-05-11-layer1-ffn-norm-review-1.md`.
-- Review pass 2 completed the operator-requested gate. It found no blocking
-  issue in the external oracle coverage state, the queued layer-1 FFN norm
-  slice-publish diff, or the continuation-state handoff, and recorded the clean
-  result in `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`.
-- External oracle tooling now independently recomputes the published
-  `token0_layer1_ffn_norm` slice from the full layer-1 post-attention
-  residual and `blk.1.ffn_norm.weight`. Because RMSNorm depends on the full
-  hidden-width denominator, the oracle recomputes all 3072 layer-1 attention
-  output and residual words before comparing the first four public words. It
-  matches the runtime words exactly.
+- The narrow GGUF v3 little-endian loader records metadata, tensor directory
+  offsets, fixed layer-0 descriptors, and reusable named descriptor lookups.
+- Token-0 layer-0 forward smoke coverage reaches post-FFN residual and is
+  covered by external oracle notes/scripts.
+- Token-0 layer-1 coverage reaches FFN RMSNorm slice publication. The external
+  oracle recomputes the full layer-1 attention output and residual before
+  checking the first four FFN norm words, and it matches the runtime.
+- A newer operator inbox entry stopped feature work and requested two
+  consecutive repository-wide review passes before any new feature work. Pass 1
+  is recorded in `work/reviews/2026-05-11-repository-wide-review-1.md`.
 
 ## Known Blockers
 
-None. The review gate is complete, and the layer-1 FFN norm slice publish plus
-external oracle coverage have been verified.
+- Feature work is stopped until repository-wide review pass 2 is committed.
+- Review pass 1 found an important maintainability blocker: `src/entry/_start.s`
+  is 8,176 lines and now owns entry dispatch, descriptor lookup sequencing,
+  descriptor/slice printing, static runtime buffers, and token-0 smoke
+  orchestration. If pass 2 confirms this, the next non-review step should be a
+  behavior-preserving split into smaller focused `.s` modules before adding
+  layer-1 FFN gate/up descriptor coverage.
 
 ## Relevant Files
 
@@ -129,47 +41,25 @@ external oracle coverage have been verified.
 - `src/math/q8_0_dot.s`
 - `src/math/rmsnorm.s`
 - `src/math/swiglu.s`
-- `tests/q8_0_dot_harness.s`
-- `tests/rmsnorm_harness.s`
-- `tests/swiglu_harness.s`
-- `tests/gguf_lookup_harness.s`
+- `src/sys/*.s`
+- `tests/*.s`
 - `Makefile`
-- `work/oracle/token0_layer1_attn_norm_oracle.py`
-- `work/oracle/token0_layer1_attn_q_oracle.py`
-- `work/oracle/token0_layer1_attn_k_oracle.py`
-- `work/oracle/token0_layer1_attn_v_oracle.py`
-- `work/oracle/token0_layer1_attn_output_oracle.py`
-- `work/oracle/token0_layer1_post_attn_residual_oracle.py`
-- `work/oracle/token0_layer1_ffn_norm_oracle.py`
-- `work/oracle/token0-layer1-attn-norm.md`
-- `work/oracle/token0-layer1-attn-q-output.md`
-- `work/oracle/token0-layer1-attn-k-output.md`
-- `work/oracle/token0-layer1-attn-v-output.md`
-- `work/oracle/token0-layer1-attn-context.md`
-- `work/oracle/token0-layer1-attn-output.md`
-- `work/oracle/token0-layer1-post-attn-residual.md`
-- `work/oracle/token0-layer1-ffn-norm.md`
-- `work/reviews/2026-05-10-token0-forward-review.md`
-- `work/reviews/2026-05-11-layer1-ffn-norm-review-1.md`
-- `work/reviews/2026-05-11-layer1-ffn-norm-review-2.md`
+- `work/oracle/`
+- `work/reviews/2026-05-11-repository-wide-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-- Layer-1 FFN norm oracle verification passed: `make clean && make &&
-  make check` with `q8_0_dot: ok`, `rmsnorm: ok`, `swiglu: ok`, and
-  `gguf_lookup: ok`; `./mistral-asm --help`;
-  `python3 work/oracle/token0_layer1_ffn_norm_oracle.py` on the real target,
-  producing `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, and `0xbfe2ec8e`;
-  real runtime comparison showing the same four `token0_layer1_ffn_norm`
-  words and unchanged prerequisite layer-1 public slices;
-  `python3 -m py_compile work/oracle/*.py`; runtime source purity scan;
-  static-link inspection; tracked-artifact and large tracked-file scans; and
-  `git diff --check`.
+- Repository-wide review pass 1 verification passed: `make clean && make &&
+  make check`; `./mistral-asm --help`; real target smoke filtered to the
+  current layer-1 handoff labels, showing `token0_layer1_ffn_norm: 1` and words
+  `0xbec8ddb4`, `0xc11f7d85`, `0x40d46234`, `0xbfe2ec8e`; oracle py-compile;
+  runtime `.s` purity scan; static-link inspection; tracked-artifact and
+  large-file scans; and `git diff --check`.
 
 ## Next Exact Step
 
-Add descriptor-only runtime coverage for `blk.1.ffn_gate.weight` and
-`blk.1.ffn_up.weight`, storing process-owned descriptor slots and printing
-their found, dimension, type, and offset summaries without reading payloads.
+Run and commit repository-wide review pass 2, independently checking the whole
+project so far and specifically confirming or revising the `_start.s`
+reorganization finding before any feature work resumes.
