@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a checked token-embedding dequant helper that computes a Q8_0 embedding row
-from a token id, validates token bounds and row shape inputs, and calls the
-scalar row dequantizer to write the first activation buffer.
+Refactor the GGUF loader interface so `_start` can obtain a validated read-only
+model mapping descriptor with mmap base and file size, keep it live for tensor
+payload reads, and explicitly unmap it after the current summary path.
 
 ## Completed Work
 
@@ -66,6 +66,14 @@ scalar row dequantizer to write the first activation buffer.
 - The real target GGUF currently reports `tensor_data_offset: 7882016`, so the
   retained `token_embd.weight` relative offset `12288` identifies file offset
   `7894304` for that tensor's payload start.
+- `src/math/q8_0_dot.s` exports `q8_0_dequant_token_embedding`, a checked
+  Q8_0 token-embedding helper that validates nonzero 32-multiple embedding
+  widths, token id bounds, row-stride arithmetic, and selected-row offset
+  arithmetic before calling the scalar row dequantizer.
+- `make check-q8_0-dot` now covers the checked token-embedding helper for token
+  0 dequantization, last-token row-stride behavior, out-of-range token
+  rejection without output writes, and invalid row-shape rejection without
+  output writes.
 
 ## Known Blockers
 
@@ -84,18 +92,17 @@ None.
 
 ## Required Verification
 
-- Add no-libc assembly verifier coverage for a checked token-embedding dequant
-  helper, including a valid token, last-token row-stride behavior, and
-  out-of-range token rejection.
 - Rebuild with `as`/`ld`.
 - Keep `make check`, existing GGUF loader lookup/base-offset smoke checks,
   future CLI usage rejection, static-link checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
+- Verify the refactor preserves explicit cleanup of any live model mapping.
 
 ## Last Verification
 
 - `make clean && make && make check` passed, printing `q8_0_dot: ok`; the
-  verifier now includes exact-bit scalar Q8_0 row dequantization fixtures.
+  verifier now includes checked token-embedding fixtures for token 0, the last
+  token row, out-of-range token rejection, and invalid shape rejection.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary with one lookup and tensor-data base.
 - Synthetic tensor-base fixture `/tmp/mistral_asm_tensor_base_round.gguf`
@@ -129,5 +136,5 @@ None.
 
 ## Next Exact Step
 
-Add a checked Q8_0 token embedding dequant helper with no-libc verifier fixtures
-for valid first/last token rows and out-of-range token rejection.
+Refactor the loader and entry path to return and explicitly release a validated
+read-only GGUF mapping descriptor, without yet reading tensor payload bytes.

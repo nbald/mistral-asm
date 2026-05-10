@@ -54,6 +54,22 @@ fail12_text:
 	.ascii "q8_0_dot: fixture 12 failed\n"
 fail12_text_end:
 
+fail13_text:
+	.ascii "q8_0_dot: fixture 13 failed\n"
+fail13_text_end:
+
+fail14_text:
+	.ascii "q8_0_dot: fixture 14 failed\n"
+fail14_text_end:
+
+fail15_text:
+	.ascii "q8_0_dot: fixture 15 failed\n"
+fail15_text_end:
+
+fail16_text:
+	.ascii "q8_0_dot: fixture 16 failed\n"
+fail16_text_end:
+
 .balign 4
 fixture1_block:
 	# scale = 1.0, qs = 1..32, x = all 1.0.
@@ -250,6 +266,45 @@ fixture11_expected:
 	.long 0x00000000
 	.endr
 
+.balign 4
+fixture13_embedding:
+	# Three one-block token rows. Row 1 is deliberately distinct so selecting
+	# the last token proves the helper advances by the Q8_0 row byte stride.
+	.word 0x3c00
+	.byte 1, -2, 3, -4
+	.rept 28
+	.byte 0
+	.endr
+	.word 0x3c00
+	.rept 32
+	.byte 7
+	.endr
+	.word 0x3800
+	.byte 4, -8, 16, -32
+	.rept 28
+	.byte 0
+	.endr
+
+.balign 4
+fixture13_expected:
+	.long 0x3f800000
+	.long 0xc0000000
+	.long 0x40400000
+	.long 0xc0800000
+	.rept 28
+	.long 0x00000000
+	.endr
+
+.balign 4
+fixture14_expected:
+	.long 0x40000000
+	.long 0xc0800000
+	.long 0x41000000
+	.long 0xc1800000
+	.rept 28
+	.long 0x00000000
+	.endr
+
 .section .bss
 
 .balign 4
@@ -266,6 +321,14 @@ dequant_out:
 
 .balign 4
 dequant_zero_out:
+	.skip 4
+
+.balign 4
+embedding_out:
+	.skip 128
+
+.balign 4
+embedding_error_out:
 	.skip 4
 
 .section .text
@@ -405,6 +468,74 @@ _start:
 	cmp eax, edx
 	jne .Lfail12
 
+	lea rdi, [rip + fixture13_embedding]
+	lea rsi, [rip + embedding_out]
+	xor edx, edx
+	mov ecx, 3
+	mov r8d, 32
+	call q8_0_dequant_token_embedding
+	test eax, eax
+	jne .Lfail13
+	lea rsi, [rip + embedding_out]
+	lea rdi, [rip + fixture13_expected]
+	mov ecx, 32
+.Lcheck_fixture13:
+	mov eax, dword ptr [rsi]
+	cmp eax, dword ptr [rdi]
+	jne .Lfail13
+	add rsi, 4
+	add rdi, 4
+	dec ecx
+	jne .Lcheck_fixture13
+
+	lea rdi, [rip + fixture13_embedding]
+	lea rsi, [rip + embedding_out]
+	mov edx, 2
+	mov ecx, 3
+	mov r8d, 32
+	call q8_0_dequant_token_embedding
+	test eax, eax
+	jne .Lfail14
+	lea rsi, [rip + embedding_out]
+	lea rdi, [rip + fixture14_expected]
+	mov ecx, 32
+.Lcheck_fixture14:
+	mov eax, dword ptr [rsi]
+	cmp eax, dword ptr [rdi]
+	jne .Lfail14
+	add rsi, 4
+	add rdi, 4
+	dec ecx
+	jne .Lcheck_fixture14
+
+	mov dword ptr [rip + embedding_error_out], 0x5a5a5a5a
+	lea rdi, [rip + fixture13_embedding]
+	lea rsi, [rip + embedding_error_out]
+	mov edx, 3
+	mov ecx, 3
+	mov r8d, 32
+	call q8_0_dequant_token_embedding
+	cmp eax, 1
+	jne .Lfail15
+	mov eax, dword ptr [rip + embedding_error_out]
+	mov edx, 0x5a5a5a5a
+	cmp eax, edx
+	jne .Lfail15
+
+	mov dword ptr [rip + embedding_error_out], 0x5a5a5a5a
+	lea rdi, [rip + fixture13_embedding]
+	lea rsi, [rip + embedding_error_out]
+	xor edx, edx
+	mov ecx, 3
+	mov r8d, 31
+	call q8_0_dequant_token_embedding
+	cmp eax, 2
+	jne .Lfail16
+	mov eax, dword ptr [rip + embedding_error_out]
+	mov edx, 0x5a5a5a5a
+	cmp eax, edx
+	jne .Lfail16
+
 	mov rdi, 1
 	lea rsi, [rip + ok_text]
 	mov rdx, ok_text_end - ok_text
@@ -507,6 +638,38 @@ _start:
 	mov rdx, fail12_text_end - fail12_text
 	call sys_write
 	mov edi, 12
+	call sys_exit
+
+.Lfail13:
+	mov rdi, 2
+	lea rsi, [rip + fail13_text]
+	mov rdx, fail13_text_end - fail13_text
+	call sys_write
+	mov edi, 13
+	call sys_exit
+
+.Lfail14:
+	mov rdi, 2
+	lea rsi, [rip + fail14_text]
+	mov rdx, fail14_text_end - fail14_text
+	call sys_write
+	mov edi, 14
+	call sys_exit
+
+.Lfail15:
+	mov rdi, 2
+	lea rsi, [rip + fail15_text]
+	mov rdx, fail15_text_end - fail15_text
+	call sys_write
+	mov edi, 15
+	call sys_exit
+
+.Lfail16:
+	mov rdi, 2
+	lea rsi, [rip + fail16_text]
+	mov rdx, fail16_text_end - fail16_text
+	call sys_write
+	mov edi, 16
 	call sys_exit
 
 .size _start, . - _start

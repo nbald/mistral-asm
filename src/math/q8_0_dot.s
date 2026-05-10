@@ -15,6 +15,8 @@
 .type q8_0_matvec_f32, @function
 .global q8_0_dequant_f32_row
 .type q8_0_dequant_f32_row, @function
+.global q8_0_dequant_token_embedding
+.type q8_0_dequant_token_embedding, @function
 
 # Contract: compute one scalar dot product between a GGML Q8_0 weight block and
 # a 32-element f32 activation span.
@@ -222,5 +224,65 @@ q8_0_dequant_f32_row:
 	ret
 
 .size q8_0_dequant_f32_row, . - q8_0_dequant_f32_row
+
+# Contract: dequantize one token embedding row from a row-major GGML Q8_0
+# token_embd.weight tensor into caller-owned f32 activation storage.
+# Inputs: rdi = pointer to row 0 of the Q8_0 embedding tensor; rsi = pointer to
+# f32 output activation storage; rdx = unsigned token id; rcx = number of token
+# rows in the tensor; r8 = embedding width in scalar values.
+# Outputs: eax = 0 on success after writing `embedding_width` f32 values;
+# eax = 1 when `token_id >= token_row_count`; eax = 2 when the row shape or byte
+# offset arithmetic is invalid. Error paths write nothing.
+# Clobbers: rax, rcx, rdx, rdi, rsi, r8, r9, r10, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads exactly the selected Q8_0 row and writes exactly the
+# matching f32 activation row during the call; retains no pointers. Callers own
+# all tensor and output storage and must ensure the already-validated tensor
+# payload contains the requested row.
+# Error behavior: rejects zero or non-32-multiple embedding widths before
+# touching output, rejects token ids outside the tensor row count, and rejects
+# overflow while deriving the Q8_0 row stride or selected-row byte offset.
+q8_0_dequant_token_embedding:
+	# GGML Q8_0 rows are measured in blocks of 32 scalar values. The embedding
+	# width must describe whole blocks so the selected token row has a unique
+	# byte stride in the tensor payload.
+	test r8, r8
+	je .Lembedding_bad_shape
+	test r8, Q8_0_BLOCK_SIZE - 1
+	jne .Lembedding_bad_shape
+
+	mov r10, r8
+	shr r10, 5
+
+	# Row stride is `block_count * 34` bytes. Treat overflow as bad setup data
+	# rather than silently wrapping into an unrelated tensor row.
+	imul r9, r10, Q8_0_BLOCK_BYTES
+	jo .Lembedding_bad_shape
+
+	cmp rdx, rcx
+	jae .Lembedding_bad_token
+
+	# Select the requested row with unsigned arithmetic. A wrapped file-relative
+	# offset would defeat earlier tensor bounds validation, so reject it here.
+	mov rax, rdx
+	mul r9
+	test rdx, rdx
+	jne .Lembedding_bad_shape
+	add rdi, rax
+	jc .Lembedding_bad_shape
+
+	mov rdx, r10
+	call q8_0_dequant_f32_row
+	xor eax, eax
+	ret
+
+.Lembedding_bad_token:
+	mov eax, 1
+	ret
+
+.Lembedding_bad_shape:
+	mov eax, 2
+	ret
+
+.size q8_0_dequant_token_embedding, . - q8_0_dequant_token_embedding
 
 .section .note.GNU-stack,"",@progbits

@@ -346,3 +346,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   synthetic lookup/base-offset fixtures, future prompt usage rejection,
   static-link checks, whitespace check, and real target-model GGUF summary
   smoke passed.
+
+## 2026-05-10T14:33:30Z
+
+- Checked token embedding dequantization now treats setup mistakes as stable
+  return codes: 1 for token ids outside the tensor row count, 2 for invalid row
+  shape or overflow while deriving the selected row.
+- Decision: the wrapper validates row shape and offset arithmetic before calling
+  the row dequantizer, so rejection paths do not depend on the lower-level
+  zero-block no-write behavior.
+- Verification evidence: the no-libc verifier covers first-token output,
+  last-token row-stride selection, out-of-range token rejection without writes,
+  and invalid shape rejection without writes. Clean rebuild, GGUF synthetic
+  lookup/base-offset fixtures, future prompt usage rejection, static-link
+  checks, whitespace check, and real target-model GGUF summary smoke passed.
