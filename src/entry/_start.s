@@ -696,6 +696,22 @@ token0_ffn_up_output3_f32_text:
 	.ascii "token0_ffn_up_output3_f32_hex: "
 token0_ffn_up_output3_f32_text_end:
 
+token0_ffn_swiglu_output0_f32_text:
+	.ascii "token0_ffn_swiglu_output0_f32_hex: "
+token0_ffn_swiglu_output0_f32_text_end:
+
+token0_ffn_swiglu_output1_f32_text:
+	.ascii "token0_ffn_swiglu_output1_f32_hex: "
+token0_ffn_swiglu_output1_f32_text_end:
+
+token0_ffn_swiglu_output2_f32_text:
+	.ascii "token0_ffn_swiglu_output2_f32_hex: "
+token0_ffn_swiglu_output2_f32_text_end:
+
+token0_ffn_swiglu_output3_f32_text:
+	.ascii "token0_ffn_swiglu_output3_f32_hex: "
+token0_ffn_swiglu_output3_f32_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -2993,6 +3009,8 @@ _start:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_ffn_swiglu_output_slice
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -3911,6 +3929,85 @@ print_token0_ffn_up_output_slice:
 	ret
 
 .size print_token0_ffn_up_output_slice, . - print_token0_ffn_up_output_slice
+
+.type print_token0_ffn_swiglu_output_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 FFN SwiGLU
+# activation when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_ffn_swiglu_status and the first four
+# f32 words of token0_ffn_swiglu_output.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_ffn_swiglu_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads process-owned static FFN SwiGLU activation storage
+# only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_ffn_swiglu_output_slice:
+	cmp qword ptr [rip + token0_ffn_swiglu_status], 1
+	jne .Lprint_ffn_swiglu_output_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_swiglu_output0_f32_text]
+	mov rdx, token0_ffn_swiglu_output0_f32_text_end - token0_ffn_swiglu_output0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_ffn_swiglu_output]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_swiglu_output1_f32_text]
+	mov rdx, token0_ffn_swiglu_output1_f32_text_end - token0_ffn_swiglu_output1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_ffn_swiglu_output + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_swiglu_output2_f32_text]
+	mov rdx, token0_ffn_swiglu_output2_f32_text_end - token0_ffn_swiglu_output2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_ffn_swiglu_output + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_swiglu_output3_f32_text]
+	mov rdx, token0_ffn_swiglu_output3_f32_text_end - token0_ffn_swiglu_output3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_ffn_swiglu_output + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_ffn_swiglu_output_slice_done:
+	ret
+
+.size print_token0_ffn_swiglu_output_slice, . - print_token0_ffn_swiglu_output_slice
 
 .type dequant_token0_embedding_smoke, @function
 

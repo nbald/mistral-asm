@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded four-word exact-hex slice from `token0_ffn_swiglu_output` after
-`token0_ffn_swiglu_status` is 1, without changing the SwiGLU math.
+Add external oracle tooling and a comparison note for the guarded
+`token0_ffn_swiglu_output` exact-hex slice.
 
 ## Completed Work
 
@@ -35,6 +35,10 @@ Add a guarded four-word exact-hex slice from `token0_ffn_swiglu_output` after
   after the FFN gate/up matvecs succeed and the retained FFN down descriptor
   proves the target `[9216 x 3072]` consumer shape. The public smoke output is
   status-only.
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_swiglu_output` after `token0_ffn_swiglu_status` is 1, without
+  changing the SwiGLU math. The real target prints words `0xbe697324`,
+  `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`.
 
 ## Known Blockers
 
@@ -88,14 +92,20 @@ None.
 - The real target model under `models/` returned status 0, preserved existing
   token-0 exact-hex slices through FFN up, printed `ffn_down_tensor_found: 1`,
   `ffn_down_tensor_name: blk.0.ffn_down.weight`, dimensions `9216 x 3072`,
-  ggml type `8`, offset `461266944`, and `token0_ffn_swiglu: 1`.
+  ggml type `8`, offset `461266944`, `token0_ffn_swiglu: 1`, and the new
+  SwiGLU exact-hex words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and
+  `0xbe30ee21`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
   showed the full-file read-only `mmap`, `close(3) = 0`, the FFN down descriptor
-  lines, FFN up output words, `token0_ffn_swiglu: 1`, and final `munmap`.
+  lines, FFN up output words, `token0_ffn_swiglu: 1`, the new SwiGLU output
+  words, and final `munmap`.
+- A quick independent Python float32 calculation from the printed gate/up words
+  matched all four new SwiGLU output words bit-for-bit.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a guarded four-word exact-hex slice from `token0_ffn_swiglu_output` after
-`token0_ffn_swiglu_status` is 1, without changing the SwiGLU math.
+Add external token-0 FFN SwiGLU oracle tooling and a comparison note that
+recomputes the four new exact-hex words from the existing gate/up path and
+compares them with runtime output.

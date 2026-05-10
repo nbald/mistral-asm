@@ -910,3 +910,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   fixtures skipped the activation with status 0, while the real local target
   printed `token0_ffn_swiglu: 1` and preserved existing exact-hex slices through
   FFN up. Cleanup tracing still showed `close(3)` before final `munmap`.
+
+## 2026-05-10T18:17:43Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_swiglu_output` after `token0_ffn_swiglu_status` is 1. The SwiGLU
+  math, shape checks, and descriptor guards were left unchanged.
+- Verification evidence: synthetic fixtures kept `token0_ffn_swiglu: 0` with no
+  SwiGLU output word labels. The real local target printed SwiGLU words
+  `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`; a direct
+  float32 calculation from the printed gate/up words matched all four bits.
+  Cleanup tracing still showed `close(3)` before final `munmap`.
