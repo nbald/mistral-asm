@@ -6,7 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded status-only layer-1 attention output-projection matvec smoke.
+Publish the first four raw f32 words of the layer-1 attention output-projection
+smoke behind its status gate.
 
 ## Completed Work
 
@@ -63,6 +64,12 @@ Add a guarded status-only layer-1 attention output-projection matvec smoke.
   is 1, each KV-head value block is copied into four query heads, and the first
   four published context words therefore equal the first four independently
   recomputed layer-1 value projection words.
+- The guarded `token0_layer1_attn_output_matvec` smoke consumes the private
+  `token0_layer1_attn_context` buffer and reusable
+  `blk.1.attn_output.weight` descriptor. It requires exact Q8_0 `4096x3072`
+  shape, bounds the complete mapped matrix payload, writes a private
+  `3072`-f32 output buffer, and currently publishes status only. The real target
+  reports status 1.
 
 ## Known Blockers
 
@@ -98,29 +105,20 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `layer1_attn_output_tensor_found: 1`, dimensions `4096x3072`, type `8`,
-  offset `554876928`, `token0_layer1_attn_context: 1`, and context words
-  `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and `0xbcca1ab6`. Existing
-  layer-1 norm/query/key/value status and public exact-hex slices stayed
-  unchanged.
-- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields,
-  kept layer-1 norm/query/key/value/context gates at 0, and emitted no
-  `token0_layer1_attn_context*_f32_hex` labels.
-- A static check of `token0_layer1_attn_context_smoke` found no references to
-  `layer1_attn_output_tensor_offset`, `gguf_mapping_base`, `q8_0_matvec`, or
-  `rmsnorm`, confirming this step does not read output-projection payload bytes.
-- `python3 work/oracle/token0_layer1_attn_v_oracle.py ...` reproduced the
-  layer-1 value projection words `0x3d6bd91b`, `0x3d763224`, `0x3d709b92`, and
-  `0xbcca1ab6`, matching the context note's equality proof and runtime context
-  slice.
+  `token0_layer1_attn_output_matvec: 1`. Existing layer-1 norm/query/key/value
+  and context status plus public exact-hex slices stayed unchanged.
+- A temporary empty valid GGUF printed zeroed layer-1 output descriptor fields
+  and kept `token0_layer1_attn_output_matvec: 0`.
+- Static inspection found no `token0_layer1_attn_output*_f32_hex` labels,
+  confirming this status-only step does not publish output-projection words yet.
+- `strace -qq -e trace=close,munmap` on the real target showed `close(3)` before
+  the final `munmap`.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
   smoke passed.
 
 ## Next Exact Step
 
-Add a guarded `token0_layer1_attn_output_matvec` smoke that consumes the private
-`token0_layer1_attn_context` buffer and `blk.1.attn_output.weight` descriptor,
-requires exact Q8_0 `4096x3072` shape and mapped payload bounds, writes a
-private output buffer, publishes status only, and runs the standard verification
-set.
+Add status-gated printing for the first four raw f32 words of
+`token0_layer1_attn_output`, keep empty-fixture output silent, and run the
+standard verification set.

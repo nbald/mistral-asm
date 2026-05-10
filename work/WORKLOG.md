@@ -1308,3 +1308,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   build, no-libc harnesses, static no-output-projection-read check, oracle
   py-compile, runtime purity, static-link, tracked-artifact, help, and
   whitespace checks passed.
+
+## 2026-05-10T21:24:38Z
+
+- Added the status-only layer-1 attention output-projection smoke. It consumes
+  the private grouped-query context, requires the reusable
+  `blk.1.attn_output.weight` descriptor to be exact Q8_0 `4096x3072`, bounds the
+  full mapped payload, and writes only private static output storage.
+- Verification evidence: the real target printed
+  `token0_layer1_attn_output_matvec: 1` while the established layer-1
+  norm/query/key/value/context exact-hex slices stayed unchanged. A temporary
+  empty valid GGUF kept the new output gate at 0, no layer-1 output word labels
+  exist yet, cleanup tracing still showed `close(3)` before final `munmap`, and
+  the build, harness, oracle py-compile, runtime purity, static-link,
+  tracked-artifact, help, and whitespace checks passed.
