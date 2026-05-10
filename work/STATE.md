@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 query projection matvec smoke using the retained
-`blk.0.attn_q.weight` descriptor and `token0_attn_norm_activation`, write into
-static output storage, and print a status. Leave numerical oracle comparison for
-a later atomic step.
+Expose a small, guarded exact-hex slice of `token0_attn_q_output` after a
+successful query projection smoke, so the external oracle comparison has stable
+runtime values to compare in a later atomic step.
 
 ## Completed Work
 
@@ -30,8 +29,9 @@ a later atomic step.
 - `_start` prints the retained summary fields, keeps the model mapping live
   through guarded token ID 0 embedding dequantization and first attention
   RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, prints the
-  retained first-layer attention query projection descriptor, then calls
-  `gguf_release_mapping`.
+  retained first-layer attention query projection descriptor, runs a guarded
+  token ID 0 attention query projection matvec into static output storage, then
+  calls `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
   print zero smoke statuses while preserving summary behavior.
 
@@ -63,8 +63,9 @@ None.
 
 - `make clean`, `make`, and `make check` passed; the harnesses printed
   `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0; the future prompt generation form
-  returned status 2 with the usage diagnostic.
+- `./mistral-asm --help` returned status 0 and showed the attention query smoke
+  milestone text; the future prompt generation form returned status 2 with the
+  usage diagnostic.
 - `readelf -d` reported no dynamic section, and `readelf -l` reported no
   interpreter or dynamic program headers.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
@@ -73,11 +74,12 @@ None.
   `attn_norm_rms_epsilon_found: 0`,
   `attn_norm_rms_epsilon_f32_hex: 0x00000000`, kept
   `attn_q_tensor_found: 0`, and kept
-  `token0_embedding_dequant: 0` plus `token0_attn_norm: 0`.
+  `token0_embedding_dequant: 0`, `token0_attn_norm: 0`, and
+  `token0_attn_q_matvec: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
-  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor
-  directory diagnostics.
+  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
+  alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
   `attn_norm_rms_epsilon_found: 1`,
   `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, retained
@@ -85,16 +87,15 @@ None.
   `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
   `blk.0.attn_q.weight` as Q8_0 with dimensions 3072 and 4096 at relative
   offset 444555264, and printed `token0_embedding_dequant: 1` plus
-  `token0_attn_norm: 1`.
+  `token0_attn_norm: 1` plus `token0_attn_q_matvec: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
   `close(3) = 0`, successful summary/smoke output including the retained
-  query projection descriptor, then
+  query projection descriptor and `token0_attn_q_matvec: 1`, then
   `munmap(..., 3651679520) = 0`.
 - `git diff --check` passed after the final work-file updates.
 
 ## Next Exact Step
 
-Add a guarded token-0 query projection matvec smoke using the retained
-`blk.0.attn_q.weight` descriptor and `token0_attn_norm_activation`, write into
-static output storage, and print a status. Leave numerical oracle comparison for
-a later atomic step.
+Expose a small, guarded exact-hex slice of `token0_attn_q_output` after a
+successful query projection smoke, so the external oracle comparison has stable
+runtime values to compare in a later atomic step.

@@ -464,3 +464,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   existing token embedding and RMSNorm smoke statuses remain 1. Synthetic parser
   fixtures keep the new descriptor absent and skip payload smokes; `strace`
   still shows the read-only mapping released after summary output.
+
+## 2026-05-10T15:25:24Z
+
+- The runtime now performs a third guarded payload smoke: after token 0 is
+  dequantized and attention-normalized, `_start` validates
+  `blk.0.attn_q.weight` as a two-dimensional Q8_0 matrix whose input width
+  matches the normalized activation and whose output row count fits static
+  storage, then calls the scalar Q8_0 matvec into `token0_attn_q_output`.
+- Decision: the query projection status is still only a smoke gate. It proves
+  the mapped matrix span is bounded and the existing scalar matvec can consume
+  the real target descriptor; selected output values should be exposed before
+  attaching an external numerical oracle.
+- Verification evidence: clean rebuild and `make check` passed; synthetic
+  parser fixtures printed `token0_attn_q_matvec: 0`; the real local target
+  printed `token0_attn_q_matvec: 1`; `strace` still showed the read-only
+  mapping released after summary and smoke output.
