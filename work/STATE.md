@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a scalar f32 RMSNorm primitive with focused assembly harness coverage. Do
-not wire it into the runtime yet.
+Add a retained descriptor for `blk.0.attn_norm.weight` so the runtime can find
+the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.
 
 ## Completed Work
 
@@ -25,6 +25,9 @@ not wire it into the runtime yet.
 - Scalar Q8_0 math covers block dot, row dot, row-major matvec, row dequant, and
   checked token-embedding dequantization, with no-libc assembly fixtures in
   `make check-q8_0-dot`.
+- Scalar f32 RMSNorm exists as a documented assembly primitive, is linked into
+  the runtime object set, and is covered by a no-libc harness in
+  `make check-rmsnorm`; `_start` does not call it yet.
 - `_start` keeps the validated model mapping live through summary output, runs a
   guarded token ID 0 `token_embd.weight` dequant smoke into static f32 activation
   storage, prints `token0_embedding_dequant: 1` when the smoke runs, then calls
@@ -46,7 +49,9 @@ None.
 - `src/entry/_start.s`
 - `src/gguf/load_header.s`
 - `src/math/q8_0_dot.s`
+- `src/math/rmsnorm.s`
 - `tests/q8_0_dot_harness.s`
+- `tests/rmsnorm_harness.s`
 - `Makefile`
 - `work/STATE.md`
 - `work/WORKLOG.md`
@@ -54,15 +59,16 @@ None.
 ## Required Verification
 
 - Rebuild with `as`/`ld`.
-- Keep `make check`, GGUF loader lookup/base-offset smoke checks, future CLI
-  usage rejection, static-link checks, and whitespace checks passing.
+- Keep `make check`, including the Q8_0 and RMSNorm harnesses, GGUF loader
+  lookup/base-offset smoke checks, future CLI usage rejection, static-link
+  checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Verify explicit cleanup of any live model mapping.
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed; the harness printed
-  `q8_0_dot: ok`.
+- `make clean`, `make`, and `make check` passed; the harnesses printed
+  `q8_0_dot: ok` and `rmsnorm: ok`.
 - `./mistral-asm --help` returned status 0 and describes the
   token-embedding dequant smoke milestone.
 - Invoking the future prompt generation form returned the usage error with
@@ -86,5 +92,5 @@ None.
 
 ## Next Exact Step
 
-Add a scalar f32 RMSNorm primitive with focused assembly harness coverage. Do
-not wire it into the runtime yet.
+Add a retained descriptor for `blk.0.attn_norm.weight` so the runtime can find
+the first layer RMSNorm weights. Do not apply RMSNorm in `_start` yet.

@@ -389,3 +389,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   the retained `token_embd.weight` dimensions 3072 by 131072 and
   `token0_embedding_dequant: 1`; `strace` showed the success path still closes
   the fd before summary output completes and releases the mmap afterward.
+
+## 2026-05-10T14:51:04Z
+
+- Scalar f32 RMSNorm now exists as a separate math primitive. It performs an
+  auditable two-pass calculation with scalar f32 sum-of-squares accumulation,
+  scalar sqrt/div for the reciprocal RMS scale, and a streamed weighted output
+  pass.
+- Decision: RMSNorm is linked as runtime math but is not called from `_start`
+  yet. Focused fixtures cover exact-scale cases, epsilon contribution, a
+  one-element row, and zero-count no-write behavior before any model-path wiring.
+- Verification evidence: clean rebuild and `make check` passed with both
+  `q8_0_dot: ok` and `rmsnorm: ok`; existing synthetic GGUF fixtures preserved
+  their expected statuses; the real target still printed
+  `token0_embedding_dequant: 1`; `strace` showed the mmap release after the real
+  target smoke.
