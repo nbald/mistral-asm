@@ -594,3 +594,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   printed `token0_attn_v_matvec: 1`; existing query/key oracle words still
   matched the runtime slices; cleanup tracing still showed the read-only mmap
   released after smoke output.
+
+## 2026-05-10T16:11:16Z
+
+- The value projection smoke now exposes a fixed four-word f32 bit slice from
+  `token0_attn_v_output`, guarded by `token0_attn_v_matvec_status == 1`.
+  Synthetic payload skips still print only the zero value smoke status and no
+  value output words.
+- Verification evidence: the real local target printed value output words
+  `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`; cleanup tracing
+  showed those lines before the final `munmap`. Existing query/key oracle words
+  still matched their runtime slices exactly.

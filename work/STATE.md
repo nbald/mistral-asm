@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Expose a guarded four-word f32 hex slice from `token0_attn_v_output`, printed
-only when `token0_attn_v_matvec` is 1. Do not add the external value oracle in
-the same step.
+Add external oracle comparison for the four runtime
+`token0_attn_v_output*_f32_hex` words. Keep it verification-only under
+`work/oracle/`; do not change runtime math in the same step.
 
 ## Completed Work
 
@@ -26,8 +26,9 @@ the same step.
   Query/key output slices have external oracle notes and exact-hex comparisons.
 - The value projection smoke validates the retained `blk.0.attn_v.weight`
   descriptor as a bounded two-dimensional Q8_0 matrix, reads the mapped payload
-  through `q8_0_matvec_f32`, writes `token0_attn_v_output`, and prints only
-  `token0_attn_v_matvec` for now.
+  through `q8_0_matvec_f32`, writes `token0_attn_v_output`, and exposes a
+  guarded four-word f32 hex slice. Query/key output slices have external oracle
+  notes; value output still needs its oracle note.
 
 ## Known Blockers
 
@@ -81,10 +82,11 @@ None.
   `blk.0.attn_v.weight` as Q8_0 with dimensions 3072 and 1024 at relative
   offset 457924608, kept token-0 embedding, RMSNorm, query, and key smoke
   statuses at 1 with the previous query/key exact-hex output words, and printed
-  `token0_attn_v_matvec: 1`.
+  `token0_attn_v_matvec: 1` followed by value words `0x3ca3b3bc`,
+  `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed `close(3) = 0`, successful value smoke output, and
-  `munmap(..., 3651679520) = 0`.
+  showed `close(3) = 0`, the guarded value output words before final cleanup,
+  and `munmap(..., 3651679520) = 0`.
 - Existing query and key oracle scripts still matched the runtime output words
   exactly:
   query `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, `0xbf155e8e`;
@@ -93,6 +95,6 @@ None.
 
 ## Next Exact Step
 
-Expose a guarded four-word f32 hex slice from `token0_attn_v_output`, printed
-only when `token0_attn_v_matvec` is 1. Do not add the external value oracle in
-the same step.
+Add external oracle comparison for the four runtime
+`token0_attn_v_output*_f32_hex` words. Keep it verification-only under
+`work/oracle/`; do not change runtime math in the same step.
