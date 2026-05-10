@@ -7,6 +7,7 @@ inbox_file="$control_dir/INBOX.md"
 pause_file="$control_dir/PAUSE"
 stop_file="$control_dir/STOP"
 pid_file="$repo_root/work/runs/current.pid"
+start_file="$repo_root/work/runs/current.start"
 
 mkdir -p "$control_dir"
 
@@ -56,6 +57,18 @@ interrupt_current() {
   pid="$(cat "$pid_file")"
   if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
     echo "invalid Codex pid file: $pid_file" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$start_file" ]]; then
+    echo "missing Codex start metadata: $start_file" >&2
+    return 1
+  fi
+
+  expected_start="$(cat "$start_file")"
+  current_start="$(awk '{ print $22 }' "/proc/$pid/stat" 2>/dev/null || true)"
+  if [[ -z "$current_start" || "$current_start" != "$expected_start" ]]; then
+    echo "Codex pid metadata mismatch; refusing to signal $pid" >&2
     return 1
   fi
 

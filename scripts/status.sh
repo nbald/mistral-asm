@@ -43,6 +43,9 @@ else
 fi
 if [[ -f work/runs/current.pid ]]; then
   echo "current pid: $(cat work/runs/current.pid)"
+  if [[ -f work/runs/current.start ]]; then
+    echo "current start: $(cat work/runs/current.start)"
+  fi
 else
   echo "current pid: none"
 fi

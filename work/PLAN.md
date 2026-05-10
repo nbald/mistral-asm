@@ -7,6 +7,7 @@
 - Build uses `as` and `ld` through `Makefile`.
 - Autonomous runs use `gpt-5.5` with `model_reasoning_effort = "xhigh"` unless
   explicitly overridden by environment variables.
+- Run only one autonomous loop per worktree. Multi-run locking is out of scope.
 - CPU target is AMD Zen 2 x86-64 with AVX2/FMA available.
 - No NUMA or dual-socket logic in the first milestones.
 - Model target is Unsloth Ministral 3 3B Instruct Q8_0 GGUF.
@@ -62,8 +63,12 @@
 - Use `scripts/control.sh interrupt` to send SIGINT to the current Codex process.
 - Use `scripts/control.sh stop` to request loop stop and interrupt the current
   Codex process.
-- `work/runs/current.pid`, `work/control/PAUSE`, `work/control/STOP`, and
-  `work/control/INBOX.md` are transient control files and are not committed.
+- `interrupt-instruction` may end the current iteration with a non-zero Codex
+  status; if more iterations remain and the inbox is non-empty, the loop
+  continues and the next iteration reads the inbox.
+- `work/runs/current.pid`, `work/runs/current.start`, `work/control/PAUSE`,
+  `work/control/STOP`, and `work/control/INBOX.md` are transient control files
+  and are not committed.
 
 ## Review Policy
 

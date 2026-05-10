@@ -29,3 +29,5 @@
 - Instructions injected without interruption are still picked up only on the
   next iteration. This is intentional; use `interrupt-instruction` for urgent
   operator changes.
+- Running multiple autonomous loops in the same worktree is unsupported by
+  project decision. There is no locking.

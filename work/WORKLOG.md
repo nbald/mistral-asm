@@ -43,3 +43,18 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: shell syntax passed for all scripts; `INBOX.md` is
   ignored; instruction append/clear leaves no tracked change; invalid watch
   interval fails with usage.
+
+## 2026-05-10T11:55:32Z
+
+- Review decision: multi-run locking is out of scope; operate one autonomous
+  loop per worktree by convention.
+- Follow-up: run output filenames now include nanoseconds and iteration number.
+- Follow-up: after `interrupt-instruction`, a multi-iteration loop can continue
+  to the next iteration only when the transient inbox is non-empty.
+- Follow-up: process interruption now checks PID start metadata before signaling.
+- Follow-up: non-zero Codex exits are captured with Bash `if` guards instead of
+  toggling `errexit`.
+- Verification evidence: shell syntax passed for all scripts; `git diff --check`
+  passed; fake stale PID metadata was refused; run metadata files are ignored;
+  fake `codex` tests confirmed fail-fast without inbox and continue-with-inbox
+  behavior.
