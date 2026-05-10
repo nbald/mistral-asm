@@ -13,6 +13,7 @@ ASM_SOURCES := \
 	src/math/q8_0_dot.s \
 	src/math/rmsnorm.s \
 	src/math/swiglu.s \
+	src/runtime/text.s \
 	src/sys/close.s \
 	src/sys/exit.s \
 	src/sys/fstat.s \

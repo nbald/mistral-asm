@@ -1480,3 +1480,16 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: clean rebuild, no-libc harnesses, help output, current
   real-target layer-1 FFN norm smoke, oracle py-compile, runtime source purity,
   static-link, tracked-artifact, large-file, and whitespace checks passed.
+
+## 2026-05-11T00:45:01+02:00
+
+- Per the review gate, performed the first behavior-preserving `_start.s`
+  responsibility split before resuming feature work. Generic exact-string and
+  bounded/decimal/hex output helpers moved into a focused runtime text module;
+  no runtime output logic was changed.
+- Verification evidence: help output and the current real-target layer-1 handoff
+  smoke were compared against pre-split baselines with no diff. The smoke still
+  reported layer-1 FFN norm status 1 and words `0xbec8ddb4`, `0xc11f7d85`,
+  `0x40d46234`, and `0xbfe2ec8e`. Build, no-libc harnesses, whitespace,
+  runtime source purity, static-link, exported-symbol, tracked-artifact, and
+  large-file checks passed.

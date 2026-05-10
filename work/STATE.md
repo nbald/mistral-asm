@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Begin the behavior-preserving `_start.s` reorganization by extracting generic
-entry/output helper functions into a focused runtime `.s` module and updating
-the `Makefile` without changing runtime output.
+Add descriptor-only reusable lookup coverage for `blk.1.ffn_gate.weight` and
+`blk.1.ffn_up.weight`, storing separate layer-1 descriptor slots and printing
+found/dim/type/offset summaries without reading payload bytes.
 
 ## Completed Work
 
@@ -27,16 +27,17 @@ the `Makefile` without changing runtime output.
 - Repository-wide review pass 2 is recorded in
   `work/reviews/2026-05-11-repository-wide-review-2.md`. The required
   two-pass review gate is complete.
+- The first behavior-preserving `_start.s` responsibility split is complete:
+  generic text/output helpers now live in `src/runtime/text.s`, and the
+  runtime link includes that module.
 
 ## Known Blockers
 
-- Feature work remains stopped until at least one behavior-preserving split
-  reduces `_start.s` responsibility before adding layer-1 FFN gate/up descriptor
-  coverage.
-- Both repository-wide review passes found the same important maintainability
-  blocker: `src/entry/_start.s` is 8,176 lines and now owns entry dispatch,
-  descriptor lookup sequencing, descriptor/slice printing, static runtime
-  buffers, and token-0 smoke orchestration.
+- No current blocker for the next descriptor-only feature step.
+- Residual maintainability risk remains: `src/entry/_start.s` still owns entry
+  dispatch, descriptor lookup sequencing, descriptor/slice printing, static
+  runtime buffers, and token-0 smoke orchestration. Prefer further
+  behavior-preserving splits before large graph expansions.
 
 ## Relevant Files
 
@@ -45,6 +46,7 @@ the `Makefile` without changing runtime output.
 - `src/math/q8_0_dot.s`
 - `src/math/rmsnorm.s`
 - `src/math/swiglu.s`
+- `src/runtime/text.s`
 - `src/sys/*.s`
 - `tests/*.s`
 - `Makefile`
@@ -56,19 +58,19 @@ the `Makefile` without changing runtime output.
 
 ## Last Verification
 
-- Repository-wide review pass 2 verification passed: `make clean && make &&
-  make check`; `./mistral-asm --help`; real target smoke filtered to the
-  current layer-1 handoff labels, showing `layer1_ffn_norm_tensor_found: 1`,
+- Behavior-preserving helper split verification passed: `make clean && make`;
+  `./mistral-asm --help` matched the pre-split baseline exactly; real target
+  smoke filtered to the current layer-1 handoff labels matched the pre-split
+  baseline exactly, showing `layer1_ffn_norm_tensor_found: 1`,
   `token0_layer1_attn_output_matvec: 1`,
   `token0_layer1_post_attn_residual: 1`,
   `token0_layer1_ffn_norm: 1`, and words `0xbec8ddb4`, `0xc11f7d85`,
-  `0x40d46234`, `0xbfe2ec8e`; oracle py-compile; runtime `.s` purity scan;
-  static-link inspection; tracked-artifact and large-file scans; and
-  `git diff --check`.
+  `0x40d46234`, `0xbfe2ec8e`; `make check`; `git diff --check`; runtime
+  source purity scan; static-link inspection; tracked-artifact and large-file
+  scans; and exported-symbol inspection for `build/runtime/text.o`.
 
 ## Next Exact Step
 
-Move `str_eq_exact`, `write_u64_decimal`, `write_u32_hex`, and
-`write_bounded_c_string` out of `src/entry/_start.s` into a new focused runtime
-`.s` module, update the `Makefile`, and verify that help output and the current
-target smoke output are unchanged.
+Add descriptor-only reusable lookup coverage for `blk.1.ffn_gate.weight` and
+`blk.1.ffn_up.weight`, storing separate layer-1 descriptor slots and printing
+found/dim/type/offset summaries without reading payload bytes.
