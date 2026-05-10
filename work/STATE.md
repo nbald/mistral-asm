@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 post-FFN residual smoke that adds
-`token0_post_attn_residual` and `token0_ffn_down_output` into static output
-storage after `token0_ffn_down_matvec_status == 1`.
+Print a guarded four-word exact-hex slice from `token0_post_ffn_residual` after
+`token0_post_ffn_residual_status == 1`.
 
 ## Completed Work
 
@@ -20,8 +19,8 @@ storage after `token0_ffn_down_matvec_status == 1`.
   FFN norm/gate/up/down tensor descriptors.
 - Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
   projections, single-token context expansion, attention output projection,
-  post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU, and
-  FFN down projection.
+  post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU,
+  FFN down projection, and status-only post-FFN residual addition.
 - Public exact-hex slices and external oracle notes exist through the FFN down
   output. The FFN down oracle recomputes the full token-0 path through the
   9216-word SwiGLU activation, dots it with the first four
@@ -70,18 +69,14 @@ None.
   form returned status 2 with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
-- Synthetic valid fixtures returned status 0 with FFN gate/up/down descriptors
-  absent and FFN gate/up/SwiGLU/down smokes skipped. Synthetic malformed
-  fixtures returned status 3 with the expected tensor diagnostics.
-- The real target model returned status 0, printed `token0_ffn_down_matvec: 1`,
-  and printed FFN down words `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and
-  `0xbe862464`.
-- `python3 work/oracle/token0_ffn_down_oracle.py ...` completed in 2:45.27 and
-  produced the same FFN down words. A direct extraction check matched runtime
-  and oracle words for FFN norm, gate, up, SwiGLU, and down slices exactly.
-- `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed full-file read-only `mmap`, successful `close(3)`, FFN down output,
-  and final `munmap`.
+- The real target model under `strace -e trace=mmap,munmap,close` returned
+  status 0, printed `token0_ffn_down_matvec: 1`, preserved FFN down words
+  `0xbde9febc`, `0xbec5ccf0`, `0x3ffe1c83`, and `0xbe862464`, and printed
+  `token0_post_ffn_residual: 1`; cleanup showed successful `close(3)` and final
+  `munmap`.
+- Synthetic valid fixtures returned status 0 with FFN down and post-FFN
+  residual smokes skipped. Synthetic malformed fixtures returned status 3 with
+  the expected bad-magic and malformed tensor diagnostics.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
@@ -89,7 +84,6 @@ None.
 
 ## Next Exact Step
 
-Add a guarded token-0 post-FFN residual smoke that requires
-`token0_ffn_down_matvec_status == 1`, computes
-`token0_post_attn_residual[i] + token0_ffn_down_output[i]` with scalar f32
-rounding into static storage, and prints status only.
+Print a guarded four-word exact-hex slice from `token0_post_ffn_residual` after
+`token0_post_ffn_residual_status == 1`, preserving status-only skip behavior for
+synthetic fixtures.

@@ -43,6 +43,8 @@
 .equ TOKEN0_FFN_SWIGLU_BYTES, TOKEN0_FFN_SWIGLU_VALUES * 4
 .equ TOKEN0_FFN_DOWN_OUTPUT_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
 .equ TOKEN0_FFN_DOWN_OUTPUT_BYTES, TOKEN0_FFN_DOWN_OUTPUT_VALUES * 4
+.equ TOKEN0_POST_FFN_RESIDUAL_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
+.equ TOKEN0_POST_FFN_RESIDUAL_BYTES, TOKEN0_POST_FFN_RESIDUAL_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -63,7 +65,7 @@ help_text:
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
-	.ascii "FFN down matvec smoke.\n"
+	.ascii "FFN down matvec smoke, post-FFN residual smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -557,6 +559,10 @@ token0_ffn_swiglu_text_end:
 token0_ffn_down_matvec_text:
 	.ascii "token0_ffn_down_matvec: "
 token0_ffn_down_matvec_text_end:
+
+token0_post_ffn_residual_text:
+	.ascii "token0_post_ffn_residual: "
+token0_post_ffn_residual_text_end:
 
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
@@ -1071,6 +1077,10 @@ token0_ffn_swiglu_status:
 token0_ffn_down_matvec_status:
 	.skip 8
 
+.balign 8
+token0_post_ffn_residual_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1122,6 +1132,10 @@ token0_ffn_swiglu_output:
 .balign 4
 token0_ffn_down_output:
 	.skip TOKEN0_FFN_DOWN_OUTPUT_BYTES
+
+.balign 4
+token0_post_ffn_residual:
+	.skip TOKEN0_POST_FFN_RESIDUAL_BYTES
 
 .section .text
 
@@ -3060,6 +3074,23 @@ _start:
 	call sys_write
 
 	call print_token0_ffn_down_output_slice
+
+	call token0_post_ffn_residual_smoke
+	mov qword ptr [rip + token0_post_ffn_residual_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_ffn_residual_text]
+	mov rdx, token0_post_ffn_residual_text_end - token0_post_ffn_residual_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_post_ffn_residual_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -5248,5 +5279,57 @@ token0_ffn_down_matvec_smoke:
 	ret
 
 .size token0_ffn_down_matvec_smoke, . - token0_ffn_down_matvec_smoke
+
+.type token0_post_ffn_residual_smoke, @function
+
+# Contract: derive the token-0 post-FFN residual activation.
+# Inputs: no register inputs. Reads token0_post_attn_residual_status,
+# token0_ffn_down_matvec_status, token0_post_attn_residual, and
+# token0_ffn_down_output.
+# Outputs: rax = 1 after writing 3072 f32 sums to
+# token0_post_ffn_residual; otherwise rax = 0 and no post-FFN residual bytes
+# are written.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads only process-owned static post-attention residual
+# and FFN down output storage, writes only process-owned static post-FFN
+# residual storage, and does not read any mapped tensor payload bytes.
+# Error behavior: this is a smoke gate for the first post-FFN residual, not
+# final layer execution. Missing prerequisites or non-target hidden width are
+# skipped with status 0.
+token0_post_ffn_residual_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_ffn_down_matvec_status], 1
+	jne .Lpost_ffn_residual_done
+	cmp qword ptr [rip + token0_post_attn_residual_status], 1
+	jne .Lpost_ffn_residual_done
+
+	# The FFN down matvec status proves the static output row was written. Keep
+	# this direct width check next to the add so later wider/narrower smoke paths
+	# cannot accidentally reuse a stale hidden-size assumption.
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_dim1], TOKEN0_POST_FFN_RESIDUAL_VALUES
+	jne .Lpost_ffn_residual_done
+
+	lea rsi, [rip + token0_post_attn_residual]
+	lea rdx, [rip + token0_ffn_down_output]
+	lea rdi, [rip + token0_post_ffn_residual]
+	mov rcx, TOKEN0_POST_FFN_RESIDUAL_VALUES
+
+.Lpost_ffn_residual_loop:
+	vmovss xmm0, dword ptr [rsi]
+	vmovss xmm1, dword ptr [rdx]
+	vaddss xmm0, xmm0, xmm1
+	vmovss dword ptr [rdi], xmm0
+	add rsi, 4
+	add rdx, 4
+	add rdi, 4
+	dec rcx
+	jnz .Lpost_ffn_residual_loop
+
+	mov eax, 1
+
+.Lpost_ffn_residual_done:
+	ret
+
+.size token0_post_ffn_residual_smoke, . - token0_post_ffn_residual_smoke
 
 .section .note.GNU-stack,"",@progbits

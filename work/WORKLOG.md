@@ -969,3 +969,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   SwiGLU, and down slices exactly. Rebuild, no-libc harnesses, CLI/static
   checks, synthetic GGUF checks, real-model cleanup tracing, oracle py-compile,
   runtime purity, and whitespace checks passed.
+
+## 2026-05-10T18:48:13Z
+
+- The runtime now computes a guarded status-only token-0 post-FFN residual by
+  adding `token0_post_attn_residual` and `token0_ffn_down_output` into separate
+  static storage after the FFN down projection succeeds.
+- Decision: keep this step status-only. The public exact-hex slice and oracle
+  comparison remain separate reviewable steps, matching the projection workflow.
+- Verification evidence: synthetic fixtures skipped the new residual with
+  status 0, while the real local target printed `token0_post_ffn_residual: 1`
+  and preserved the FFN down exact words. Cleanup tracing still showed
+  `close(3)` before the final `munmap`.
