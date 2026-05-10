@@ -822,3 +822,15 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: the real local target printed gate output words
   `0xbf5c7417`, `0xbfa9b30c`, `0xbfecdf2f`, and `0xbfa6fe18`; merged cleanup
   tracing showed those lines between `close(3)` and the final `munmap`.
+
+## 2026-05-10T17:38:23Z
+
+- Added external FFN gate oracle tooling and a comparison note. The oracle
+  recomputes the full token-0 path through FFN RMSNorm, then dots that
+  activation with the first four `blk.0.ffn_gate.weight` rows.
+- Verification evidence: the oracle printed gate output words `0xbf5c7417`,
+  `0xbfa9b30c`, `0xbfecdf2f`, and `0xbfa6fe18`. A direct extraction check
+  compared those four words with the runtime smoke output and matched each one
+  exactly. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
+  real-model smoke, cleanup tracing, oracle py-compile, and whitespace checks
+  passed.

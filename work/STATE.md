@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an external FFN gate oracle script and comparison note for the public
-`token0_ffn_gate_output[0..3]` exact-hex slice.
+Retain and print the fixed `blk.0.ffn_up.weight` tensor descriptor in the GGUF
+summary, without reading FFN up payload bytes yet.
 
 ## Completed Work
 
@@ -25,11 +25,14 @@ Add an external FFN gate oracle script and comparison note for the public
   projection, post-attention residual, FFN RMSNorm, and FFN gate projection.
 - Public exact-hex slices exist through the FFN gate projection. Existing
   external oracle notes cover Q/K/V/output/context-equivalent output, residual,
-  and FFN RMSNorm; FFN gate still needs its oracle note.
+  FFN RMSNorm, and FFN gate.
 - The FFN gate matvec validates `blk.0.ffn_gate.weight` as Q8_0
   `[3072 x 9216]`, bounds the full mapped payload, writes static FFN gate
   activation storage, prints `token0_ffn_gate_matvec`, and prints the first four
   output f32 bit patterns only when the status is 1.
+- `work/oracle/token0_ffn_gate_oracle.py` independently recomputes token 0
+  through FFN RMSNorm and the first four FFN gate rows. Its note records an
+  exact match to the runtime gate output words.
 
 ## Known Blockers
 
@@ -56,7 +59,8 @@ None.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Rerun existing external projection/output/residual/FFN RMSNorm oracle
   comparisons when their math, shared inputs, or public exact-hex slices change.
-- Add and run an external FFN gate oracle for the newly exposed gate slice.
+- Rerun the external FFN gate oracle when its math, shared inputs, or public
+  exact-hex slice changes.
 
 ## Last Verification
 
@@ -82,14 +86,17 @@ None.
 - Merged `strace -e trace=mmap,munmap,close` output on the real target returned
   status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the new gate
   word lines, and final `munmap`.
+- `python3 work/oracle/token0_ffn_gate_oracle.py ...` printed the same four gate
+  words as the runtime. A direct extraction check compared each runtime
+  `token0_ffn_gate_output*_f32_hex` word against the matching oracle word and
+  all four matched exactly.
 - `python3 -m py_compile work/oracle/*.py` passed.
 - Existing external oracle comparisons were not rerun because this step only
-  added guarded printing for already-computed gate output; it did not alter
-  math, shared inputs, or existing public slices.
+  added an external FFN gate oracle note; it did not alter runtime math, shared
+  inputs, or existing public slices.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add `work/oracle/token0_ffn_gate_oracle.py` and a comparison note that recompute
-token 0 through FFN RMSNorm and the first four FFN gate rows, then compare them
-against the runtime gate output words.
+Retain and print the fixed `blk.0.ffn_up.weight` tensor descriptor in the GGUF
+summary, without reading FFN up payload bytes yet.
