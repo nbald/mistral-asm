@@ -17,6 +17,8 @@
 .equ TOKEN0_ATTN_Q_OUTPUT_BYTES, TOKEN0_ATTN_Q_OUTPUT_VALUES * 4
 .equ TOKEN0_ATTN_K_OUTPUT_VALUES, 1024
 .equ TOKEN0_ATTN_K_OUTPUT_BYTES, TOKEN0_ATTN_K_OUTPUT_VALUES * 4
+.equ TOKEN0_ATTN_V_OUTPUT_VALUES, 1024
+.equ TOKEN0_ATTN_V_OUTPUT_BYTES, TOKEN0_ATTN_V_OUTPUT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -34,7 +36,7 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
-	.ascii "RMSNorm, attention query/key smoke, and value descriptor.\n"
+	.ascii "RMSNorm, and attention query/key/value smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -313,6 +315,10 @@ token0_attn_k_matvec_text:
 	.ascii "token0_attn_k_matvec: "
 token0_attn_k_matvec_text_end:
 
+token0_attn_v_matvec_text:
+	.ascii "token0_attn_v_matvec: "
+token0_attn_v_matvec_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -556,6 +562,10 @@ token0_attn_q_matvec_status:
 token0_attn_k_matvec_status:
 	.skip 8
 
+.balign 8
+token0_attn_v_matvec_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -571,6 +581,10 @@ token0_attn_q_output:
 .balign 4
 token0_attn_k_output:
 	.skip TOKEN0_ATTN_K_OUTPUT_BYTES
+
+.balign 4
+token0_attn_v_output:
+	.skip TOKEN0_ATTN_V_OUTPUT_BYTES
 
 .section .text
 
@@ -588,8 +602,9 @@ token0_attn_k_output:
 # Ownership/lifetime: argv strings remain kernel-provided process memory. The
 # loader returns a live read-only model mapping descriptor on success; _start
 # keeps it live through the current summary path and token embedding, RMSNorm,
-# first query projection, and first key projection smokes, then releases it
-# explicitly with gguf_release_mapping before exit. The GGUF summary buffer is
+# first query projection, first key projection, and first value projection
+# smokes, then releases it explicitly with gguf_release_mapping before exit. The
+# GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
 # bounded metadata
 # string copies, and selected scalar and array-length metadata values, plus a
@@ -1696,6 +1711,23 @@ _start:
 
 	call print_token0_attn_k_output_slice
 
+	call token0_attn_v_matvec_smoke
+	mov qword ptr [rip + token0_attn_v_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_attn_v_matvec_text]
+	mov rdx, token0_attn_v_matvec_text_end - token0_attn_v_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_attn_v_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -2451,5 +2483,109 @@ token0_attn_k_matvec_smoke:
 	ret
 
 .size token0_attn_k_matvec_smoke, . - token0_attn_k_matvec_smoke
+
+.type token0_attn_v_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 first attention-normalized
+# activation through the retained blk.0.attn_v.weight matrix.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_attn_norm_status, and token0_attn_norm_activation.
+# Outputs: rax = 1 when token0_attn_norm_activation is available and a
+# two-dimensional Q8_0 blk.0.attn_v.weight matrix with matching input width and
+# bounded output row count fits inside the mapping, after q8_0_matvec_f32 writes
+# token0_attn_v_output; otherwise rax = 0 and no value matrix payload is read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during q8_0_matvec_f32,
+# reads the static normalized activation as the shared f32 input vector, and
+# writes at most TOKEN0_ATTN_V_OUTPUT_BYTES into static output storage. The mmap
+# remains owned by _start and must be released separately.
+# Error behavior: this is a smoke gate for the first attention value projection,
+# not final graph setup. Non-target synthetic GGUF fixtures and shape mismatches
+# are skipped with status 0.
+token0_attn_v_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_attn_norm_status], 1
+	jne .Lattn_v_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_v_tensor_found], 1
+	jne .Lattn_v_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_v_tensor_n_dimensions], 2
+	jne .Lattn_v_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_v_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lattn_v_smoke_done
+
+	mov r8, qword ptr [rip + gguf_summary_attn_v_tensor_dim0]
+	test r8, r8
+	jz .Lattn_v_smoke_done
+	js .Lattn_v_smoke_done
+	test r8, Q8_0_BLOCK_SIZE - 1
+	jne .Lattn_v_smoke_done
+	cmp r8, TOKEN_EMBEDDING_ACTIVATION_VALUES
+	ja .Lattn_v_smoke_done
+
+	# The value projection consumes the same normalized hidden row produced by the
+	# RMSNorm smoke. Require the matrix input dimension to match that row exactly
+	# before deriving Q8_0 row strides.
+	cmp r8, qword ptr [rip + gguf_summary_attn_norm_tensor_dim0]
+	jne .Lattn_v_smoke_done
+
+	mov rcx, qword ptr [rip + gguf_summary_attn_v_tensor_dim1]
+	test rcx, rcx
+	jz .Lattn_v_smoke_done
+	js .Lattn_v_smoke_done
+	cmp rcx, TOKEN0_ATTN_V_OUTPUT_VALUES
+	ja .Lattn_v_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# matrix start and prove the full row-major Q8_0 matrix fits in the live mmap
+	# before handing any payload pointer to the math helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lattn_v_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_attn_v_tensor_offset]
+	test rdx, rdx
+	js .Lattn_v_smoke_skip
+	add rax, rdx
+	jc .Lattn_v_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lattn_v_smoke_skip
+
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Lattn_v_smoke_skip
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Lattn_v_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Lattn_v_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Lattn_v_smoke_skip
+	add rdi, rax
+	jc .Lattn_v_smoke_skip
+
+	lea rsi, [rip + token0_attn_norm_activation]
+	lea rdx, [rip + token0_attn_v_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Lattn_v_smoke_skip:
+	xor eax, eax
+
+.Lattn_v_smoke_done:
+	ret
+
+.size token0_attn_v_matvec_smoke, . - token0_attn_v_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits

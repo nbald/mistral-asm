@@ -578,3 +578,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   as Q8_0 with dimensions 3072 by 1024 and relative offset 457924608. Existing
   query/key smoke words stayed unchanged, and cleanup tracing still shows the
   live read-only mmap released after summary and smoke output.
+
+## 2026-05-10T16:06:48Z
+
+- The runtime now performs the guarded value-projection payload smoke: after
+  token 0 is dequantized and attention-normalized, `_start` validates
+  `blk.0.attn_v.weight` as a two-dimensional Q8_0 matrix with matching input
+  width and bounded 1024-row output storage, then calls the scalar Q8_0 matvec
+  into `token0_attn_v_output`.
+- Decision: this step prints only `token0_attn_v_matvec`. Value output words and
+  oracle comparison should follow as separate reviewable changes, matching the
+  earlier query/key sequence.
+- Verification evidence: clean rebuild and no-libc harnesses passed; synthetic
+  parser fixtures printed `token0_attn_v_matvec: 0`; the real local target
+  printed `token0_attn_v_matvec: 1`; existing query/key oracle words still
+  matched the runtime slices; cleanup tracing still showed the read-only mmap
+  released after smoke output.
