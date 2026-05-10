@@ -1178,3 +1178,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-1 key output labels were emitted, cleanup tracing still showed
   `close(3)` before final `munmap`, and the build, harness, oracle py-compile,
   runtime purity, artifact, and whitespace checks passed.
+
+## 2026-05-10T20:30:34Z
+
+- Published the first four raw f32 words of the token-0 layer-1 key projection
+  behind the existing `token0_layer1_attn_k_matvec` status gate. This mirrors
+  the query projection exposure and intentionally leaves external oracle
+  comparison to the next step.
+- Verification evidence: the real local target printed key words `0x3fb2a129`,
+  `0x405dbdbe`, `0x3f5611d3`, and `0x3f1e325d`. The empty valid synthetic GGUF
+  kept the layer-1 norm/query/key gates at 0 and emitted no layer-1 output
+  labels; rebuild, no-libc harnesses, cleanup tracing, oracle py-compile,
+  runtime purity, static-link, tracked-artifact, and whitespace checks passed.

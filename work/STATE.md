@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first four raw f32 words of `token0_layer1_attn_k_output` behind the
-existing `token0_layer1_attn_k_matvec` status gate.
+Add external oracle tooling for the published `token0_layer1_attn_k_output`
+slice and compare it with the runtime output.
 
 ## Completed Work
 
@@ -30,11 +30,12 @@ existing `token0_layer1_attn_k_matvec` status gate.
   and publishes the first four raw f32 words only when status is 1. The real
   target reports `0x3f98c6d6`, `0x3e72aeb6`, `0x3e641287`, and `0x3e76b8f1`,
   matching the external oracle.
-- The guarded status-only `token0_layer1_attn_k_matvec` smoke consumes the
-  layer-1 attention RMSNorm activation and reusable `blk.1.attn_k.weight`
-  descriptor. It requires exact `3072x1024` Q8_0 shape, bounds the full mapped
-  matrix payload, writes only a private static output buffer, and prints status
-  1 on the real target. Empty synthetic GGUFs keep the status at 0.
+- The guarded `token0_layer1_attn_k_matvec` smoke consumes the layer-1 attention
+  RMSNorm activation and reusable `blk.1.attn_k.weight` descriptor. It requires
+  exact `3072x1024` Q8_0 shape, bounds the full mapped matrix payload, writes a
+  private output buffer, and publishes the first four raw f32 words only when
+  status is 1. The real target reports `0x3fb2a129`, `0x405dbdbe`,
+  `0x3f5611d3`, and `0x3f1e325d`.
 
 ## Known Blockers
 
@@ -65,18 +66,20 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `token0_layer1_attn_k_matvec: 1`; the layer-1 RMSNorm and query output words
-  stayed unchanged, and no `token0_layer1_attn_k_output*_f32_hex` labels were
-  emitted.
+  `token0_layer1_attn_k_matvec: 1` and
+  `token0_layer1_attn_k_output*_f32_hex` words `0x3fb2a129`, `0x405dbdbe`,
+  `0x3f5611d3`, and `0x3f1e325d`; the layer-1 RMSNorm and query output words
+  stayed unchanged.
 - A temporary empty valid GGUF printed zeroed layer-1 query/key descriptor
-  fields and kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`, and
-  `token0_layer1_attn_k_matvec` at 0.
+  fields, kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`, and
+  `token0_layer1_attn_k_matvec` at 0, and emitted no layer-1 query/key output
+  labels.
 - `strace -e close,munmap` on the real target showed `close(3)` before the final
   `munmap`.
-- `python3 -m py_compile work/oracle/*.py`, runtime source purity scan, tracked
-  artifact scan, and `git diff --check` passed.
+- `python3 -m py_compile work/oracle/*.py`, runtime source purity scan,
+  static-link inspection, tracked artifact scan, and `git diff --check` passed.
 
 ## Next Exact Step
 
-Publish the first four raw f32 words of `token0_layer1_attn_k_output` behind the
-existing `token0_layer1_attn_k_matvec` status gate.
+Add external oracle tooling for the published `token0_layer1_attn_k_output`
+slice and compare it with the runtime output.
