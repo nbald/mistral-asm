@@ -1154,3 +1154,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   the current runtime labels exactly. The prerequisite post-FFN residual and
   layer-1 attention RMSNorm words stayed unchanged, and the assembly harnesses
   still passed.
+
+## 2026-05-10T20:22:46Z
+
+- Added descriptor-only runtime coverage for `blk.1.attn_k.weight` in its own
+  reusable lookup slot. This deliberately does not read key projection payload
+  bytes and leaves the layer-1 query matvec path wired to the existing query
+  descriptor slot.
+- Verification evidence: the empty synthetic GGUF printed zeroed layer-1 key
+  descriptor fields. The real target printed the key descriptor as Q8_0
+  `3072x1024` at relative offset `551522304`, matching an external parser
+  check, while the existing layer-1 query output words stayed unchanged.

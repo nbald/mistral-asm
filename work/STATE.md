@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only runtime lookup and printed summary fields for
-`blk.1.attn_k.weight` in a separate scratch slot, without reading key-projection
-payload bytes or changing the layer-1 query math path.
+Add a guarded status-only `token0_layer1_attn_k_matvec` smoke using the
+reusable `blk.1.attn_k.weight` descriptor and the existing layer-1 attention
+RMSNorm activation. Keep its output private and do not publish exact words yet.
 
 ## Completed Work
 
@@ -25,10 +25,12 @@ payload bytes or changing the layer-1 query math path.
   `blk.1.attn_norm.weight` descriptor. The real target prints status 1 and
   exact words `0xc05ae197`, `0xc1210d34`, `0x426154e8`, and `0xc0a7934a`,
   matching the external oracle.
-- The runtime now also captures `blk.1.attn_q.weight` in a separate reusable
-  160-byte scratch descriptor and prints descriptor-only fields. The real target
-  reports dimensions `3072x4096`, GGML type `8` (`Q8_0`), and relative offset
-  `568246272`; empty synthetic GGUFs print zeroed layer-1 query fields.
+- The runtime now captures `blk.1.attn_q.weight` and `blk.1.attn_k.weight` in
+  separate reusable 160-byte scratch descriptors and prints descriptor-only
+  fields. The real target reports query dimensions `3072x4096`, GGML type `8`,
+  and relative offset `568246272`; it reports key dimensions `3072x1024`, GGML
+  type `8`, and relative offset `551522304`. Empty synthetic GGUFs print zeroed
+  layer-1 query/key fields.
 - A guarded `token0_layer1_attn_q_matvec` smoke consumes the layer-1 attention
   RMSNorm activation and the reusable `blk.1.attn_q.weight` descriptor. It
   requires exact `3072x4096` Q8_0 shape, bounds the full mapped matrix payload,
@@ -78,10 +80,13 @@ None.
   printed layer-1 query oracle words `0x3f98c6d6`, `0x3e72aeb6`,
   `0x3e641287`, and `0x3e76b8f1`, with the recorded post-FFN residual and
   layer-1 attention RMSNorm prerequisite words unchanged.
-- `./mistral-asm` on the real target GGUF printed `token0_layer1_attn_q_matvec:
-  1`; a focused oracle/runtime comparison over the post-FFN residual, layer-1
-  attention RMSNorm, and layer-1 query labels printed `layer1 query
-  oracle/runtime comparison: ok`.
+- `./mistral-asm` on the real target GGUF printed
+  `layer1_attn_k_tensor_found: 1`, dimensions `3072x1024`, GGML type `8`, and
+  relative offset `551522304`, matching an external parser check. Existing
+  layer-1 query output words remained `0x3f98c6d6`, `0x3e72aeb6`,
+  `0x3e641287`, and `0x3e76b8f1`.
+- An empty synthetic GGUF printed zeroed layer-1 key descriptor fields and kept
+  `token0_layer1_attn_q_matvec: 0`.
 - `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
   source files.
 - `git ls-files` found no tracked model files, GGUFs, large logs, traces, or
@@ -90,6 +95,6 @@ None.
 
 ## Next Exact Step
 
-Add descriptor-only runtime lookup and printed summary fields for
-`blk.1.attn_k.weight`, using a separate reusable descriptor slot and preserving
-the existing layer-1 query projection behavior.
+Add a guarded status-only `token0_layer1_attn_k_matvec` smoke using the
+reusable `blk.1.attn_k.weight` descriptor and the existing layer-1 attention
+RMSNorm activation. Keep its output private and do not publish exact words yet.
