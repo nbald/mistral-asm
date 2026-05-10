@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 post-attention residual smoke that sums
-`token_embedding_activation` and `token0_attn_output` into a 3072-f32 static
-buffer, prints a status and the first four exact-hex words, and does not add new
-tensor payload reads.
+Add an external oracle comparison for the token-0 post-attention residual first
+four exact-hex words, using only verification tooling outside the assembly
+runtime.
 
 ## Completed Work
 
@@ -39,6 +38,12 @@ tensor payload reads.
   static 4096-f32 context into a 3072-f32 static buffer, and prints
   `token0_attn_output_matvec` plus guarded `token0_attn_output0..3_f32_hex`
   words.
+- The guarded post-attention residual smoke requires successful token-0
+  embedding dequantization, successful attention output projection, and an
+  exact 3072-f32 embedding width, then sums `token_embedding_activation` and
+  `token0_attn_output` into a 3072-f32 static buffer without reading any new
+  tensor payload bytes. It prints `token0_post_attn_residual` plus guarded
+  `token0_post_attn_residual0..3_f32_hex` words.
 - The verification-only output projection oracle parses the target GGUF
   externally, recomputes token 0 attention RMSNorm, all 1024 value rows, the
   repeated 4096-f32 single-token context, and the first four output projection
@@ -78,13 +83,15 @@ None.
   projection math or shared token-0 inputs change.
 - Rerun the external output projection oracle comparison when value projection,
   context expansion, output projection math, or shared token-0 inputs change.
+- Add and rerun an external residual oracle comparison when residual math or
+  shared token-0 inputs change.
 
 ## Last Verification
 
 - `make clean && make` passed.
 - `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 and reported the output projection
-  smoke milestone; the current unsupported prompt generation form returned
+- `./mistral-asm --help` returned status 0 and reported the residual smoke
+  milestone; the current unsupported prompt generation form returned
   status 2 with the usage diagnostic.
 - `readelf -d` reported no dynamic section; `readelf -l` showed only LOAD and
   GNU_STACK program headers, with no interpreter or dynamic program header.
@@ -92,7 +99,8 @@ None.
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
   `attn_output_tensor_found: 0`, and kept `token0_attn_context: 0` and
-  `token0_attn_output_matvec: 0` with no context or output word slices.
+  `token0_attn_output_matvec: 0` with no context, output, or residual word
+  slices.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
@@ -103,23 +111,23 @@ None.
   `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`, matching the
   first four value-projection words exactly, printed
   `token0_attn_output_matvec: 1`, and printed output words `0xbd553ed5`,
-  `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`.
+  `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`. It also printed
+  `token0_post_attn_residual: 1` and residual words `0xbd41a6d5`,
+  `0xbe4a334d`, `0x3f822e41`, and `0x3d7fcd1a`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed `close(3) = 0`, printed the guarded value, context, and output words
-  plus `token0_attn_output_matvec: 1` before final cleanup, and showed
+  showed `mmap(..., 3651679520, PROT_READ, MAP_PRIVATE, 3, 0)`, `close(3) = 0`,
+  printed the guarded residual words before final cleanup, and showed
   `munmap(..., 3651679520) = 0`.
-- `python3 work/oracle/token0_attn_output_oracle.py` on the real target printed
-  context words `0x3ca3b3bc`, `0x3c9bf3e4`, `0x3c29a3e4`, and `0xbb17585e`,
-  and output words `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and
-  `0x3d799d1a`, exactly matching the runtime slices.
+- `python3 work/oracle/token0_attn_output_oracle.py <target-model>` printed the
+  previously matched context and output words. There is not yet a committed
+  residual oracle.
 - The external query/key/value projection oracles were not rerun because this
-  step added only output-projection verification tooling and notes, not runtime
-  projection math or shared token-0 inputs.
+  step added only a static residual add after existing output-projection math,
+  not projection math or shared token-0 inputs.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Add a guarded token-0 post-attention residual smoke that sums
-`token_embedding_activation` and `token0_attn_output` into a 3072-f32 static
-buffer, prints a status and the first four exact-hex words, and does not add new
-tensor payload reads.
+Add an external oracle comparison for the token-0 post-attention residual first
+four exact-hex words, using only verification tooling outside the assembly
+runtime.

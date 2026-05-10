@@ -27,6 +27,8 @@
 .equ TOKEN0_ATTN_CONTEXT_BYTES, TOKEN0_ATTN_CONTEXT_VALUES * 4
 .equ TOKEN0_ATTN_OUTPUT_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
 .equ TOKEN0_ATTN_OUTPUT_BYTES, TOKEN0_ATTN_OUTPUT_VALUES * 4
+.equ TOKEN0_POST_ATTN_RESIDUAL_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
+.equ TOKEN0_POST_ATTN_RESIDUAL_BYTES, TOKEN0_POST_ATTN_RESIDUAL_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -44,7 +46,8 @@ help_text:
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
 	.ascii "Current milestone: GGUF tensor summary with token embedding, "
-	.ascii "RMSNorm, attention query/key/value smoke, context, and output projection smoke.\n"
+	.ascii "RMSNorm, attention query/key/value smoke, context, "
+	.ascii "output projection, and residual smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -371,6 +374,10 @@ token0_attn_output_matvec_text:
 	.ascii "token0_attn_output_matvec: "
 token0_attn_output_matvec_text_end:
 
+token0_post_attn_residual_text:
+	.ascii "token0_post_attn_residual: "
+token0_post_attn_residual_text_end:
+
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
 token0_attn_q_output0_f32_text_end:
@@ -450,6 +457,22 @@ token0_attn_output2_f32_text_end:
 token0_attn_output3_f32_text:
 	.ascii "token0_attn_output3_f32_hex: "
 token0_attn_output3_f32_text_end:
+
+token0_post_attn_residual0_f32_text:
+	.ascii "token0_post_attn_residual0_f32_hex: "
+token0_post_attn_residual0_f32_text_end:
+
+token0_post_attn_residual1_f32_text:
+	.ascii "token0_post_attn_residual1_f32_hex: "
+token0_post_attn_residual1_f32_text_end:
+
+token0_post_attn_residual2_f32_text:
+	.ascii "token0_post_attn_residual2_f32_hex: "
+token0_post_attn_residual2_f32_text_end:
+
+token0_post_attn_residual3_f32_text:
+	.ascii "token0_post_attn_residual3_f32_hex: "
+token0_post_attn_residual3_f32_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -692,6 +715,10 @@ token0_attn_context_status:
 token0_attn_output_matvec_status:
 	.skip 8
 
+.balign 8
+token0_post_attn_residual_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -720,6 +747,10 @@ token0_attn_context:
 token0_attn_output:
 	.skip TOKEN0_ATTN_OUTPUT_BYTES
 
+.balign 4
+token0_post_attn_residual:
+	.skip TOKEN0_POST_ATTN_RESIDUAL_BYTES
+
 .section .text
 
 .global _start
@@ -738,8 +769,9 @@ token0_attn_output:
 # keeps it live through the current summary path and token embedding, RMSNorm,
 # first query projection, first key projection, and first value projection
 # smokes, then derives the single-token attention context and projects it
-# through the first output projection before releasing the mapping explicitly
-# with gguf_release_mapping before exit. The
+# through the first output projection before adding the post-attention residual
+# from process-owned static buffers and releasing the mapping explicitly with
+# gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
 # bounded metadata
@@ -2031,6 +2063,25 @@ _start:
 
 	call print_token0_attn_output_slice
 
+	call token0_post_attn_residual_smoke
+	mov qword ptr [rip + token0_post_attn_residual_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_attn_residual_text]
+	mov rdx, token0_post_attn_residual_text_end - token0_post_attn_residual_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_post_attn_residual_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	call print_token0_post_attn_residual_slice
+
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
 	lea rdi, [rip + gguf_mapping]
@@ -2633,6 +2684,85 @@ print_token0_attn_output_slice:
 	ret
 
 .size print_token0_attn_output_slice, . - print_token0_attn_output_slice
+
+.type print_token0_post_attn_residual_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 post-attention
+# residual when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_post_attn_residual_status and the
+# first four f32 words of token0_post_attn_residual.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_post_attn_residual_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads process-owned static residual storage only during
+# this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_post_attn_residual_slice:
+	cmp qword ptr [rip + token0_post_attn_residual_status], 1
+	jne .Lprint_post_attn_residual_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_attn_residual0_f32_text]
+	mov rdx, token0_post_attn_residual0_f32_text_end - token0_post_attn_residual0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_post_attn_residual]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_attn_residual1_f32_text]
+	mov rdx, token0_post_attn_residual1_f32_text_end - token0_post_attn_residual1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_post_attn_residual + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_attn_residual2_f32_text]
+	mov rdx, token0_post_attn_residual2_f32_text_end - token0_post_attn_residual2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_post_attn_residual + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_post_attn_residual3_f32_text]
+	mov rdx, token0_post_attn_residual3_f32_text_end - token0_post_attn_residual3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_post_attn_residual + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_post_attn_residual_slice_done:
+	ret
+
+.size print_token0_post_attn_residual_slice, . - print_token0_post_attn_residual_slice
 
 .type dequant_token0_embedding_smoke, @function
 
@@ -3288,5 +3418,57 @@ token0_attn_output_matvec_smoke:
 	ret
 
 .size token0_attn_output_matvec_smoke, . - token0_attn_output_matvec_smoke
+
+.type token0_post_attn_residual_smoke, @function
+
+# Contract: derive the token-0 post-attention residual activation.
+# Inputs: no register inputs. Reads token0_embedding_dequant_status,
+# token0_attn_output_matvec_status, token_embedding_activation, and
+# token0_attn_output.
+# Outputs: rax = 1 after writing 3072 f32 sums to
+# token0_post_attn_residual; otherwise rax = 0 and no residual bytes are
+# written.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads only process-owned static activation and attention
+# output storage, writes only process-owned static residual storage, and does
+# not read any mapped tensor payload bytes.
+# Error behavior: this is a smoke gate for the first post-attention residual,
+# not final layer execution. Missing prerequisites or non-target hidden width
+# are skipped with status 0.
+token0_post_attn_residual_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_embedding_dequant_status], 1
+	jne .Lpost_attn_residual_done
+	cmp qword ptr [rip + token0_attn_output_matvec_status], 1
+	jne .Lpost_attn_residual_done
+
+	# The embedding smoke can accept narrower synthetic rows. The residual add
+	# consumes a complete hidden row, so require the target 3072-f32 width before
+	# reading the static activation tail.
+	cmp qword ptr [rip + gguf_summary_lookup_tensor_dim0], TOKEN0_POST_ATTN_RESIDUAL_VALUES
+	jne .Lpost_attn_residual_done
+
+	lea rsi, [rip + token_embedding_activation]
+	lea rdx, [rip + token0_attn_output]
+	lea rdi, [rip + token0_post_attn_residual]
+	mov rcx, TOKEN0_POST_ATTN_RESIDUAL_VALUES
+
+.Lpost_attn_residual_loop:
+	vmovss xmm0, dword ptr [rsi]
+	vmovss xmm1, dword ptr [rdx]
+	vaddss xmm0, xmm0, xmm1
+	vmovss dword ptr [rdi], xmm0
+	add rsi, 4
+	add rdx, 4
+	add rdi, 4
+	dec rcx
+	jnz .Lpost_attn_residual_loop
+
+	mov eax, 1
+
+.Lpost_attn_residual_done:
+	ret
+
+.size token0_post_attn_residual_smoke, . - token0_post_attn_residual_smoke
 
 .section .note.GNU-stack,"",@progbits

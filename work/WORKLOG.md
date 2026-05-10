@@ -703,3 +703,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   words `0xbd553ed5`, `0xbe2c4b4d`, `0x3f7c2d02`, and `0x3d799d1a`.
   Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
   real-model smoke, cleanup tracing, and whitespace checks passed.
+
+## 2026-05-10T16:52:38Z
+
+- The runtime now derives the first post-attention residual for token 0 by
+  adding the retained token embedding activation and the retained attention
+  output projection into a new 3072-f32 static buffer. The helper is static-only:
+  it adds no tensor descriptor or mmap payload reads.
+- Decision: guard the residual add on both predecessor smoke statuses and the
+  exact 3072-f32 embedding width, because earlier embedding smokes intentionally
+  tolerate narrow synthetic fixtures.
+- Verification evidence: synthetic fixtures kept `token0_post_attn_residual: 0`
+  with no residual word slice, while the real local target printed status 1 and
+  residual words `0xbd41a6d5`, `0xbe4a334d`, `0x3f822e41`, and `0x3d7fcd1a`.
+  Cleanup tracing still showed `close(3)` before final `munmap`.
