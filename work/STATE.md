@@ -2,13 +2,13 @@
 
 ## Current Milestone
 
-Milestone 7: Review pass.
+Milestone 8: Q8_0 matvec.
 
 ## Current Exact Task
 
-Fix the Milestone 7 review finding: reject tensor descriptors whose relative
-payload offsets point beyond the mapped file once the aligned tensor-data base is
-known.
+Begin the scalar Q8_0 math slice by adding a small, audited assembly routine for
+one Q8_0 block dot product and a verification path that can compare it against a
+simple external calculation.
 
 ## Completed Work
 
@@ -34,6 +34,9 @@ known.
   aligned tensor relative offsets can point beyond EOF because the walker checks
   descriptor bounds and offset alignment but not `tensor_data_base + offset`
   against the mapped file length.
+- The Milestone 7 parser gap is fixed: the tensor-info walker tracks the largest
+  relative payload offset across all descriptors and rejects directories whose
+  aligned tensor-data base plus that offset does not land inside the mapped file.
 
 ## Known Blockers
 
@@ -41,45 +44,40 @@ None.
 
 ## Relevant Files
 
-- `src/entry/_start.s`
 - `src/gguf/load_header.s`
+- `src/entry/_start.s`
+- `src/math/` (next milestone destination; not yet present)
 - `work/reviews/`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Required Verification
 
-- Add a synthetic GGUF fixture whose tensor descriptor uses an aligned relative
-  offset beyond EOF, and verify it is rejected with status 3 and the malformed
-  tensor-directory diagnostic.
-- Re-run the successful tensor-directory summary fixture to prove valid aligned
-  offsets still pass.
-- Run rebuild, help, future prompt-form rejection, static-link, and whitespace
-  checks.
+- Define focused scalar Q8_0 dot-product fixtures with known expected results.
+- Rebuild with `as`/`ld`.
+- Verify the new assembly math routine against the expected scalar results.
+- Keep existing GGUF loader smoke checks passing.
 
 ## Last Verification
 
 - `make clean && make` passed.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
   summary milestone.
-- Synthetic GGUF fixtures verified empty tensor summary zero-fill, first tensor
-  dimension capture for two-dimension and four-dimension descriptors, zero-fill
-  of unused dimension slots, metadata summary preservation, and continued
-  walking of a second tensor descriptor.
-- Synthetic failure fixtures still reject a misaligned second tensor offset and
-  a truncated first tensor dimension array with status 3 diagnostics.
-- Invoking the future prompt generation form returned the usage error with
-  status 2.
+- Synthetic GGUF fixture `/tmp/mistral_asm_tensor_valid.gguf` with one tensor,
+  aligned offset 0, and one payload byte returned status 0 and printed the first
+  tensor summary.
+- Synthetic GGUF fixture `/tmp/mistral_asm_tensor_offset_beyond_file.gguf` with
+  one tensor and aligned relative offset 1024 returned status 3 with the
+  malformed tensor-directory diagnostic.
+- Invoking the future prompt generation form returned the usage error with status
+  2.
 - `readelf` reported no dynamic section and no interpreter or dynamic program
   headers.
 - Target model file was not present locally.
 - `git diff --check` passed.
-- Review fixture `/tmp/mistral_asm_tensor_offset_beyond_file.gguf` proved the
-  offset gap: a 64-byte one-tensor GGUF with `first_tensor_offset: 1024` returned
-  status 0.
 
 ## Next Exact Step
 
-Fix tensor relative payload offset validation in `src/gguf/load_header.s`, then
-verify the beyond-EOF offset fixture is rejected and valid tensor-directory
-fixtures still pass.
+Add `src/math/q8_0_dot.s` with a scalar one-block Q8_0 dot-product routine and
+wire a minimal assembly verification target or harness so known fixtures can
+exercise it without libc.

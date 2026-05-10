@@ -630,20 +630,26 @@ gguf_capture_string_to_fixed:
 # tensor-data start offset on success when tensors exist, or the unchanged cursor
 # when tensor_count is zero.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
-# it uses (rbx, r12, r13, r14, r15).
+# it uses (rbx, rbp, r12, r13, r14, r15).
 # Ownership/lifetime: reads only from the caller-owned mapping. The first tensor
 # name and up to four dimension sizes are copied into fixed-size caller-owned
 # summary storage; no mapped-file pointer is retained.
 # Error behavior: returns malformed-tensor status before any out-of-bounds read.
-# Tensor payload offsets with the high bit set or not divisible by the current
-# default alignment are rejected in this narrow parser.
+# Tensor payload offsets with the high bit set, not divisible by the current
+# default alignment, or not landing inside the mapped file after tensor-data
+# base alignment are rejected in this narrow parser.
 gguf_walk_tensor_infos:
+	push rbp
 	push rbx
 	push r12
 	push r13
 	push r14
 	push r15
 
+	# rbp tracks the largest relative payload offset seen in the directory. Once
+	# the tensor-data base is aligned, one bounds check proves every retained
+	# relative payload start lands inside the mapping.
+	xor ebp, ebp
 	mov r13, rdi
 	mov r14, rsi
 	mov r12, rdx
@@ -739,6 +745,7 @@ gguf_walk_tensor_infos:
 	test al, GGUF_DEFAULT_ALIGNMENT - 1
 	jnz .Ltensor_bad_alignment
 	mov qword ptr [r15 + GGUF_SUMMARY_FIRST_TENSOR_OFFSET], rax
+	mov rbp, rax
 	add r12, 8
 
 	dec rbx
@@ -802,6 +809,8 @@ gguf_walk_tensor_infos:
 	js .Ltensor_bad
 	test al, GGUF_DEFAULT_ALIGNMENT - 1
 	jnz .Ltensor_bad_alignment
+	cmp rbp, rax
+	cmovb rbp, rax
 	add r12, 8
 
 	dec rbx
@@ -817,6 +826,13 @@ gguf_walk_tensor_infos:
 	and rax, -GGUF_DEFAULT_ALIGNMENT
 	cmp rax, r14
 	ja .Ltensor_bad
+	# The directory stores offsets relative to this aligned data base. Requiring
+	# the largest relative offset to be strictly smaller than the remaining file
+	# bytes proves every payload start address is inside the mmap range.
+	mov rdx, r14
+	sub rdx, rax
+	cmp rdx, rbp
+	jbe .Ltensor_bad
 	mov rdx, rax
 	xor eax, eax
 	jmp .Ltensor_epilogue
@@ -841,6 +857,7 @@ gguf_walk_tensor_infos:
 	pop r13
 	pop r12
 	pop rbx
+	pop rbp
 	ret
 
 .size gguf_walk_tensor_infos, . - gguf_walk_tensor_infos

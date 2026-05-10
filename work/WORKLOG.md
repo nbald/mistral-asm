@@ -244,3 +244,15 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence for the finding: a 64-byte synthetic one-tensor GGUF in
   `/tmp` with aligned `first_tensor_offset: 1024` was accepted with status 0.
   The next implementation step should turn that fixture into a rejection case.
+
+## 2026-05-10T13:47:11Z
+
+- Tensor-directory validation now records the maximum aligned relative payload
+  offset while walking descriptors, then checks it after aligning the tensor-data
+  base. The check is strict: a tensor payload start must land inside the mapped
+  file, not at the one-past-EOF address.
+- Verification evidence: the prior beyond-file synthetic fixture now exits with
+  status 3 and the malformed tensor-directory diagnostic; a valid one-tensor
+  fixture with one payload byte still prints the retained tensor summary.
+- The usual rebuild, help, future prompt-form rejection, static-link, and
+  whitespace checks passed. The target model file was still absent locally.
