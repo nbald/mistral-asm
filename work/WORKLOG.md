@@ -1214,3 +1214,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-1 query/key output words stayed unchanged, and build, harness, oracle
   py-compile, runtime purity, static-link, tracked-artifact, help, and whitespace
   checks passed.
+
+## 2026-05-10T20:46:38Z
+
+- Added the status-only layer-1 value projection smoke. It reuses the private
+  layer-1 attention RMSNorm activation and `blk.1.attn_v.weight` descriptor,
+  requires exact Q8_0 `3072x1024` shape, bounds the complete mapped payload, and
+  writes only private static output storage.
+- Verification evidence: the real target printed
+  `token0_layer1_attn_v_matvec: 1`, while a temporary empty valid GGUF kept it
+  at 0. No
+  `token0_layer1_attn_v_output*` labels were emitted yet; existing layer-1
+  query/key words stayed unchanged, cleanup tracing still showed `close(3)`
+  before final `munmap`, and the build, harness, oracle py-compile, runtime
+  purity, static-link, tracked-artifact, help, and whitespace checks passed.

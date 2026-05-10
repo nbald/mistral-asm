@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a status-only `token0_layer1_attn_v_matvec` smoke using the reusable
-`blk.1.attn_v.weight` descriptor, without publishing value output words yet.
+Publish the first four raw f32 words from `token0_layer1_attn_v_output` behind
+the existing `token0_layer1_attn_v_matvec` status gate.
 
 ## Completed Work
 
@@ -40,6 +40,11 @@ Add a status-only `token0_layer1_attn_v_matvec` smoke using the reusable
 - External oracle tooling now independently recomputes the published
   `token0_layer1_attn_k_output` slice from the full layer-0 FFN and layer-1
   attention RMSNorm chain. The oracle matches the runtime key words exactly.
+- The guarded status-only `token0_layer1_attn_v_matvec` smoke consumes the
+  layer-1 attention RMSNorm activation and reusable `blk.1.attn_v.weight`
+  descriptor. It requires exact `3072x1024` Q8_0 shape, bounds the full mapped
+  matrix payload, writes a private output buffer, and deliberately publishes no
+  value output words yet. The real target reports status 1.
 
 ## Known Blockers
 
@@ -72,19 +77,19 @@ None.
 - `make && make check` passed; the harnesses printed `q8_0_dot: ok`,
   `rmsnorm: ok`, `swiglu: ok`, and `gguf_lookup: ok`.
 - `./mistral-asm` on the real target GGUF printed
-  `layer1_attn_v_tensor_found: 1`, dimensions `3072x1024`, type `8`, and
-  offset `581615616`; an external descriptor parser reported the same
-  `blk.1.attn_v.weight` fields.
+  `layer1_attn_v_tensor_found: 1`, dimensions `3072x1024`, type `8`, offset
+  `581615616`, and `token0_layer1_attn_v_matvec: 1`.
 - A temporary empty valid GGUF printed zeroed layer-1 query/key/value descriptor
-  fields and kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`, and
-  `token0_layer1_attn_k_matvec` at 0.
+  fields and kept `token0_layer1_attn_norm`, `token0_layer1_attn_q_matvec`,
+  `token0_layer1_attn_k_matvec`, and `token0_layer1_attn_v_matvec` at 0.
 - Existing layer-1 query/key public output words stayed unchanged on the real
-  target.
+  target, and the real target emitted no `token0_layer1_attn_v_output*` labels.
 - `python3 -m py_compile work/oracle/*.py`, `git diff --check`, runtime source
   purity scan, static-link inspection, tracked artifact scan, and `--help`
-  smoke passed.
+  smoke passed. Cleanup tracing on a temporary valid GGUF still showed
+  `close(3)` before the final `munmap`.
 
 ## Next Exact Step
 
-Add a status-only `token0_layer1_attn_v_matvec` smoke using the reusable
-`blk.1.attn_v.weight` descriptor, without publishing value output words yet.
+Publish the first four raw f32 words from `token0_layer1_attn_v_output` behind
+the existing `token0_layer1_attn_v_matvec` status gate.
