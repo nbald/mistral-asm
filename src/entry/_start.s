@@ -18,7 +18,7 @@ help_text:
 	.ascii "  mistral-asm --help\n"
 	.ascii "  mistral-asm <model.gguf>\n"
 	.ascii "\n"
-	.ascii "Current milestone: GGUF tensor directory summary with one lookup.\n"
+	.ascii "Current milestone: GGUF tensor directory summary with one lookup and tensor-data base.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -56,6 +56,10 @@ block_count_text_end:
 vocab_size_text:
 	.ascii "vocab_size: "
 vocab_size_text_end:
+
+tensor_data_offset_text:
+	.ascii "tensor_data_offset: "
+tensor_data_offset_text_end:
 
 first_tensor_name_text:
 	.ascii "first_tensor_name: "
@@ -231,6 +235,8 @@ gguf_summary_lookup_tensor_ggml_type:
 	.skip 8
 gguf_summary_lookup_tensor_offset:
 	.skip 8
+gguf_summary_tensor_data_offset:
+	.skip 8
 
 .section .text
 
@@ -251,7 +257,8 @@ gguf_summary_lookup_tensor_offset:
 # header counts, a bounded copy of selected metadata strings, and selected
 # scalar and array-length metadata values, plus a bounded snapshot of the first
 # tensor descriptor and the first requested tensor-name lookup, including up to
-# four dimension sizes for each retained descriptor.
+# four dimension sizes for each retained descriptor and the aligned tensor-data
+# base offset for non-empty tensor directories.
 # Error behavior: maps gguf_validate_file status codes to stderr diagnostics.
 _start:
 	# argc is the first word on the initial process stack. The milestone CLI
@@ -390,7 +397,8 @@ _start:
 .Lgguf_ok:
 	# This milestone validates the fixed GGUF header, metadata shapes, and
 	# tensor-info directory bounds, then exposes header counts, selected metadata,
-	# and the first tensor descriptor retained in caller-owned storage.
+	# the aligned tensor-data base, and retained tensor descriptors in
+	# caller-owned storage.
 	mov rdi, 1
 	lea rsi, [rip + gguf_ok_text]
 	mov rdx, gguf_ok_text_end - gguf_ok_text
@@ -474,6 +482,20 @@ _start:
 
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_vocab_size]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + tensor_data_offset_text]
+	mov rdx, tensor_data_offset_text_end - tensor_data_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call write_u64_decimal
 
 	mov rdi, 1

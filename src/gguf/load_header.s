@@ -31,7 +31,8 @@
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_DIMS, 336
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_GGML_TYPE, 368
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_OFFSET, 376
-.equ GGUF_SUMMARY_SIZE, 384
+.equ GGUF_SUMMARY_TENSOR_DATA_OFFSET, 384
+.equ GGUF_SUMMARY_SIZE, 392
 
 .equ GGUF_OK, 0
 .equ GGUF_ERR_OPEN, 1
@@ -80,8 +81,9 @@ tokenizer_tokens_key_end:
 # first tensor name at offset 72, the first tensor's dimension count at offset
 # 168, up to four u64 dimension sizes at offset 176, and the first tensor's
 # ggml_type and relative payload offset as u64 values at offsets 208 and 216,
-# followed by a one-name lookup descriptor slot beginning at offset 224. rdx =
-# pointer to the requested tensor name bytes; rcx = requested tensor name length.
+# followed by a one-name lookup descriptor slot beginning at offset 224 and the
+# aligned tensor-data base offset at offset 384. rdx = pointer to the requested
+# tensor name bytes; rcx = requested tensor name length.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -90,7 +92,8 @@ tokenizer_tokens_key_end:
 # descriptor or mapping. The summary buffer remains caller-owned; this function
 # writes header counts, bounded metadata copies, selected scalar metadata, and
 # selected array lengths into it, plus a bounded first tensor descriptor
-# snapshot and the bounded descriptor for the requested tensor when found.
+# snapshot, the bounded descriptor for the requested tensor when found, and the
+# aligned tensor-data base offset when the tensor directory is non-empty.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -208,6 +211,11 @@ gguf_validate_file:
 	call gguf_walk_tensor_infos
 	test rax, rax
 	jnz .Ltensor_failed
+	cmp qword ptr [r15 + GGUF_SUMMARY_TENSOR_COUNT], 0
+	je .Ltensor_data_base_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_TENSOR_DATA_OFFSET], rdx
+
+.Ltensor_data_base_recorded:
 
 	# The success path also unmaps before closing; no mapped pointer escapes.
 	mov rdi, r13

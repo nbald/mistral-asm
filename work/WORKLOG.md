@@ -318,3 +318,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   descriptor, absent lookup/default zero state, and malformed-later rejection.
   The local target GGUF resolves `token_embd.weight` as Q8_0 with dimensions
   3072 and 131072 and relative payload offset 12288.
+
+## 2026-05-10T14:22:31Z
+
+- The GGUF summary now retains the aligned tensor-data base offset alongside
+  relative tensor offsets, so payload starts can be audited as file offsets
+  without exposing mmap pointers.
+- Decision: empty tensor directories keep the zero-filled data-base summary
+  value because they have no tensor payload section to align.
+- Verification evidence: the focused synthetic fixture ended its descriptor at
+  byte 57 and printed `tensor_data_offset: 64`; lookup found/absent and
+  malformed-later fixtures preserved their prior behavior. The local target
+  GGUF printed data base `7882016` and `token_embd.weight` relative offset
+  `12288`.

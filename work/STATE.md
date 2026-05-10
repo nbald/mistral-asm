@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Prepare resolved tensor descriptors for payload access by retaining the aligned
-GGUF tensor-data base offset in caller-owned summary storage.
+Add a scalar GGML Q8_0 row-dequantize-to-f32 primitive with no-libc verifier
+coverage, so a token embedding row can become the first activation vector before
+full forward plumbing.
 
 ## Completed Work
 
@@ -54,6 +55,12 @@ GGUF tensor-data base offset in caller-owned summary storage.
 - The runtime currently requests `token_embd.weight`; the real target GGUF
   resolves it as a two-dimensional Q8_0 tensor with dimensions 3072 and 131072
   and relative payload offset 12288.
+- The GGUF summary retains and prints `tensor_data_offset`, the tensor-info
+  cursor rounded up to the 32-byte GGUF tensor-data alignment for non-empty
+  tensor directories. Empty tensor directories keep the zero-filled default.
+- The real target GGUF currently reports `tensor_data_offset: 7882016`, so the
+  retained `token_embd.weight` relative offset `12288` identifies file offset
+  `7894304` for that tensor's payload start.
 
 ## Known Blockers
 
@@ -72,32 +79,40 @@ None.
 
 ## Required Verification
 
-- Add a synthetic GGUF fixture proving the retained tensor-data base offset is
-  the descriptor cursor rounded up to 32 bytes.
+- Add no-libc assembly verifier coverage for exact f32 bit patterns from scalar
+  Q8_0 row dequantization, including at least one multi-block row.
 - Rebuild with `as`/`ld`.
-- Keep `make check`, existing GGUF loader lookup smoke checks, future CLI usage
-  rejection, static-link checks, and whitespace checks passing.
+- Keep `make check`, existing GGUF loader lookup/base-offset smoke checks,
+  future CLI usage rejection, static-link checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 
 ## Last Verification
 
 - `make clean && make && make check` passed, printing `q8_0_dot: ok`.
 - `./mistral-asm --help` returned status 0 and lists the tensor-directory
-  summary with one lookup.
+  summary with one lookup and tensor-data base.
+- Synthetic tensor-base fixture `/tmp/mistral_asm_tensor_base_round.gguf`
+  returned status 0 and printed `tensor_data_offset: 64`, proving a 57-byte
+  descriptor cursor is rounded up to the 32-byte GGUF data alignment.
 - Synthetic lookup fixture `/tmp/mistral_asm_lookup_found.gguf` returned status
-  0, kept `first_tensor_name: other.weight`, and filled the lookup slot for
+  0, printed `tensor_data_offset: 128`, kept
+  `first_tensor_name: other.weight`, and filled the lookup slot for
   `token_embd.weight` with dimensions 4 and 5, ggml type 8, and relative offset
   32.
 - Synthetic lookup fixture `/tmp/mistral_asm_lookup_absent.gguf` returned status
-  0 and left the lookup slot at the zero/default state.
+  0, printed `tensor_data_offset: 96`, and left the lookup slot at the
+  zero/default state.
 - Synthetic lookup fixture `/tmp/mistral_asm_lookup_malformed_later.gguf`
   returned status 3 with the misaligned tensor-data diagnostic even though the
   requested tensor appeared before the malformed later descriptor.
+- Synthetic beyond-EOF fixture `/tmp/mistral_asm_offset_beyond_eof.gguf`
+  returned status 3 with the malformed tensor-directory diagnostic.
 - Invoking the future prompt generation form returned the usage error with
   status 2.
 - The target model is present under
   `models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`;
-  loading it returned status 0 and printed `lookup_tensor_found: 1`,
+  loading the actual local path returned status 0 and printed
+  `tensor_data_offset: 7882016`, `lookup_tensor_found: 1`,
   `lookup_tensor_name: token_embd.weight`, `lookup_tensor_dim0: 3072`,
   `lookup_tensor_dim1: 131072`, `lookup_tensor_ggml_type: 8`, and
   `lookup_tensor_offset: 12288`.
@@ -107,6 +122,6 @@ None.
 
 ## Next Exact Step
 
-Extend the GGUF summary with the aligned tensor-data base offset and print it,
-so the retained relative tensor offsets can be audited as file-relative payload
-starts before persistent model mappings are introduced.
+Add a scalar Q8_0 row dequantization routine that writes f32 activations from
+GGML Q8_0 blocks, then extend the no-libc math verifier with exact-bit fixtures
+for one-block and multi-block rows.
