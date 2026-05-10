@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Retain and print the `blk.0.attn_k.weight` descriptor so the first-layer
-attention key projection can be wired as a separate guarded smoke.
+Wire a guarded token-0 attention key projection matvec from the retained
+`blk.0.attn_k.weight` descriptor and print its smoke status.
 
 ## Completed Work
 
@@ -16,29 +16,23 @@ attention key projection can be wired as a separate guarded smoke.
 - The GGUF loader validates the narrow v3 little-endian target shape, walks
   metadata and tensor descriptors with bounds checks, records the aligned
   tensor-data base, and returns a live read-only mapping descriptor to `_start`.
-- The summary captures tensor and metadata counts, architecture, context length,
-  layer count, vocab size, tensor-data base, the first tensor descriptor,
-  `token_embd.weight`, `blk.0.attn_norm.weight`, `blk.0.attn_q.weight`, and
-  `mistral3.attention.layer_norm_rms_epsilon` as a found flag plus exact f32
-  bits.
+- The summary captures counts, selected Mistral metadata, the first tensor
+  descriptor, `token_embd.weight`, `blk.0.attn_norm.weight`,
+  `blk.0.attn_q.weight`, `blk.0.attn_k.weight`, and
+  `mistral3.attention.layer_norm_rms_epsilon` as exact f32 bits.
 - Scalar Q8_0 helpers cover block dot, row dot, row-major matvec, row dequant,
   and checked token-embedding dequantization with no-libc verifier coverage.
 - Scalar f32 RMSNorm exists as a documented primitive with no-libc verifier
   coverage.
-- `_start` prints the retained summary fields, keeps the model mapping live
-  through guarded token ID 0 embedding dequantization and first attention
-  RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, prints the
-  retained first-layer attention query projection descriptor, runs a guarded
-  token ID 0 attention query projection matvec into static output storage,
-  prints the first four output f32 words as exact hex bits when that smoke
-  succeeds, then calls `gguf_release_mapping`.
+- `_start` prints retained summary fields, keeps the model mapping live through
+  guarded token ID 0 embedding dequantization, attention RMSNorm, and query
+  projection smokes, prints the first four query output f32 words as exact hex
+  bits on success, then calls `gguf_release_mapping`.
 - Synthetic parser fixtures that are not target-shaped skip payload smokes and
-  print zero smoke statuses while preserving summary behavior and emit no query
-  output slice.
-- External oracle tooling under `work/oracle/` now parses the target GGUF
-  independently and reproduces the current scalar f32 token-0 embedding,
-  attention RMSNorm, and first four query projection dot products. The oracle
-  exactly matches the runtime `token0_attn_q_output[0..3]` f32 hex words.
+  print zero smoke statuses while preserving summary behavior.
+- External oracle tooling under `work/oracle/` independently reproduces the
+  current scalar f32 token-0 embedding, attention RMSNorm, and first four query
+  projection dot products; those words match the runtime output.
 
 ## Known Blockers
 
@@ -62,50 +56,42 @@ None.
 
 - Rebuild with `as`/`ld`.
 - Keep `make check`, static-link checks, future CLI usage rejection, GGUF smoke
-  checks, and whitespace checks passing.
+  checks, cleanup tracing, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
-- Verify explicit cleanup of any live model mapping.
 - Rerun the external `token0_attn_q_oracle.py` comparison when query-projection
   math or its inputs change.
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed; the harnesses printed
-  `q8_0_dot: ok` and `rmsnorm: ok`.
-- `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
-  and printed oracle query output words `0xbf9945a5`, `0xbf0612bc`,
-  `0xbe09ed5f`, and `0xbf155e8e`.
-- `./mistral-asm --help` returned status 0 and showed the attention query smoke
-  milestone text; the future prompt generation form returned status 2 with the
-  usage diagnostic.
+- `make clean && make` passed.
+- `make check` passed; the harnesses printed `q8_0_dot: ok` and `rmsnorm: ok`.
+- `./mistral-asm --help` returned status 0 and showed the key descriptor
+  summary milestone text; the future prompt generation form returned status 2
+  with the usage diagnostic.
 - `readelf -d` reported no dynamic section, and `readelf -l` reported no
   interpreter or dynamic program headers.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
-  `attn_norm_rms_epsilon_found: 0`,
-  `attn_norm_rms_epsilon_f32_hex: 0x00000000`, kept
-  `attn_q_tensor_found: 0`, and kept
-  `token0_embedding_dequant: 0`, `token0_attn_norm: 0`, and
-  `token0_attn_q_matvec: 0`.
+  `attn_k_tensor_found: 0`, and kept `token0_embedding_dequant: 0`,
+  `token0_attn_norm: 0`, and `token0_attn_q_matvec: 0`.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
   alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
-  `attn_norm_rms_epsilon_found: 1`,
-  `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, `tensor_data_offset: 7882016`,
-  retained `blk.0.attn_norm.weight` as f32 with dimension 3072, retained
-  `blk.0.attn_q.weight` as Q8_0 with dimensions 3072 and 4096 at relative
-  offset 444555264, and printed `token0_embedding_dequant: 1`,
-  `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, plus query output slice
-  words `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
-- `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, successful query smoke output and the four query output slice
-  words, then `munmap(..., 3651679520) = 0`.
-- `git diff --check` passed after the final work-file updates.
+  `blk.0.attn_k.weight` as Q8_0 with dimensions 3072 and 1024 at relative
+  offset 427831296, kept `token0_embedding_dequant: 1`,
+  `token0_attn_norm: 1`, `token0_attn_q_matvec: 1`, and printed query output
+  slice words `0xbf9945a5`, `0xbf0612bc`, `0xbe09ed5f`, and `0xbf155e8e`.
+- `strace -e trace=mmap,munmap,close` on the real target returned status 0,
+  showed `close(3) = 0`, successful summary output including the key descriptor,
+  and `munmap(..., 3651679520) = 0`.
+- `python3 work/oracle/token0_attn_q_oracle.py <target.gguf>` returned status 0
+  and matched the runtime query output words above.
+- `git diff --check` passed.
 
 ## Next Exact Step
 
-Retain and print the `blk.0.attn_k.weight` descriptor so the first-layer
-attention key projection can be wired as a separate guarded smoke.
+Wire a guarded token-0 attention key projection matvec from the retained
+`blk.0.attn_k.weight` descriptor and print its smoke status.

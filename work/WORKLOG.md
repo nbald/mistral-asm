@@ -507,3 +507,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0xbe09ed5f`, and `0xbf155e8e`, exactly matching the runtime slice. Rebuild,
   no-libc harnesses, static-link inspection, synthetic GGUF checks, real-model
   smoke, cleanup tracing, and whitespace checks also passed.
+
+## 2026-05-10T15:43:51Z
+
+- The tensor directory summary now retains the fixed
+  `blk.0.attn_k.weight` descriptor alongside the existing embedding, attention
+  RMSNorm, and query projection descriptors. This step is descriptor plumbing
+  only; no key payload bytes are read yet.
+- Decision: keep the key descriptor in its own summary slot immediately after
+  the query descriptor and before the RMSNorm epsilon fields, matching the
+  fixed-slot pattern already used for the query descriptor.
+- Verification evidence: the real local target reports `blk.0.attn_k.weight` as
+  Q8_0 with dimensions 3072 by 1024 and relative offset 427831296, while the
+  existing embedding, RMSNorm, and query smoke statuses remain 1 and the query
+  oracle words still match. Synthetic parser fixtures keep the key descriptor
+  absent and skip payload smokes; cleanup tracing still shows the read-only mmap
+  released after summary output.

@@ -46,9 +46,16 @@
 .equ GGUF_SUMMARY_ATTN_Q_TENSOR_DIMS, 664
 .equ GGUF_SUMMARY_ATTN_Q_TENSOR_GGML_TYPE, 696
 .equ GGUF_SUMMARY_ATTN_Q_TENSOR_OFFSET, 704
-.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_FOUND, 712
-.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_F32, 720
-.equ GGUF_SUMMARY_SIZE, 728
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_FOUND, 712
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_NAME, 720
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_NAME_CAP, 96
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_N_DIMS, 816
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_DIMS, 824
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_GGML_TYPE, 856
+.equ GGUF_SUMMARY_ATTN_K_TENSOR_OFFSET, 864
+.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_FOUND, 872
+.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_F32, 880
+.equ GGUF_SUMMARY_SIZE, 888
 .equ GGUF_MAPPING_BASE, 0
 .equ GGUF_MAPPING_SIZE, 8
 
@@ -96,6 +103,10 @@ attn_q_tensor_request:
 	.ascii "blk.0.attn_q.weight"
 attn_q_tensor_request_end:
 
+attn_k_tensor_request:
+	.ascii "blk.0.attn_k.weight"
+attn_k_tensor_request_end:
+
 .section .text
 
 .global gguf_validate_file
@@ -114,11 +125,12 @@ attn_q_tensor_request_end:
 # followed by a one-name lookup descriptor slot beginning at offset 224, the
 # aligned tensor-data base offset at offset 384, a fixed first-layer attention
 # RMSNorm weight descriptor slot beginning at offset 392, a fixed first-layer
-# query projection descriptor slot beginning at offset 552, plus the attention
-# RMSNorm epsilon found flag at offset 712 and raw f32 bits at offset 720. rdx =
-# pointer to the requested tensor name bytes; rcx = requested tensor
-# name length; r8 = pointer to a 16-byte mapping descriptor whose first word
-# receives the mmap base and whose second word receives the file size.
+# query projection descriptor slot beginning at offset 552, a fixed first-layer
+# key projection descriptor slot beginning at offset 712, plus the attention
+# RMSNorm epsilon found flag at offset 872 and raw f32 bits at offset 880. rdx =
+# pointer to the requested tensor name bytes; rcx = requested tensor name
+# length; r8 = pointer to a 16-byte mapping descriptor whose first word receives
+# the mmap base and whose second word receives the file size.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -130,9 +142,9 @@ attn_q_tensor_request_end:
 # selected scalar metadata, and selected array lengths into it, plus a bounded
 # first tensor descriptor snapshot, the bounded descriptor for the requested
 # tensor when found, the fixed `blk.0.attn_norm.weight` descriptor when found,
-# the fixed `blk.0.attn_q.weight` descriptor when found, the attention RMSNorm
-# epsilon metadata when found, and the aligned tensor-data base offset when the
-# tensor directory is non-empty.
+# the fixed `blk.0.attn_q.weight` and `blk.0.attn_k.weight` descriptors when
+# found, the attention RMSNorm epsilon metadata when found, and the aligned
+# tensor-data base offset when the tensor directory is non-empty.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -798,7 +810,8 @@ gguf_copy_bytes_to_fixed:
 # Contract: advance over the GGUF tensor-info directory, retain a bounded
 # snapshot of the first descriptor, retain a bounded descriptor snapshot for one
 # requested tensor name when it is present, and retain the fixed first-layer
-# attention RMSNorm weight and query projection descriptors when present.
+# attention RMSNorm weight, query projection, and key projection descriptors
+# when present.
 # Inputs: rdi = mapping base, rsi = mapped file length, rdx = tensor-info start
 # offset, rcx = tensor count from the GGUF header, r8 = summary buffer, r9 =
 # requested tensor name bytes, r10 = requested tensor name length.
@@ -821,7 +834,7 @@ gguf_walk_tensor_infos:
 	push r13
 	push r14
 	push r15
-	sub rsp, 64
+	sub rsp, 72
 
 	# rbp tracks the largest relative payload offset seen in the directory. Once
 	# the tensor-data base is aligned, one bounds check proves every retained
@@ -874,6 +887,7 @@ gguf_walk_tensor_infos:
 	mov qword ptr [rsp + 16], rax
 	mov qword ptr [rsp + 48], rax
 	mov qword ptr [rsp + 56], rax
+	mov qword ptr [rsp + 64], rax
 	cmp qword ptr [rsp + 8], 0
 	je .Ltensor_first_name_compared
 	mov rdi, qword ptr [rsp + 24]
@@ -897,6 +911,13 @@ gguf_walk_tensor_infos:
 	mov rcx, attn_q_tensor_request_end - attn_q_tensor_request
 	call gguf_bytes_eq_literal
 	mov qword ptr [rsp + 56], rax
+
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [rip + attn_k_tensor_request]
+	mov rcx, attn_k_tensor_request_end - attn_k_tensor_request
+	call gguf_bytes_eq_literal
+	mov qword ptr [rsp + 64], rax
 
 	# n_dimensions is recorded as a u64 in the summary, but its in-file encoding
 	# is a u32 followed by that many u64 dimension sizes.
@@ -940,6 +961,15 @@ gguf_walk_tensor_infos:
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_DIMS + 24], 0
 
 .Ltensor_first_attn_q_n_dims_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_first_attn_k_n_dims_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_N_DIMS], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 8], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 16], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 24], 0
+
+.Ltensor_first_attn_k_n_dims_recorded:
 
 	# The summary has exactly four dimension slots, matching the GGUF max dims
 	# accepted above. Bounds-check the whole in-file span before copying any
@@ -974,8 +1004,13 @@ gguf_walk_tensor_infos:
 
 .Ltensor_first_attn_q_dim:
 	cmp qword ptr [rsp + 56], 0
-	je .Ltensor_first_dim_next
+	je .Ltensor_first_attn_k_dim
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_DIMS + rdx * 8], r10
+
+.Ltensor_first_attn_k_dim:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_first_dim_next
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + rdx * 8], r10
 
 .Ltensor_first_dim_next:
 	inc rdx
@@ -1009,6 +1044,11 @@ gguf_walk_tensor_infos:
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_GGML_TYPE], rax
 
 .Ltensor_first_attn_q_type_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_first_attn_k_type_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_GGML_TYPE], rax
+
+.Ltensor_first_attn_k_type_recorded:
 	add r12, 4
 
 	# Tensor offsets are relative to the aligned tensor-data section, not the
@@ -1061,6 +1101,18 @@ gguf_walk_tensor_infos:
 	call gguf_copy_bytes_to_fixed
 
 .Ltensor_first_attn_q_offset_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_first_attn_k_offset_recorded
+	mov rax, qword ptr [rsp + 40]
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_OFFSET], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_FOUND], 1
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_NAME]
+	mov rcx, GGUF_SUMMARY_ATTN_K_TENSOR_NAME_CAP
+	call gguf_copy_bytes_to_fixed
+
+.Ltensor_first_attn_k_offset_recorded:
 	mov rax, qword ptr [rsp + 40]
 	mov rbp, rax
 	add r12, 8
@@ -1095,6 +1147,7 @@ gguf_walk_tensor_infos:
 	mov qword ptr [rsp + 16], rax
 	mov qword ptr [rsp + 48], rax
 	mov qword ptr [rsp + 56], rax
+	mov qword ptr [rsp + 64], rax
 	cmp qword ptr [rsp + 8], 0
 	je .Ltensor_name_compared
 	mov rdi, qword ptr [rsp + 24]
@@ -1118,6 +1171,13 @@ gguf_walk_tensor_infos:
 	mov rcx, attn_q_tensor_request_end - attn_q_tensor_request
 	call gguf_bytes_eq_literal
 	mov qword ptr [rsp + 56], rax
+
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [rip + attn_k_tensor_request]
+	mov rcx, attn_k_tensor_request_end - attn_k_tensor_request
+	call gguf_bytes_eq_literal
+	mov qword ptr [rsp + 64], rax
 
 	# n_dimensions is a u32 followed by that many u64 dimension sizes. GGUF
 	# tensors are capped by GGML_MAX_DIMS, four dimensions in this target format.
@@ -1160,6 +1220,15 @@ gguf_walk_tensor_infos:
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_DIMS + 24], 0
 
 .Ltensor_attn_q_n_dims_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_attn_k_n_dims_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_N_DIMS], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 8], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 16], 0
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + 24], 0
+
+.Ltensor_attn_k_n_dims_recorded:
 	mov r8, rax
 	shl r8, 3
 	cmp r12, r14
@@ -1199,7 +1268,7 @@ gguf_walk_tensor_infos:
 
 .Ltensor_maybe_attn_q_dims:
 	cmp qword ptr [rsp + 56], 0
-	je .Ltensor_dims_done
+	je .Ltensor_maybe_attn_k_dims
 	mov r11, r13
 	add r11, r12
 	xor edx, edx
@@ -1211,6 +1280,21 @@ gguf_walk_tensor_infos:
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_DIMS + rdx * 8], r10
 	inc rdx
 	jmp .Ltensor_attn_q_dim_loop
+
+.Ltensor_maybe_attn_k_dims:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_dims_done
+	mov r11, r13
+	add r11, r12
+	xor edx, edx
+
+.Ltensor_attn_k_dim_loop:
+	cmp rdx, qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_N_DIMS]
+	je .Ltensor_dims_done
+	mov r10, qword ptr [r11 + rdx * 8]
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_DIMS + rdx * 8], r10
+	inc rdx
+	jmp .Ltensor_attn_k_dim_loop
 
 .Ltensor_dims_done:
 	add r12, r8
@@ -1241,6 +1325,11 @@ gguf_walk_tensor_infos:
 	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_Q_TENSOR_GGML_TYPE], rax
 
 .Ltensor_attn_q_type_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_attn_k_type_recorded
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_GGML_TYPE], rax
+
+.Ltensor_attn_k_type_recorded:
 	add r12, 4
 
 	# Tensor offsets are relative to the aligned tensor-data section. Rejecting
@@ -1292,6 +1381,18 @@ gguf_walk_tensor_infos:
 	call gguf_copy_bytes_to_fixed
 
 .Ltensor_attn_q_recorded:
+	cmp qword ptr [rsp + 64], 0
+	je .Ltensor_attn_k_recorded
+	mov rax, qword ptr [rsp + 40]
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_OFFSET], rax
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_FOUND], 1
+	mov rdi, qword ptr [rsp + 24]
+	mov rsi, qword ptr [rsp + 32]
+	lea rdx, [r15 + GGUF_SUMMARY_ATTN_K_TENSOR_NAME]
+	mov rcx, GGUF_SUMMARY_ATTN_K_TENSOR_NAME_CAP
+	call gguf_copy_bytes_to_fixed
+
+.Ltensor_attn_k_recorded:
 	mov rax, qword ptr [rsp + 40]
 	cmp rbp, rax
 	cmovb rbp, rax
@@ -1336,7 +1437,7 @@ gguf_walk_tensor_infos:
 	mov eax, GGUF_ERR_TENSOR_BOUNDS
 
 .Ltensor_epilogue:
-	add rsp, 64
+	add rsp, 72
 	pop r15
 	pop r14
 	pop r13
