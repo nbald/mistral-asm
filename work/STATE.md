@@ -2,11 +2,11 @@
 
 ## Current Milestone
 
-Milestone 4: Review pass.
+Milestone 4: Review pass follow-up.
 
 ## Current Exact Task
 
-Review the GGUF loader and working docs before expanding parser scope.
+Fix the review text drift before expanding parser scope.
 
 ## Known Blockers
 
@@ -17,47 +17,32 @@ None.
 - `README.md`
 - `Makefile`
 - `src/entry/_start.s`
-- `src/sys/*.s`
 - `src/gguf/load_header.s`
-- `work/AUTONOMOUS.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
-- `work/reviews/`
+- `work/reviews/2026-05-10-gguf-loader-review.md`
 
 ## Required Verification
 
-- Code-review pass over the GGUF loader, diagnostics, comments, and working
-  docs.
-- Commit review notes under `work/reviews/` if there are findings or a useful
-  explicit clean result.
-- If findings exist, set the next exact step to fix the highest-impact issue.
+- `make clean && make`
+- `./mistral-asm --help` shows only commands supported by the current milestone
+  or clearly marks future prompt generation as not implemented.
+- The stale metadata-walker comment no longer says tensor-info walking is a
+  future slice.
 - `git diff --check`
 
 ## Last Verification
 
-- `make clean` then `make` passed.
-- `./mistral-asm --help` printed usage with the GGUF tensor directory validation
-  milestone text.
-- `readelf -d mistral-asm` reported no dynamic section.
-- `readelf -l mistral-asm` showed no program interpreter.
-- `strace -e trace=write,exit,exit_group ./mistral-asm --help` showed direct
-  `write(1, ..., 175)` and `exit(0)`.
-- A zero-metadata, zero-tensor `/tmp` GGUF v3 fixture returned
-  `GGUF tensor directory ok`.
-- A mixed metadata `/tmp` fixture with a string scalar, fixed scalar, and string
-  array returned `GGUF tensor directory ok`.
-- A one-tensor `/tmp` fixture with a bounded descriptor and aligned offset
-  returned `GGUF tensor directory ok`.
-- A truncated tensor directory failed with
-  `mistral-asm: malformed GGUF tensor directory` and exit status 3.
-- A tensor descriptor with offset 1 failed with
-  `mistral-asm: misaligned GGUF tensor data` and exit status 3.
-- A tensor descriptor with five dimensions failed with
-  `mistral-asm: malformed GGUF tensor directory` and exit status 3.
-- An unknown metadata type still failed with
-  `mistral-asm: unsupported GGUF metadata type` and exit status 3.
+- Milestone 4 review completed.
+- `make clean && make` passed.
+- `./mistral-asm --help` returned status 0 and currently advertises the future
+  prompt generation form.
+- Invoking the advertised prompt form returned the usage error with status 2.
+- No tracked runtime purity violation was found: tracked runtime sources under
+  `src/` are `.s` files, and the Makefile uses `as`/`ld`.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Run the Milestone 4 review pass over the GGUF loader and working docs.
+Update `_start` help text and the stale GGUF metadata comment so audit-facing
+text matches the current runtime behavior, then rebuild and check behavior.

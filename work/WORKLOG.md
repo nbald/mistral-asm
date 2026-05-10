@@ -125,3 +125,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   capture exists.
 - Operator inbox result: no GGUF model download or project `.venv` was needed
   for this parser slice; verification used small `/tmp` fixtures.
+
+## 2026-05-10T12:50:05Z
+
+- Milestone 4 review found no runtime purity issue: tracked runtime sources are
+  assembly files and the build still uses `as`/`ld`.
+- Review findings: help currently advertises prompt generation that `_start`
+  rejects, and one GGUF metadata-walker comment still describes tensor-info
+  walking as future work even though it is now implemented.
+- Verification evidence: rebuild passed; help returned status 0; the advertised
+  prompt form returned the usage error with status 2; `git diff --check` passed.
