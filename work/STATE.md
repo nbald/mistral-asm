@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Implement a guarded status-only token-0 FFN down matvec from
-`token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`.
+Print a guarded four-word exact-hex slice from `token0_ffn_down_output` after
+`token0_ffn_down_matvec_status` is 1, preserving status-only skip behavior for
+synthetic fixtures.
 
 ## Completed Work
 
@@ -16,32 +17,23 @@ Implement a guarded status-only token-0 FFN down matvec from
 - The GGUF loader validates the narrow v3 little-endian target shape, returns a
   live read-only mapping descriptor on success, and releases it explicitly after
   summary and guarded smoke output.
-- The summary captures selected Mistral metadata, tensor-data base offset, the
-  first tensor, `token_embd.weight`, first-layer attention norm/Q/K/V/output
-  descriptors, `blk.0.ffn_norm.weight`, `blk.0.ffn_gate.weight`,
-  `blk.0.ffn_up.weight`, `blk.0.ffn_down.weight`, and attention RMSNorm epsilon
-  bits.
+- The summary captures selected Mistral metadata, tensor-data base offset,
+  `token_embd.weight`, first-layer attention tensors, FFN norm/gate/up/down
+  tensor descriptors, and attention RMSNorm epsilon bits.
 - Token-0 smokes cover embedding dequantization, attention RMSNorm, Q/K/V
   projections, single-token context expansion, attention output projection,
-  post-attention residual, FFN RMSNorm, FFN gate projection, FFN up projection,
-  and FFN SwiGLU activation.
+  post-attention residual, FFN RMSNorm, FFN gate/up projections, FFN SwiGLU, and
+  status-only FFN down projection.
 - Public exact-hex slices and external oracle notes exist through the FFN
-  SwiGLU activation.
-- The `blk.0.ffn_down.weight` descriptor is retained and printed. The real
-  target reports Q8_0 dimensions `9216 x 3072` at relative offset `461266944`.
-  No FFN down payload bytes are read yet.
-- The scalar `swiglu_f32` helper has a no-libc harness. The runtime
-  computes the guarded token-0 FFN SwiGLU activation into static f32 storage
-  after the FFN gate/up matvecs succeed and the retained FFN down descriptor
-  proves the target `[9216 x 3072]` consumer shape. The public smoke output is
-  status-only.
-- The runtime now prints a guarded four-word exact-hex slice from
-  `token0_ffn_swiglu_output` after `token0_ffn_swiglu_status` is 1, without
-  changing the SwiGLU math. The real target prints words `0xbe697324`,
-  `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`.
-- External SwiGLU oracle tooling recomputes the existing token-0 path through
-  FFN norm, gate, and up projections, applies `silu(gate) * up`, checks the
-  FFN down descriptor guard, and matches the four runtime SwiGLU words exactly.
+  SwiGLU activation. No public FFN down output slice exists yet.
+- The real target reports `blk.0.ffn_down.weight` as Q8_0 dimensions
+  `9216 x 3072` at relative offset `461266944`.
+- The runtime computes a guarded status-only token-0 FFN down matvec from
+  `token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`. It requires
+  `token0_ffn_swiglu_status == 1`, exact Q8_0 `[9216 x 3072]` shape, and a
+  bounded full matrix span before reading payload bytes; on success it writes
+  3072 f32 values to static `token0_ffn_down_output` and prints only
+  `token0_ffn_down_matvec: 1`.
 
 ## Known Blockers
 
@@ -65,8 +57,10 @@ None.
 ## Required Verification
 
 - Rebuild with `as`/`ld`.
-- Keep `make check` including the SwiGLU harness, static-link checks, future CLI
-  usage rejection, GGUF smoke checks, cleanup tracing, oracle py-compile, and
+- Keep `make check` including the Q8_0 dot, RMSNorm, and SwiGLU harnesses
+  passing.
+- Keep CLI usage rejection, static-link checks, synthetic GGUF smoke/error
+  checks, cleanup tracing, oracle py-compile, runtime source purity, and
   whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Rerun existing external projection/output/residual/FFN RMSNorm/FFN gate/FFN
@@ -86,32 +80,25 @@ None.
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, kept
   `ffn_gate_tensor_found: 0`, `ffn_up_tensor_found: 0`, and
-  `ffn_down_tensor_found: 0`, and printed the FFN gate/up matvec and SwiGLU
-  statuses as 0.
+  `ffn_down_tensor_found: 0`, and printed the FFN gate/up matvec, SwiGLU, and
+  FFN down matvec statuses as 0.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with the expected
   tensor alignment/directory diagnostics.
 - The real target model under `models/` returned status 0, preserved existing
-  token-0 exact-hex slices through FFN up, printed `ffn_down_tensor_found: 1`,
-  `ffn_down_tensor_name: blk.0.ffn_down.weight`, dimensions `9216 x 3072`,
-  ggml type `8`, offset `461266944`, `token0_ffn_swiglu: 1`, and the new
-  SwiGLU exact-hex words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and
-  `0xbe30ee21`.
+  FFN SwiGLU exact-hex words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and
+  `0xbe30ee21`, and printed `token0_ffn_down_matvec: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed the full-file read-only `mmap`, a successful file-descriptor close
-  before the final `munmap`, the FFN down descriptor lines, FFN up output words,
-  `token0_ffn_swiglu: 1`, and the SwiGLU output words.
-- `python3 work/oracle/token0_ffn_swiglu_oracle.py` on the real target printed
-  SwiGLU words `0xbe697324`, `0xbe7a2af9`, `0xbe66d77d`, and `0xbe30ee21`.
-  A direct extraction check compared the runtime FFN norm, gate, up, and SwiGLU
-  slices against the oracle output and matched all checked words exactly.
+  showed the full-file read-only `mmap`, successful `close(3)`, FFN down
+  descriptor output, `token0_ffn_down_matvec: 1`, and final `munmap`.
 - `python3 -m py_compile work/oracle/*.py` passed.
+- `find src -type f ! -name '*.s' -print` produced no runtime non-assembly
+  source files.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Implement a guarded status-only token-0 FFN down matvec from
-`token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`, requiring the exact
-Q8_0 `[9216 x 3072]` shape and a bounded full matrix span before reading
-payload bytes.
+Print a guarded four-word exact-hex slice from `token0_ffn_down_output` after
+`token0_ffn_down_matvec_status` is 1, preserving status-only skip behavior for
+synthetic fixtures.

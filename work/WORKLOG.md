@@ -933,3 +933,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   compared runtime FFN norm, gate, up, and SwiGLU slices with the oracle output
   exactly. Rebuild, no-libc harnesses, CLI/static checks, synthetic GGUF checks,
   real-model cleanup tracing, oracle py-compile, and whitespace checks passed.
+
+## 2026-05-10T18:30:43Z
+
+- The runtime now computes a guarded status-only token-0 FFN down matvec from
+  `token0_ffn_swiglu_output` through `blk.0.ffn_down.weight`, writing the 3072
+  f32 result row into static storage only after the SwiGLU prerequisite, exact
+  Q8_0 `[9216 x 3072]` shape, and full matrix bounds checks pass.
+- Decision: keep this step status-only. The public exact-hex FFN down slice and
+  oracle comparison remain separate reviewable steps, matching the gate/up
+  projection workflow.
+- Verification evidence: synthetic fixtures skipped the new projection with
+  `token0_ffn_down_matvec: 0`, while the real local target printed
+  `token0_ffn_down_matvec: 1` and preserved the existing SwiGLU words. Cleanup
+  tracing still showed `close(3)` before the final `munmap`.

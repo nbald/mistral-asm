@@ -41,6 +41,8 @@
 .equ TOKEN0_FFN_UP_OUTPUT_BYTES, TOKEN0_FFN_UP_OUTPUT_VALUES * 4
 .equ TOKEN0_FFN_SWIGLU_VALUES, 9216
 .equ TOKEN0_FFN_SWIGLU_BYTES, TOKEN0_FFN_SWIGLU_VALUES * 4
+.equ TOKEN0_FFN_DOWN_OUTPUT_VALUES, TOKEN_EMBEDDING_ACTIVATION_VALUES
+.equ TOKEN0_FFN_DOWN_OUTPUT_BYTES, TOKEN0_FFN_DOWN_OUTPUT_VALUES * 4
 .equ Q8_0_BLOCK_SIZE, 32
 .equ Q8_0_BLOCK_BYTES, 34
 
@@ -61,7 +63,7 @@ help_text:
 	.ascii "RMSNorm, attention query/key/value smoke, context, "
 	.ascii "output projection, residual smoke, FFN RMSNorm smoke, "
 	.ascii "FFN gate/up matvec smoke, SwiGLU activation smoke, "
-	.ascii "FFN down descriptor.\n"
+	.ascii "FFN down matvec smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -551,6 +553,10 @@ token0_ffn_up_matvec_text_end:
 token0_ffn_swiglu_text:
 	.ascii "token0_ffn_swiglu: "
 token0_ffn_swiglu_text_end:
+
+token0_ffn_down_matvec_text:
+	.ascii "token0_ffn_down_matvec: "
+token0_ffn_down_matvec_text_end:
 
 token0_attn_q_output0_f32_text:
 	.ascii "token0_attn_q_output0_f32_hex: "
@@ -1045,6 +1051,10 @@ token0_ffn_up_matvec_status:
 token0_ffn_swiglu_status:
 	.skip 8
 
+.balign 8
+token0_ffn_down_matvec_status:
+	.skip 8
+
 .balign 4
 token_embedding_activation:
 	.skip TOKEN_EMBEDDING_ACTIVATION_BYTES
@@ -1093,6 +1103,10 @@ token0_ffn_up_output:
 token0_ffn_swiglu_output:
 	.skip TOKEN0_FFN_SWIGLU_BYTES
 
+.balign 4
+token0_ffn_down_output:
+	.skip TOKEN0_FFN_DOWN_OUTPUT_BYTES
+
 .section .text
 
 .global _start
@@ -1114,7 +1128,8 @@ token0_ffn_swiglu_output:
 # through the first output projection before adding the post-attention residual
 # from process-owned static buffers, applies the FFN RMSNorm smoke through
 # retained FFN norm weights, and projects that activation through the retained
-# FFN gate and up matrices before deriving the first FFN SwiGLU activation. The
+# FFN gate and up matrices before deriving the first FFN SwiGLU activation and
+# projecting it through the retained FFN down matrix. The
 # mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is
 # process-owned static storage passed to the loader for scalar header counts,
@@ -3010,6 +3025,23 @@ _start:
 	call sys_write
 
 	call print_token0_ffn_swiglu_output_slice
+
+	call token0_ffn_down_matvec_smoke
+	mov qword ptr [rip + token0_ffn_down_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_ffn_down_matvec_text]
+	mov rdx, token0_ffn_down_matvec_text_end - token0_ffn_down_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_ffn_down_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
@@ -5029,5 +5061,95 @@ token0_ffn_swiglu_smoke:
 	ret
 
 .size token0_ffn_swiglu_smoke, . - token0_ffn_swiglu_smoke
+
+.type token0_ffn_down_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 FFN SwiGLU activation through
+# the retained blk.0.ffn_down.weight matrix.
+# Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
+# descriptor, token0_ffn_swiglu_status, and token0_ffn_swiglu_output.
+# Outputs: rax = 1 when token0_ffn_swiglu_output is available and
+# blk.0.ffn_down.weight is exactly a two-dimensional Q8_0 [9216 x 3072] matrix
+# whose complete payload span fits inside the mapping, after q8_0_matvec_f32
+# writes token0_ffn_down_output; otherwise rax = 0 and no FFN down matrix
+# payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
+# q8_0_matvec_f32, reads the static SwiGLU activation as the shared f32 input
+# vector, and writes exactly TOKEN0_FFN_DOWN_OUTPUT_BYTES into static output
+# storage on success. The mmap remains owned by _start and must be released
+# separately.
+# Error behavior: this is a smoke gate for the first FFN down projection, not
+# final FFN setup. Non-target synthetic GGUF fixtures and shape or bounds
+# mismatches are skipped with status 0.
+token0_ffn_down_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_ffn_swiglu_status], 1
+	jne .Lffn_down_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_found], 1
+	jne .Lffn_down_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_n_dimensions], 2
+	jne .Lffn_down_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Lffn_down_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_dim0], TOKEN0_FFN_SWIGLU_VALUES
+	jne .Lffn_down_smoke_done
+	cmp qword ptr [rip + gguf_summary_ffn_down_tensor_dim1], TOKEN0_FFN_DOWN_OUTPUT_VALUES
+	jne .Lffn_down_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# FFN down projection start and prove the complete row-major Q8_0 matrix fits
+	# in the live mapping before handing any payload pointer to the math helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Lffn_down_smoke_skip
+	mov rdx, qword ptr [rip + gguf_summary_ffn_down_tensor_offset]
+	test rdx, rdx
+	js .Lffn_down_smoke_skip
+	add rax, rdx
+	jc .Lffn_down_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Lffn_down_smoke_skip
+
+	mov r8, TOKEN0_FFN_SWIGLU_VALUES
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Lffn_down_smoke_skip
+	mov rcx, TOKEN0_FFN_DOWN_OUTPUT_VALUES
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Lffn_down_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Lffn_down_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Lffn_down_smoke_skip
+	add rdi, rax
+	jc .Lffn_down_smoke_skip
+
+	lea rsi, [rip + token0_ffn_swiglu_output]
+	lea rdx, [rip + token0_ffn_down_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Lffn_down_smoke_skip:
+	xor eax, eax
+
+.Lffn_down_smoke_done:
+	ret
+
+.size token0_ffn_down_matvec_smoke, . - token0_ffn_down_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits
