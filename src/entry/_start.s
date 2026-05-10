@@ -1,6 +1,7 @@
 .intel_syntax noprefix
 
 .equ DECIMAL_SCRATCH_SIZE, 32
+.equ HEX_SCRATCH_SIZE, 16
 .equ GGUF_SUMMARY_ARCHITECTURE_CAP, 32
 .equ GGUF_SUMMARY_FIRST_TENSOR_NAME_CAP, 96
 .equ GGUF_SUMMARY_LOOKUP_TENSOR_NAME_CAP, 96
@@ -63,6 +64,14 @@ block_count_text_end:
 vocab_size_text:
 	.ascii "vocab_size: "
 vocab_size_text_end:
+
+attn_norm_rms_epsilon_found_text:
+	.ascii "attn_norm_rms_epsilon_found: "
+attn_norm_rms_epsilon_found_text_end:
+
+attn_norm_rms_epsilon_f32_text:
+	.ascii "attn_norm_rms_epsilon_f32_hex: "
+attn_norm_rms_epsilon_f32_text_end:
 
 tensor_data_offset_text:
 	.ascii "tensor_data_offset: "
@@ -184,11 +193,8 @@ newline_text:
 	.ascii "\n"
 newline_text_end:
 
-.balign 4
-rmsnorm_smoke_epsilon_f32:
-	# Temporary graph-setup smoke epsilon; metadata capture can replace this
-	# constant before numerical oracle comparison becomes the active milestone.
-	.long 0x3727c5ac
+hex_digits:
+	.ascii "0123456789abcdef"
 
 gguf_open_error_text:
 	.ascii "mistral-asm: could not open model\n"
@@ -312,6 +318,10 @@ gguf_summary_attn_norm_tensor_ggml_type:
 	.skip 8
 gguf_summary_attn_norm_tensor_offset:
 	.skip 8
+gguf_summary_attn_norm_rms_epsilon_found:
+	.skip 8
+gguf_summary_attn_norm_rms_epsilon_f32:
+	.skip 4
 
 .balign 8
 gguf_mapping:
@@ -586,6 +596,34 @@ _start:
 	mov rdi, 1
 	mov rsi, qword ptr [rip + gguf_summary_vocab_size]
 	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_norm_rms_epsilon_found_text]
+	mov rdx, attn_norm_rms_epsilon_found_text_end - attn_norm_rms_epsilon_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + gguf_summary_attn_norm_rms_epsilon_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + attn_norm_rms_epsilon_f32_text]
+	mov rdx, attn_norm_rms_epsilon_f32_text_end - attn_norm_rms_epsilon_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + gguf_summary_attn_norm_rms_epsilon_f32]
+	call write_u32_hex
 
 	mov rdi, 1
 	lea rsi, [rip + newline_text]
@@ -1126,6 +1164,50 @@ write_u64_decimal:
 
 .size write_u64_decimal, . - write_u64_decimal
 
+.type write_u32_hex, @function
+
+# Contract: write a 32-bit value as exact lowercase hexadecimal ASCII.
+# Inputs: rdi = output file descriptor; esi = value to print.
+# Outputs: returns after one write(2) attempt for a fixed `0x` plus 8-digit
+# span. The raw sys_write result is intentionally ignored by this milestone
+# caller.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: uses a fixed scratch area on its own stack frame and does
+# not retain pointers after sys_write returns.
+# Error behavior: write errors are not reported separately; this is summary
+# output only.
+write_u32_hex:
+	push rbp
+	mov rbp, rsp
+	sub rsp, HEX_SCRATCH_SIZE
+
+	mov byte ptr [rsp], '0'
+	mov byte ptr [rsp + 1], 'x'
+	lea r9, [rip + hex_digits]
+	lea r10, [rsp + 10]
+	mov r8d, esi
+	mov ecx, 8
+
+.Lhex_loop:
+	mov eax, r8d
+	and eax, 0xf
+	mov al, byte ptr [r9 + rax]
+	dec r10
+	mov byte ptr [r10], al
+	shr r8d, 4
+	dec ecx
+	jnz .Lhex_loop
+
+	mov rsi, rsp
+	mov rdx, 10
+	call sys_write
+
+	add rsp, HEX_SCRATCH_SIZE
+	pop rbp
+	ret
+
+.size write_u32_hex, . - write_u32_hex
+
 .type write_bounded_c_string, @function
 
 # Contract: write a NUL-terminated string whose storage has a fixed maximum
@@ -1271,10 +1353,11 @@ dequant_token0_embedding_smoke:
 # dequant_token0_embedding_smoke.
 # Inputs: no register inputs. Reads the process-owned GGUF summary, live mapping
 # descriptor, token0_embedding_dequant_status, and token_embedding_activation.
-# Outputs: rax = 1 when token 0 was dequantized and a one-dimensional f32
-# blk.0.attn_norm.weight span with matching width fits in the mapping, after
-# rmsnorm_f32 writes token0_attn_norm_activation; otherwise rax = 0 and no
-# RMSNorm payload bytes are read.
+# Outputs: rax = 1 when token 0 was dequantized, the RMSNorm epsilon metadata
+# was captured, and a one-dimensional f32 blk.0.attn_norm.weight span with
+# matching width fits in the mapping, after rmsnorm_f32 writes
+# token0_attn_norm_activation; otherwise rax = 0 and no RMSNorm payload bytes
+# are read.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2, xmm3 and flags.
 # Ownership/lifetime: reads mapped weight bytes only during rmsnorm_f32, reads
 # the static token embedding activation twice through that helper, and writes at
@@ -1286,6 +1369,8 @@ dequant_token0_embedding_smoke:
 token0_attn_norm_smoke:
 	xor eax, eax
 	cmp qword ptr [rip + token0_embedding_dequant_status], 1
+	jne .Lattn_norm_smoke_done
+	cmp qword ptr [rip + gguf_summary_attn_norm_rms_epsilon_found], 1
 	jne .Lattn_norm_smoke_done
 	cmp qword ptr [rip + gguf_summary_attn_norm_tensor_found], 1
 	jne .Lattn_norm_smoke_done
@@ -1339,7 +1424,7 @@ token0_attn_norm_smoke:
 	lea rdi, [rip + token_embedding_activation]
 	lea rdx, [rip + token0_attn_norm_activation]
 	mov rcx, r8
-	vmovss xmm0, dword ptr [rip + rmsnorm_smoke_epsilon_f32]
+	vmovss xmm0, dword ptr [rip + gguf_summary_attn_norm_rms_epsilon_f32]
 	call rmsnorm_f32
 
 	mov eax, 1

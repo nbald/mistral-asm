@@ -6,51 +6,32 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Capture `mistral3.attention.layer_norm_rms_epsilon` as f32 metadata, print it
-in the summary, and make `token0_attn_norm_smoke` load epsilon from the summary
-instead of the temporary 1e-5 constant.
+Retain and print the first-layer attention query projection descriptor
+`blk.0.attn_q.weight`, then verify it on the real target GGUF. Leave payload
+matvec wiring for a later atomic step.
 
 ## Completed Work
 
-- The runtime remains pure GNU `as` Intel assembly and is built with `as` plus
-  `ld`; `_start` uses Linux syscalls directly.
+- Runtime source remains pure GNU `as` Intel assembly built with `as` and
+  linked with `ld`; `_start` uses Linux syscalls directly and no libc.
 - The GGUF loader validates the narrow v3 little-endian target shape, walks
-  metadata and tensor-info descriptors with bounds checks, records the aligned
+  metadata and tensor descriptors with bounds checks, records the aligned
   tensor-data base, and returns a live read-only mapping descriptor to `_start`.
-- The summary captures tensor count, metadata count, architecture, context
-  length, block/layer count, tokenizer vocabulary size, first tensor descriptor,
-  a retained descriptor for `token_embd.weight`, and a retained descriptor for
-  `blk.0.attn_norm.weight`.
-- The tensor directory walker still validates all descriptors after the retained
-  lookup and rejects malformed later descriptors, misaligned payload offsets,
-  and payload starts beyond EOF.
-- Scalar Q8_0 math covers block dot, row dot, row-major matvec, row dequant, and
-  checked token-embedding dequantization, with no-libc assembly fixtures in
-  `make check-q8_0-dot`.
-- Scalar f32 RMSNorm exists as a documented assembly primitive, is linked into
-  the runtime object set, is covered by a no-libc harness in `make
-  check-rmsnorm`, and is now called by `_start` through a guarded token-0
-  attention-norm smoke.
-- `_start` keeps the validated model mapping live through summary output, runs a
-  guarded token ID 0 `token_embd.weight` dequant smoke into static f32 activation
-  storage, runs a guarded `blk.0.attn_norm.weight` RMSNorm smoke into separate
-  static f32 storage, prints both smoke status lines, then calls
+- The summary captures tensor and metadata counts, architecture, context length,
+  layer count, vocab size, tensor-data base, the first tensor descriptor,
+  `token_embd.weight`, `blk.0.attn_norm.weight`, and
+  `mistral3.attention.layer_norm_rms_epsilon` as a found flag plus exact f32
+  bits.
+- Scalar Q8_0 helpers cover block dot, row dot, row-major matvec, row dequant,
+  and checked token-embedding dequantization with no-libc verifier coverage.
+- Scalar f32 RMSNorm exists as a documented primitive with no-libc verifier
+  coverage.
+- `_start` prints the retained summary fields, keeps the model mapping live
+  through guarded token ID 0 embedding dequantization and first attention
+  RMSNorm smokes, loads RMSNorm epsilon from the captured metadata, then calls
   `gguf_release_mapping`.
-- `_start` prints the retained `blk.0.attn_norm.weight` descriptor when found;
-  the real target resolves it as a one-dimensional f32 vector of width 3072.
-- The token-0 smoke requires a retained two-dimensional Q8_0 descriptor, a
-  nonzero 32-multiple embedding width no larger than the static 3072-f32 buffer,
-  a nonzero row count, non-overflowing tensor-data-base plus relative offset,
-  and one complete Q8_0 row inside the mmap before calling the math helper.
-- The token-0 attention RMSNorm smoke requires successful token embedding
-  dequantization, a retained one-dimensional f32 `blk.0.attn_norm.weight`
-  descriptor whose width matches the embedding row, non-overflowing tensor-data
-  base plus relative offset, and a complete f32 weight span inside the mmap
-  before calling `rmsnorm_f32`.
-- Narrow synthetic GGUF fixtures that are useful for parser smoke checks but are
-  not target-shaped skip the payload smokes and print zero
-  `token0_embedding_dequant` and `token0_attn_norm` statuses while preserving
-  their summary behavior.
+- Synthetic parser fixtures that are not target-shaped skip payload smokes and
+  print zero smoke statuses while preserving summary behavior.
 
 ## Known Blockers
 
@@ -71,45 +52,42 @@ None.
 ## Required Verification
 
 - Rebuild with `as`/`ld`.
-- Keep `make check`, including the Q8_0 and RMSNorm harnesses, GGUF loader
-  lookup/base-offset smoke checks, future CLI usage rejection, static-link
+- Keep `make check`, static-link checks, future CLI usage rejection, GGUF smoke
   checks, and whitespace checks passing.
 - Smoke-test the real target GGUF when the ignored local model remains present.
 - Verify explicit cleanup of any live model mapping.
 
 ## Last Verification
 
-- `make clean`, `make`, and `make check` passed after wiring the guarded
-  token-0 attention RMSNorm smoke; the harnesses printed `q8_0_dot: ok` and
-  `rmsnorm: ok`.
-- `./mistral-asm --help` returned status 0 with the updated milestone text.
-- Invoking the future prompt generation form returned the usage error with
-  status 2.
+- `make clean`, `make`, and `make check` passed; the harnesses printed
+  `q8_0_dot: ok` and `rmsnorm: ok`.
+- `./mistral-asm --help` returned status 0; the future prompt generation form
+  returned status 2 with the usage diagnostic.
+- `readelf -d` reported no dynamic section, and `readelf -l` reported no
+  interpreter or dynamic program headers.
 - Synthetic fixtures `/tmp/mistral_asm_tensor_base_round.gguf`,
   `/tmp/mistral_asm_lookup_found.gguf`, and
-  `/tmp/mistral_asm_lookup_absent.gguf` returned status 0 and printed
-  `attn_norm_tensor_found: 0`, `token0_embedding_dequant: 0`, and
-  `token0_attn_norm: 0`.
-- Synthetic fixtures `/tmp/mistral_asm_lookup_malformed_later.gguf` and
-  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with the expected
-  tensor-directory diagnostics.
-- The real target model under `models/` returned status 0, retained
+  `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
+  `attn_norm_rms_epsilon_found: 0`,
+  `attn_norm_rms_epsilon_f32_hex: 0x00000000`, and kept
+  `token0_embedding_dequant: 0` plus `token0_attn_norm: 0`.
+- Synthetic malformed fixtures
+  `/tmp/mistral_asm_lookup_malformed_later.gguf` and
+  `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor
+  directory diagnostics.
+- The real target model under `models/` returned status 0, printed
+  `attn_norm_rms_epsilon_found: 1`,
+  `attn_norm_rms_epsilon_f32_hex: 0x3727c5ac`, retained
   `token_embd.weight` as Q8_0 with dimensions 3072 and 131072, retained
-  `blk.0.attn_norm.weight` as f32 with dimension 3072 and relative payload
-  offset 431173632, and printed `token0_embedding_dequant: 1` and
-  `token0_attn_norm: 1`.
+  `blk.0.attn_norm.weight` as f32 with dimension 3072, and printed
+  `token0_embedding_dequant: 1` plus `token0_attn_norm: 1`.
 - `strace -e trace=mmap,munmap,close` on the real target showed `mmap`,
-  `close(3) = 0`, the summary plus successful embedding and RMSNorm smokes, then
+  `close(3) = 0`, successful summary/smoke output, then
   `munmap(..., 3651679520) = 0`.
-- `readelf -d` reported no dynamic section; `readelf -l` reported no interpreter
-  or dynamic program headers.
-- `strings` on the local target GGUF found the metadata key
-  `mistral3.attention.layer_norm_rms_epsilon` for the next epsilon-capture
-  step.
-- `git diff --check` passed.
+- `git diff --check` passed after the final work-file updates.
 
 ## Next Exact Step
 
-Capture `mistral3.attention.layer_norm_rms_epsilon` as f32 metadata, print it
-in the summary, and make `token0_attn_norm_smoke` load epsilon from the summary
-instead of the temporary 1e-5 constant.
+Retain and print the first-layer attention query projection descriptor
+`blk.0.attn_q.weight`, then verify it on the real target GGUF. Leave payload
+matvec wiring for a later atomic step.

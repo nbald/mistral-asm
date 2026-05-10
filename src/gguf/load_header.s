@@ -39,7 +39,9 @@
 .equ GGUF_SUMMARY_ATTN_NORM_TENSOR_DIMS, 504
 .equ GGUF_SUMMARY_ATTN_NORM_TENSOR_GGML_TYPE, 536
 .equ GGUF_SUMMARY_ATTN_NORM_TENSOR_OFFSET, 544
-.equ GGUF_SUMMARY_SIZE, 552
+.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_FOUND, 552
+.equ GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_F32, 560
+.equ GGUF_SUMMARY_SIZE, 568
 .equ GGUF_MAPPING_BASE, 0
 .equ GGUF_MAPPING_SIZE, 8
 
@@ -71,6 +73,10 @@ mistral3_block_count_key:
 	.ascii "mistral3.block_count"
 mistral3_block_count_key_end:
 
+mistral3_attn_norm_rms_epsilon_key:
+	.ascii "mistral3.attention.layer_norm_rms_epsilon"
+mistral3_attn_norm_rms_epsilon_key_end:
+
 tokenizer_tokens_key:
 	.ascii "tokenizer.ggml.tokens"
 tokenizer_tokens_key_end:
@@ -96,10 +102,11 @@ attn_norm_tensor_request_end:
 # ggml_type and relative payload offset as u64 values at offsets 208 and 216,
 # followed by a one-name lookup descriptor slot beginning at offset 224, the
 # aligned tensor-data base offset at offset 384, and a fixed first-layer
-# attention RMSNorm weight descriptor slot beginning at offset 392. rdx =
-# pointer to the requested tensor name bytes; rcx = requested tensor name
-# length; r8 = pointer to a 16-byte mapping descriptor whose first word receives
-# the mmap base and whose second word receives the file size.
+# attention RMSNorm weight descriptor slot beginning at offset 392, plus the
+# attention RMSNorm epsilon found flag at offset 552 and raw f32 bits at offset
+# 560. rdx = pointer to the requested tensor name bytes; rcx = requested tensor
+# name length; r8 = pointer to a 16-byte mapping descriptor whose first word
+# receives the mmap base and whose second word receives the file size.
 # Outputs: rax = GGUF_OK on success or one of the GGUF_ERR_* status codes above.
 # Clobbers: caller-saved registers and flags. Preserves callee-saved registers
 # it uses (rbx, r12, r13, r14, r15, rbp).
@@ -111,7 +118,8 @@ attn_norm_tensor_request_end:
 # selected scalar metadata, and selected array lengths into it, plus a bounded
 # first tensor descriptor snapshot, the bounded descriptor for the requested
 # tensor when found, the fixed `blk.0.attn_norm.weight` descriptor when found,
-# and the aligned tensor-data base offset when the tensor directory is non-empty.
+# the attention RMSNorm epsilon metadata when found, and the aligned tensor-data
+# base offset when the tensor directory is non-empty.
 # Error behavior: syscall failures are collapsed into stable loader status codes;
 # malformed magic/version/count fields, unsupported metadata shapes, malformed
 # tensor descriptors, and tensor-data alignment failures are reported separately.
@@ -408,7 +416,7 @@ gguf_walk_metadata:
 	mov r10, r8
 	# r9d is a small key-kind enum for values retained in the summary:
 	# 0 = not retained, 1 = architecture, 2 = context_length, 3 = block_count,
-	# 4 = vocab_size from tokenizer.ggml.tokens.
+	# 4 = vocab_size from tokenizer.ggml.tokens, 5 = RMSNorm epsilon f32.
 	xor r9d, r9d
 	lea rdi, [r13 + r12]
 	mov rsi, r8
@@ -438,8 +446,19 @@ gguf_walk_metadata:
 	mov rcx, mistral3_block_count_key_end - mistral3_block_count_key
 	call gguf_bytes_eq_literal
 	test eax, eax
-	jz .Lmetadata_check_tokens_key
+	jz .Lmetadata_check_rms_epsilon_key
 	mov r9d, 3
+	jmp .Lmetadata_key_compared
+
+.Lmetadata_check_rms_epsilon_key:
+	lea rdi, [r13 + r12]
+	mov rsi, r10
+	lea rdx, [rip + mistral3_attn_norm_rms_epsilon_key]
+	mov rcx, mistral3_attn_norm_rms_epsilon_key_end - mistral3_attn_norm_rms_epsilon_key
+	call gguf_bytes_eq_literal
+	test eax, eax
+	jz .Lmetadata_check_tokens_key
+	mov r9d, 5
 	jmp .Lmetadata_key_compared
 
 .Lmetadata_check_tokens_key:
@@ -491,7 +510,7 @@ gguf_walk_metadata:
 
 .Lmetadata_check_block_count:
 	cmp r9d, 3
-	jne .Lmetadata_check_vocab_size
+	jne .Lmetadata_check_rms_epsilon
 	mov r8, GGUF_SUMMARY_BLOCK_COUNT
 
 .Lmetadata_capture_unsigned_scalar:
@@ -527,6 +546,27 @@ gguf_walk_metadata:
 	mov rax, qword ptr [r13 + r12]
 	mov qword ptr [r15 + r8], rax
 	add r12, 8
+	jmp .Lmetadata_next
+
+.Lmetadata_check_rms_epsilon:
+	cmp r9d, 5
+	jne .Lmetadata_check_vocab_size
+	cmp ecx, 6
+	jne .Lmetadata_skip_value
+
+	# The target GGUF stores the RMSNorm epsilon as GGUF float32. Retain the raw
+	# IEEE-754 bits so the summary can be printed exactly and the smoke path can
+	# pass the value to rmsnorm_f32 without inventing a process-local constant.
+	cmp r12, r14
+	ja .Lmetadata_bad
+	mov rax, r14
+	sub rax, r12
+	cmp rax, 4
+	jb .Lmetadata_bad
+	mov eax, dword ptr [r13 + r12]
+	mov dword ptr [r15 + GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_F32], eax
+	mov qword ptr [r15 + GGUF_SUMMARY_ATTN_NORM_RMS_EPSILON_FOUND], 1
+	add r12, 4
 	jmp .Lmetadata_next
 
 .Lmetadata_check_vocab_size:

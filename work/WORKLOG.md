@@ -434,3 +434,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   lookup/base fixtures printed `token0_attn_norm: 0`; the real local target
   printed `token0_embedding_dequant: 1` and `token0_attn_norm: 1`; `strace`
   still showed close-before-output and final `munmap`.
+
+## 2026-05-10T15:13:52Z
+
+- The RMSNorm smoke now uses `mistral3.attention.layer_norm_rms_epsilon` from
+  GGUF metadata instead of a temporary process-local constant. The summary keeps
+  a found flag and the exact f32 bit pattern.
+- Decision: print the f32 value as exact hexadecimal bits for now. That avoids
+  adding a float-to-decimal formatter before numerical oracle comparison, while
+  still making the value auditable and directly reusable by `vmovss`.
+- Verification evidence: synthetic fixtures without the key print the found
+  flag as zero and keep payload smoke statuses at zero; the real local target
+  prints the epsilon as `0x3727c5ac` and still completes both token-0 payload
+  smokes. `strace` continues to show the live mapping released after summary
+  and smoke output.
