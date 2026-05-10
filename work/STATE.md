@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Print a guarded four-word exact-hex slice from `token0_ffn_norm_activation` when
-`token0_ffn_norm_status` is 1, without changing the FFN RMSNorm math path.
+Add verification-only external oracle tooling and a comparison note for the
+first four `token0_ffn_norm_activation` exact-hex words, without changing the
+runtime.
 
 ## Completed Work
 
@@ -23,11 +24,11 @@ Print a guarded four-word exact-hex slice from `token0_ffn_norm_activation` when
   query/key/value projections, single-token context expansion, attention output
   projection, post-attention residual, and FFN RMSNorm. The
   query/key/value/output/residual exact-hex slices have external oracle notes.
-- The latest step added a guarded FFN RMSNorm smoke. It consumes
-  `blk.0.ffn_norm.weight` only after `token0_post_attn_residual` is available,
-  validates the retained descriptor as f32 `[3072]`, proves the mapped payload
-  span is in bounds, writes `token0_ffn_norm_activation`, and prints only
-  `token0_ffn_norm`.
+- The FFN RMSNorm smoke consumes `blk.0.ffn_norm.weight` only after
+  `token0_post_attn_residual` is available, validates the retained descriptor as
+  f32 `[3072]`, proves the mapped payload span is in bounds, writes
+  `token0_ffn_norm_activation`, and now prints a guarded four-word exact-hex
+  slice when `token0_ffn_norm_status` is 1.
 
 ## Known Blockers
 
@@ -81,24 +82,25 @@ None.
   `/tmp/mistral_asm_lookup_found.gguf`, and
   `/tmp/mistral_asm_lookup_absent.gguf` returned status 0, printed
   `ffn_norm_tensor_found: 0`, and kept `token0_post_attn_residual: 0` and
-  `token0_ffn_norm: 0`.
+  `token0_ffn_norm: 0` with no FFN norm word slice.
 - Synthetic malformed fixtures
   `/tmp/mistral_asm_lookup_malformed_later.gguf` and
   `/tmp/mistral_asm_offset_beyond_eof.gguf` returned status 3 with tensor data
   alignment or tensor directory diagnostics.
 - The real target model under `models/` returned status 0, printed
   `blk.0.ffn_norm.weight` as f32 with dimension 3072 at relative offset
-  521428992, kept the existing token-0 attention and residual statuses at 1,
-  printed `token0_ffn_norm: 1`, and preserved the previous exact-hex slices
-  through post-attention residual.
-- `strace -e trace=mmap,munmap,close` on the real target returned status 0,
-  showed the full-file read-only `mmap`, `close(3) = 0`, printed the FFN norm
-  descriptor and `token0_ffn_norm: 1`, then showed final `munmap`.
+  521428992, kept the existing token-0 attention and residual exact-hex slices,
+  printed `token0_ffn_norm: 1`, and printed FFN norm words `0xc01a392c`,
+  `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`.
+- Merged `strace -e trace=mmap,munmap,close` output on the real target returned
+  status 0, showed the full-file read-only `mmap`, `close(3) = 0`, the FFN norm
+  status and four-word slice, then final `munmap`.
 - The external projection/residual oracles were not rerun because this step
-  did not change their math or shared token-0 inputs.
+  only exposed already-computed FFN norm output words.
 - `git diff --check` passed.
 
 ## Next Exact Step
 
-Print a guarded four-word exact-hex slice from `token0_ffn_norm_activation` when
-`token0_ffn_norm_status` is 1, without changing the FFN RMSNorm math path.
+Add verification-only external oracle tooling and a comparison note for the
+first four `token0_ffn_norm_activation` exact-hex words, without changing the
+runtime.

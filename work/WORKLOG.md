@@ -762,3 +762,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   the real local target printed `token0_ffn_norm: 1` while preserving existing
   Q/K/V/output/residual slices. Cleanup tracing still showed `close(3)` before
   the final `munmap`.
+
+## 2026-05-10T17:11:40Z
+
+- The runtime now prints a guarded four-word exact-hex slice from
+  `token0_ffn_norm_activation` after `token0_ffn_norm_status` is 1. The FFN
+  RMSNorm smoke and shared math helper were left unchanged.
+- Verification evidence: narrow synthetic fixtures kept `token0_ffn_norm: 0`
+  with no FFN norm word slice. The real local target printed FFN norm words
+  `0xc01a392c`, `0xc116e478`, `0x416e11b8`, and `0x3fe0d866`; merged cleanup
+  tracing showed those lines before the final `munmap`.
