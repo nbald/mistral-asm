@@ -32,7 +32,8 @@ help_text:
 	.ascii "value descriptor lookup/matvec output slice plus "
 	.ascii "output descriptor lookup/context output slice and "
 	.ascii "output matvec slice, post-attention residual slice, "
-	.ascii "FFN RMSNorm slice, and FFN gate matvec slice.\n"
+	.ascii "FFN RMSNorm slice, FFN gate matvec slice, and "
+	.ascii "FFN up matvec status.\n"
 help_text_end:
 
 lookup_tensor_request:

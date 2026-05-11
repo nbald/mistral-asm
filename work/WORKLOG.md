@@ -2768,3 +2768,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, symbol, line-count, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T20:06:04+02:00
+
+- Added the guarded layer-3 FFN up projection as a status-only smoke. The
+  runtime now retains `blk.3.ffn_up.weight`, requires the layer-3 FFN RMSNorm
+  activation, bounds the complete Q8_0 `[3072 x 9216]` payload, fills private
+  9216-f32 up output storage, and intentionally emits no up exact-hex words
+  yet.
+- Verification evidence: the real target reported the up descriptor as type
+  `8`, dimensions `3072 x 9216`, relative offset `892514304`, and
+  `token0_layer3_ffn_up_matvec: 1`. The focused runtime/oracle diff for the
+  already-published layer-3 attention output, post-attention residual, FFN
+  RMSNorm, and FFN gate labels was empty; the 24-byte header-only GGUF kept the
+  new descriptor and dependent status at `0` and emitted no guarded gate/up
+  output labels.
