@@ -35,7 +35,8 @@ help_text:
 	.ascii "FFN RMSNorm slice, FFN gate matvec slice, and "
 	.ascii "FFN up matvec slice plus FFN SwiGLU activation slice "
 	.ascii "and FFN down matvec output slice plus post-FFN residual "
-	.ascii "output slice.\n"
+	.ascii "output slice plus layer-4 attention RMSNorm descriptor "
+	.ascii "lookup.\n"
 help_text_end:
 
 lookup_tensor_request:

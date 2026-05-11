@@ -48,13 +48,16 @@ ENTRY_START_INCLUDES := \
 
 ENTRY_LOOKUP_SUMMARY_INCLUDES := \
 	src/entry/start/lookup_summary/layer2.inc \
-	src/entry/start/lookup_summary/layer3.inc
+	src/entry/start/lookup_summary/layer3.inc \
+	src/entry/start/lookup_summary/layer4.inc
 
 ENTRY_RODATA_INCLUDES := \
 	src/entry/start/rodata/cli_requests.inc \
 	src/entry/start/rodata/layer3_cli_requests.inc \
+	src/entry/start/rodata/layer4_cli_requests.inc \
 	src/entry/start/rodata/summary_labels.inc \
 	src/entry/start/rodata/layer3_summary_labels.inc \
+	src/entry/start/rodata/layer4_summary_labels.inc \
 	src/entry/start/rodata/layer0_tensor_labels.inc \
 	src/entry/start/rodata/smoke_status_labels.inc \
 	src/entry/start/rodata/slice_labels.inc \
@@ -62,11 +65,14 @@ ENTRY_RODATA_INCLUDES := \
 
 ENTRY_STATE_INCLUDES := \
 	src/entry/start/state/layer3_globals.inc \
-	src/entry/start/state/layer3_bss.inc
+	src/entry/start/state/layer4_globals.inc \
+	src/entry/start/state/layer3_bss.inc \
+	src/entry/start/state/layer4_bss.inc
 
 ENTRY_MAIN_INCLUDES := \
 	src/entry/start/main/bootstrap.inc \
 	src/entry/start/main/bootstrap/layer3.inc \
+	src/entry/start/main/bootstrap/layer4.inc \
 	src/entry/start/main/summary_header.inc \
 	src/entry/start/main/summary_first_lookup.inc \
 	src/entry/start/main/summary_layer0_attn_tensors.inc \

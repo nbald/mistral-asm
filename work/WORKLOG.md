@@ -2926,3 +2926,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   empty-header GGUF kept reviewed descriptors/statuses at `0` and emitted no
   guarded exact-hex labels. Static purity, include dependency, symbol,
   line-count, artifact, and large-file scans passed.
+
+## 2026-05-11T21:26:16+02:00
+
+- Began layer-4 attention scope with descriptor-only retained lookup and summary
+  coverage for `blk.4.attn_norm.weight`. The new entry fragments only publish
+  directory metadata and leave layer-4 f32 payload bytes untouched until a
+  guarded RMSNorm smoke is added.
+- Verification evidence: the real target reported the layer-4 attention RMSNorm
+  descriptor as f32 `[3072]` at relative offset `925937664`, while the 24-byte
+  header-only GGUF kept all layer-4 descriptor fields at `0`. Existing layer-3
+  terminal smoke statuses and post-FFN residual words stayed unchanged.

@@ -1,0 +1,5 @@
+.global layer4_attn_norm_tensor_found
+.global layer4_attn_norm_tensor_n_dimensions
+.global layer4_attn_norm_tensor_dim0
+.global layer4_attn_norm_tensor_ggml_type
+.global layer4_attn_norm_tensor_offset

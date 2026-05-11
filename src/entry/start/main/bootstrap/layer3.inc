@@ -180,7 +180,7 @@
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
-	jz .Lsummary_print
+	jz .Llookup_layer4_attn_norm_tensor
 	cmp rax, 12
 	je .Llookup_tensor_alignment_error
 	cmp rax, 11
