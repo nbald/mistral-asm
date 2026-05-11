@@ -2378,3 +2378,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   include dependency, descriptor-only, static-link, undefined-symbol, and symbol
   checks passed.
+
+## 2026-05-11T17:10:24+02:00
+
+- Added status-only layer-3 attention RMSNorm coverage in a focused inference
+  module. The path waits for the retained layer-2 post-FFN residual, rechecks
+  `blk.3.attn_norm.weight` and RMSNorm epsilon metadata, bounds the complete
+  mapped 3072-f32 weight span, fills private layer-3 norm activation storage,
+  and prints only `token0_layer3_attn_norm`.
+- Verification evidence: the real target preserved the layer-2 post-FFN
+  residual words and printed `token0_layer3_attn_norm: 1`; a temporary 24-byte
+  empty valid GGUF kept the layer-3 descriptor fields and new status at `0`;
+  scans found no layer-3 RMSNorm exact-hex output labels and no query/key/value
+  or output expansion. Build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, static-link, undefined-symbol,
+  symbol, tracked-artifact, and tracked large-file checks passed.
