@@ -1741,3 +1741,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   emits no guarded output labels. Build, harnesses, help, oracle py-compile,
   whitespace, source extension, static-link, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T11:09:55+02:00
+
+- Added durable external oracle coverage for the completed token-0 layer-1 FFN
+  branch. The new script keeps exact scalar Q8_0 dot accumulation for the
+  full gate/up/SwiGLU vectors before checking the down and post-FFN residual
+  public slices, so the run is intentionally slow and should remain targeted
+  verification rather than a default check.
+- Verification evidence: the exact oracle matched the runtime for the layer-1
+  FFN gate, up, SwiGLU, down, and post-FFN residual public words. The script
+  also reuses the full layer-1 FFN norm activation and post-attention residual
+  arrays from the previous oracle path, which removes the review blocker without
+  changing runtime assembly.

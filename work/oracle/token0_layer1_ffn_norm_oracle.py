@@ -129,8 +129,10 @@ def load_layer1_ffn_norm(path, expected_epsilon_bits, activation,
                 "layer1_attn_v_words": value_output[:4].copy(),
                 "layer1_attn_context_words": context[:4].copy(),
                 "layer1_attn_output_words": attn_output[:4].copy(),
+                "layer1_post_attn_residual": post_attn_residual.copy(),
                 "layer1_post_attn_residuals": (
                     post_attn_residual[:4].copy()),
+                "layer1_ffn_norm_activation": ffn_norm_output.copy(),
                 "layer1_ffn_norm_words": ffn_norm_output[:4].copy(),
             }
     finally:

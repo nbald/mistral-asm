@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Fix review pass 1's durable oracle coverage finding for the completed token-0
-layer-1 FFN branch before adding layer-2 or broader feature work.
+Run review gate pass 1 over the completed token-0 layer-1 FFN branch,
+including the new durable oracle coverage, before adding layer-2 or broader
+feature work.
 
 ## Completed Work
 
@@ -121,13 +122,17 @@ layer-1 FFN branch before adding layer-2 or broader feature work.
   bounds or status-gating blocker, but it found a durable oracle coverage gap
   for the committed layer-1 FFN gate/up/SwiGLU/down and post-FFN residual
   public diagnostics.
+- Durable external oracle coverage for the completed token-0 layer-1 FFN branch
+  now lives in `work/oracle/token0_layer1_post_ffn_residual_oracle.py` and
+  `work/oracle/token0-layer1-post-ffn-residual.md`. It reuses the layer-1 FFN
+  norm oracle's full retained arrays, computes layer-1 gate/up/SwiGLU/down and
+  post-FFN residual slices, and its public oracle words match the current
+  runtime output exactly for the local target GGUF.
 
 ## Known Blockers
 
-- Durable oracle coverage now lags the committed layer-1 FFN branch:
-  `work/oracle/` has tracked layer-1 oracle coverage through FFN norm, but no
-  repeatable script/note for gate/up/SwiGLU/down or the post-FFN residual
-  slices. Fix this before layer-2 or broader feature work.
+- No current blocker to restarting the two-pass review gate for the completed
+  layer-1 FFN branch.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -153,6 +158,8 @@ layer-1 FFN branch before adding layer-2 or broader feature work.
 - `tests/*.s`
 - `Makefile`
 - `work/oracle/`
+- `work/oracle/token0_layer1_post_ffn_residual_oracle.py`
+- `work/oracle/token0-layer1-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer1-ffn-down-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-2.md`
@@ -162,20 +169,18 @@ layer-1 FFN branch before adding layer-2 or broader feature work.
 
 ## Last Verification
 
-- Review gate pass 1 verification passed: `make`; `make check`;
-  `./mistral-asm --help`; real target smoke reported the layer-1 down
-  descriptor as `9216x3072` Q8_0 at offset `584957952`, down output words
-  `0x3babc025`, `0x3db2eb07`, `0xbeba3568`, `0x3df45039`, and post-FFN residual
-  words `0xbd2addbf`, `0xbef2bcaa`, `0x4003aae1`, `0xbddfb01f`; a temporary
-  24-byte empty valid GGUF kept the reviewed statuses at 0 and emitted no down
-  or post-FFN residual output labels; oracle py-compile; `git diff --check`;
-  runtime source extension scan allowing `.s` drivers and tracked `.inc`
-  fragments; static-link, no-dynamic-section, tracked-artifact, and tracked
-  large-file checks.
+- Oracle coverage verification passed: `make`; `make check`;
+  `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; exact
+  scalar oracle run for
+  `work/oracle/token0_layer1_post_ffn_residual_oracle.py` against the local
+  target GGUF; runtime slice check for layer-1 FFN gate/up/SwiGLU/down and
+  post-FFN residual labels matched the oracle words exactly; `git diff
+  --check`; runtime source extension scan allowing `.s` drivers and tracked
+  `.inc` fragments; static-link/no-dynamic-section check; tracked-artifact and
+  tracked large-file checks.
 
 ## Next Exact Step
 
-Add durable external oracle coverage for the committed token-0 layer-1 FFN
-gate/up/SwiGLU/down and post-FFN residual slices, compare it against the current
-runtime output for the local target GGUF, then update state so the two-pass
-review gate can restart before layer-2 work.
+Run review gate pass 1 over the completed token-0 layer-1 FFN branch, including
+the new durable oracle script/note and the runtime slice comparison evidence,
+then update state with any findings before continuing toward layer-2 work.
