@@ -5,6 +5,8 @@
 .equ TOKEN0_LAYER1_FFN_SWIGLU_VALUES, 9216
 .equ TOKEN0_LAYER1_FFN_DOWN_OUTPUT_VALUES, 3072
 .equ TOKEN0_LAYER1_FFN_DOWN_OUTPUT_BYTES, TOKEN0_LAYER1_FFN_DOWN_OUTPUT_VALUES * 4
+.equ TOKEN0_LAYER1_POST_FFN_RESIDUAL_VALUES, 3072
+.equ TOKEN0_LAYER1_POST_FFN_RESIDUAL_BYTES, TOKEN0_LAYER1_POST_FFN_RESIDUAL_VALUES * 4
 
 .section .rodata
 
@@ -28,6 +30,10 @@ token0_layer1_ffn_down_output3_f32_text:
 	.ascii "token0_layer1_ffn_down_output3_f32_hex: "
 token0_layer1_ffn_down_output3_f32_text_end:
 
+token0_layer1_post_ffn_residual_text:
+	.ascii "token0_layer1_post_ffn_residual: "
+token0_layer1_post_ffn_residual_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -43,6 +49,16 @@ token0_layer1_ffn_down_matvec_status:
 .balign 4
 token0_layer1_ffn_down_output:
 	.skip TOKEN0_LAYER1_FFN_DOWN_OUTPUT_BYTES
+
+.global token0_layer1_post_ffn_residual_status
+.balign 8
+token0_layer1_post_ffn_residual_status:
+	.skip 8
+
+.global token0_layer1_post_ffn_residual
+.balign 4
+token0_layer1_post_ffn_residual:
+	.skip TOKEN0_LAYER1_POST_FFN_RESIDUAL_BYTES
 
 .section .text
 
@@ -89,6 +105,48 @@ run_token0_layer1_ffn_down_matvec_status:
 	ret
 
 .size run_token0_layer1_ffn_down_matvec_status, . - run_token0_layer1_ffn_down_matvec_status
+
+.global run_token0_layer1_post_ffn_residual_status
+.type run_token0_layer1_post_ffn_residual_status, @function
+
+# Contract: run the token-0 layer-1 post-FFN residual smoke and publish exactly
+# one status line.
+# Inputs: no register inputs. Reads token0_layer1_post_attn_residual_status,
+# token0_layer1_ffn_down_matvec_status, token0_layer1_post_attn_residual, and
+# token0_layer1_ffn_down_output.
+# Outputs: writes token0_layer1_post_ffn_residual_status and, on success, fills
+# token0_layer1_post_ffn_residual with 3072 f32 residual sums. Always prints one
+# label/value/newline sequence to stdout. The return register is unspecified.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags through the smoke
+# helper and summary writers.
+# Ownership/lifetime: reads the upstream layer-1 post-attention residual owned
+# by entry state and this module's retained FFN down output only during this
+# call; owns the layer-1 post-FFN residual status and output storage for later
+# focused inference steps.
+# Error behavior: status is 1 only after both prerequisite statuses are present
+# and the fixed hidden-width add completes; otherwise status is 0 and no
+# residual bytes are written. Output write errors remain diagnostic-only.
+run_token0_layer1_post_ffn_residual_status:
+	call token0_layer1_post_ffn_residual_smoke
+	mov qword ptr [rip + token0_layer1_post_ffn_residual_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer1_post_ffn_residual_text]
+	mov rdx, token0_layer1_post_ffn_residual_text_end - token0_layer1_post_ffn_residual_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer1_post_ffn_residual_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size run_token0_layer1_post_ffn_residual_status, . - run_token0_layer1_post_ffn_residual_status
 
 .type print_token0_layer1_ffn_down_output_slice, @function
 
@@ -168,6 +226,55 @@ print_token0_layer1_ffn_down_output_slice:
 	ret
 
 .size print_token0_layer1_ffn_down_output_slice, . - print_token0_layer1_ffn_down_output_slice
+
+.type token0_layer1_post_ffn_residual_smoke, @function
+
+# Contract: derive the token-0 layer-1 post-FFN residual activation.
+# Inputs: no register inputs. Reads token0_layer1_post_attn_residual_status,
+# token0_layer1_ffn_down_matvec_status, token0_layer1_post_attn_residual, and
+# token0_layer1_ffn_down_output.
+# Outputs: rax = 1 after writing 3072 f32 sums to
+# token0_layer1_post_ffn_residual; otherwise rax = 0 and no layer-1 post-FFN
+# residual bytes are written.
+# Clobbers: caller-saved registers, xmm0, xmm1 and flags.
+# Ownership/lifetime: reads only static residual and FFN down output storage,
+# writes only module-owned static post-FFN residual storage, and does not read
+# any mapped tensor payload bytes.
+# Error behavior: this is a status-only smoke gate for the layer-1 residual,
+# not final layer execution. Missing prerequisite statuses are skipped with
+# status 0.
+token0_layer1_post_ffn_residual_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer1_post_attn_residual_status], 1
+	jne .Llayer1_post_ffn_residual_done
+	cmp qword ptr [rip + token0_layer1_ffn_down_matvec_status], 1
+	jne .Llayer1_post_ffn_residual_done
+
+	# The two prerequisite statuses prove both 3072-wide static rows were
+	# freshly written for this token path, so this step only adds retained f32
+	# buffers and publishes a reusable residual for the next layer.
+	lea rsi, [rip + token0_layer1_post_attn_residual]
+	lea rdx, [rip + token0_layer1_ffn_down_output]
+	lea rdi, [rip + token0_layer1_post_ffn_residual]
+	mov rcx, TOKEN0_LAYER1_POST_FFN_RESIDUAL_VALUES
+
+.Llayer1_post_ffn_residual_loop:
+	vmovss xmm0, dword ptr [rsi]
+	vmovss xmm1, dword ptr [rdx]
+	vaddss xmm0, xmm0, xmm1
+	vmovss dword ptr [rdi], xmm0
+	add rsi, 4
+	add rdx, 4
+	add rdi, 4
+	dec rcx
+	jnz .Llayer1_post_ffn_residual_loop
+
+	mov eax, 1
+
+.Llayer1_post_ffn_residual_done:
+	ret
+
+.size token0_layer1_post_ffn_residual_smoke, . - token0_layer1_post_ffn_residual_smoke
 
 .type token0_layer1_ffn_down_matvec_smoke, @function
 

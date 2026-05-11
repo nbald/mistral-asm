@@ -6,11 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-1 post-FFN residual smoke in focused inference
-code, consuming `token0_layer1_post_attn_residual_status`,
-`token0_layer1_ffn_down_matvec_status`, `token0_layer1_post_attn_residual`,
-and `token0_layer1_ffn_down_output`, then print one status line after the
-layer-1 FFN down output slice.
+Add a guarded first-four exact-hex output slice for
+`token0_layer1_post_ffn_residual`, printed only when
+`token0_layer1_post_ffn_residual_status` is 1.
 
 ## Completed Work
 
@@ -105,10 +103,18 @@ layer-1 FFN down output slice.
   its status is 1. The new words appear immediately after
   `token0_layer1_ffn_down_matvec: 1`, and the help milestone line now
   describes layer-1 FFN SwiGLU/down output slices.
+- Status-only layer-1 post-FFN residual coverage now lives beside the focused
+  layer-1 FFN down path in `src/infer/token0_layer1_ffn_down.s`. It consumes
+  `token0_layer1_post_attn_residual_status`,
+  `token0_layer1_ffn_down_matvec_status`,
+  `token0_layer1_post_attn_residual`, and
+  `token0_layer1_ffn_down_output`, writes a reusable
+  `token0_layer1_post_ffn_residual` buffer plus status word, and prints exactly
+  one `token0_layer1_post_ffn_residual` status line after the down output slice.
 
 ## Known Blockers
 
-- No current blocker for the next layer-1 post-FFN residual status step.
+- No current blocker for the next layer-1 post-FFN residual output slice step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -142,22 +148,22 @@ layer-1 FFN down output slice.
 
 ## Last Verification
 
-- Layer-1 FFN down output slice verification passed: `make`; `make check`;
+- Layer-1 post-FFN residual status verification passed: `make`; `make check`;
   `./mistral-asm --help`; real target smoke printed
   `layer1_ffn_down_tensor_found: 1`, dimensions `9216x3072`, type `8`, offset
   `584957952`, the unchanged layer-1 FFN norm/gate/up/SwiGLU diagnostics,
   `token0_layer1_ffn_down_matvec: 1`, and down output words `0x3babc025`,
-  `0x3db2eb07`, `0xbeba3568`, `0x3df45039`; a temporary 24-byte empty valid
-  GGUF kept the gate/up/down descriptor slots zeroed and layer-1 FFN
-  norm/gate/up/SwiGLU/down statuses at 0 while emitting no down output labels;
-  oracle py-compile; `git diff --check`; runtime source purity scan;
-  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
-  large-file checks.
+  `0x3db2eb07`, `0xbeba3568`, `0x3df45039`, followed by
+  `token0_layer1_post_ffn_residual: 1`; a temporary 24-byte empty valid GGUF
+  kept the gate/up/down descriptor slots zeroed and layer-1 FFN
+  norm/gate/up/SwiGLU/down plus post-FFN residual statuses at 0 while emitting
+  no down or post-FFN residual output labels; oracle py-compile;
+  `git diff --check`; runtime source extension scan; static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-1 post-FFN residual smoke in focused inference
-code, consuming `token0_layer1_post_attn_residual_status`,
-`token0_layer1_ffn_down_matvec_status`, `token0_layer1_post_attn_residual`,
-and `token0_layer1_ffn_down_output`, then print one status line after the
-layer-1 FFN down output slice.
+Add a guarded first-four exact-hex output slice for
+`token0_layer1_post_ffn_residual`, printed only when
+`token0_layer1_post_ffn_residual_status` is 1.

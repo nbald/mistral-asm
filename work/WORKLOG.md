@@ -1693,3 +1693,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T10:36:48+02:00
+
+- Added status-only layer-1 post-FFN residual coverage in the focused FFN down
+  inference module. The new step is pure retained-buffer math: it waits for the
+  layer-1 post-attention residual and FFN down statuses, adds the two 3072-wide
+  f32 rows into a reusable post-FFN residual buffer, and prints only one status
+  line in this iteration.
+- Verification evidence: the real target printed the unchanged layer-1 FFN
+  down output words followed by `token0_layer1_post_ffn_residual: 1`. A
+  temporary empty valid GGUF kept the new status at `0` and emitted no
+  post-FFN residual output labels. Build, no-libc harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.
