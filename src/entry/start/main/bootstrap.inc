@@ -54,8 +54,8 @@
 # projection, key projection, value projection, output projection, FFN RMSNorm
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
 # attention/FFN setup descriptors. The layer-2 FFN RMSNorm smoke consumes the
-# retained layer-2 post-attention residual and publishes only a status line for
-# this step.
+# retained layer-2 post-attention residual and publishes a guarded exact-hex
+# output slice.
 # Error behavior: maps gguf_validate_file and post-validation tensor lookup
 # status codes to stderr diagnostics after releasing any live mapping.
 _start:

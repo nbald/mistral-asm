@@ -2119,3 +2119,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   include dependency, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:09:57+02:00
+
+- Published the first guarded layer-2 FFN RMSNorm activation slice from the
+  focused FFN module. The four exact-hex labels are emitted only after
+  `token0_layer2_ffn_norm: 1`; the empty-GGUF guard path still prints only the
+  zero status and no guarded layer-2 FFN norm words.
+- Verification evidence: the real target printed layer-2 FFN RMSNorm words
+  `0x40522d9d`, `0xbf5d5852`, `0x3fc92f4e`, and `0x3f3f5579`. The focused
+  external oracle recomputed the full upstream layer-1 post-FFN residual,
+  layer-2 attention output, full layer-2 post-attention residual, and
+  `blk.2.ffn_norm.weight` RMSNorm activation; its output words matched the
+  runtime exactly. Build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.
