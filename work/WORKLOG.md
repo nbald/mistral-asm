@@ -3111,3 +3111,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   slices still matched their external oracles exactly. A 24-byte header-only
   GGUF kept all layer-4 guarded statuses, including context, at `0` and emitted
   no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T23:08:22+02:00
+
+- Added guarded status-only layer-4 attention output-projection matvec coverage.
+  The smoke consumes the retained single-token layer-4 context and exact
+  `blk.4.attn_output.weight` Q8_0 `[4096,3072]` descriptor, proves the complete
+  payload span fits in the mmap, and retains the output for the next residual
+  step without publishing output exact-hex labels yet.
+- Verification evidence: the real target reported
+  `token0_layer4_attn_output_matvec: 1`, existing layer-3 post-FFN residual and
+  layer-4 RMSNorm/query/key/value public slices still matched their oracles, and
+  no `token0_layer4_attn_output*_f32_hex` labels were emitted. The 24-byte
+  header-only GGUF reported the new output matvec status as `0`, kept layer-4
+  descriptor fields at `0`, and emitted no guarded layer-4 exact-hex labels.
+- Source-size note: the layer-4 attention `.s` file is now close to the
+  threshold; the next slice publication should keep only minimal call wiring in
+  that file and place substantial work in the existing slice include and oracle.

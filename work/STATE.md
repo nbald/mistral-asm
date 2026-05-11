@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add guarded status-only token-0 layer-4 attention output-projection matvec
-coverage, using the retained layer-4 attention context and
-`blk.4.attn_output.weight` descriptor, with no new public exact-hex output
-slice yet.
+Publish the first guarded token-0 layer-4 attention output-projection
+exact-hex slice and external oracle, with only minimal wiring in the near-guard
+`src/infer/token0_layer4_attn.s` file.
 
 ## Completed Work
 
@@ -90,11 +89,20 @@ slice yet.
   success plus exact retained query/key/value/output descriptor shapes, expands
   the single-token grouped-query context from the value output, reports
   `token0_layer4_attn_context`, and publishes no context exact-hex slice.
+- Layer-4 attention output-projection coverage is now status-only and retained
+  inside `src/infer/token0_layer4_attn.s`. It requires retained layer-4
+  context success plus the exact Q8_0 `[4096,3072]`
+  `blk.4.attn_output.weight` descriptor, bounds-checks the full payload span,
+  runs `q8_0_matvec_f32`, reports `token0_layer4_attn_output_matvec`, and
+  publishes no output exact-hex slice yet.
 
 ## Known Blockers
 
-- No functional blocker to adding a guarded layer-4 attention output-projection
-  matvec status smoke.
+- No functional blocker to publishing the first guarded layer-4 attention
+  output-projection exact-hex slice and oracle.
+- `src/infer/token0_layer4_attn.s` is 942 lines after the output-projection
+  status smoke. Keep the next slice step's `.s` edit to minimal call wiring and
+  put substantial slice/oracle logic in focused files.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -135,31 +143,32 @@ slice yet.
 
 ## Last Verification
 
-Layer-4 attention context status verification passed:
+Layer-4 attention output-projection status verification passed:
 
 - `make all check` and `./mistral-asm --help`
-- real-target run reported `token0_layer4_attn_context: 1`, kept the retained
-  layer-4 query/key/value/output descriptors at their expected target shapes,
-  and emitted no `token0_layer4_attn_context*_f32_hex` labels
+- real-target run reported `token0_layer4_attn_output_matvec: 1`, kept the
+  retained `blk.4.attn_output.weight` descriptor at Q8_0 `[4096,3072]` offset
+  `925949952`, and emitted no `token0_layer4_attn_output*_f32_hex` labels
 - real-target runtime/oracle diffs stayed empty for the layer-3 post-FFN
   residual prerequisite slice and layer-4 attention RMSNorm/query/key/value
   public slices
 - 24-byte header-only GGUF kept all layer-4 query/key/value/output descriptor
-  fields at `0`, reported `token0_layer4_attn_context: 0`, and emitted no
-  guarded layer-4 exact-hex labels
+  fields at `0`, reported `token0_layer4_attn_output_matvec: 0`, and emitted
+  no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- inference source line-count check; `src/infer/token0_layer4_attn.s` is now
-  790 lines
+- exported symbol check for `run_token0_layer4_attn_output_matvec_status`,
+  `token0_layer4_attn_output_matvec_status`, and `token0_layer4_attn_output`
+- inference/source line-count check; `src/infer/token0_layer4_attn.s` is now
+  942 lines
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add guarded status-only token-0 layer-4 attention output-projection matvec
-coverage, using the retained layer-4 attention context and
-`blk.4.attn_output.weight` descriptor, while preserving the existing public
-slices and 24-byte header-only GGUF guard behavior.
+Publish the first guarded token-0 layer-4 attention output-projection
+exact-hex slice and external oracle, preserving the existing public slices and
+24-byte header-only GGUF guard behavior.
