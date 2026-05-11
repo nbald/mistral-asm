@@ -2747,3 +2747,24 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime/oracle diff for the already-published layer-3 attention output,
   post-attention residual, and FFN RMSNorm labels was empty; the 24-byte
   header-only GGUF kept the new descriptor and dependent status at `0`.
+
+## 2026-05-11T19:58:43+02:00
+
+- Published the first guarded layer-3 FFN gate projection slice. The runtime
+  still computes the full 9216-word gate output after the existing payload
+  bounds check, but now prints only the first four words when
+  `token0_layer3_ffn_gate_matvec: 1`; the help text was updated from
+  status-only to slice.
+- Added an external layer-3 FFN gate oracle and note that reuse the full
+  layer-3 FFN RMSNorm chain, then dot the first four rows of
+  `blk.3.ffn_gate.weight` using the same scalar Q8_0 accumulation order as the
+  runtime helper.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-3 attention output, post-attention residual, FFN RMSNorm, and new FFN
+  gate public labels. The new gate words are `0xbfb2e5c3`, `0xbec7c2ba`,
+  `0xbe4be710`, and `0x3d08c33e`; the 24-byte header-only GGUF kept the
+  layer-3 FFN gate descriptor and dependent statuses at `0` and emitted no
+  guarded gate output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, symbol, line-count, tracked-artifact, and tracked
+  large-file scans passed.
