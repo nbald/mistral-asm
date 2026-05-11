@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded token-0 layer-4 post-attention residual exact-hex slice with
-an external oracle, while keeping the 24-byte header-only GGUF silent.
+Run review gate pass 1 over the token-0 layer-4 post-attention residual handoff
+before starting layer-4 FFN scope.
 
 ## Completed Work
 
@@ -114,18 +114,28 @@ an external oracle, while keeping the 24-byte header-only GGUF silent.
   under `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`. The two-pass
   review gate is complete; feature work can resume in a focused layer-4
   post-attention residual module.
-- `src/infer/token0_layer4_post_attn_residual.s` now owns guarded status-only
-  token-0 layer-4 post-attention residual coverage. It requires
+- `src/infer/token0_layer4_post_attn_residual.s` now owns guarded token-0
+  layer-4 post-attention residual coverage. It requires
   `token0_layer3_post_ffn_residual_status`,
   `token0_layer4_attn_output_matvec_status`, and the retained layer-4 attention
   output descriptor width before filling retained
   `token0_layer4_post_attn_residual` storage and reporting
-  `token0_layer4_post_attn_residual`. No exact-hex slice is published yet.
+  `token0_layer4_post_attn_residual`.
+- The first guarded layer-4 post-attention residual exact-hex slice is
+  published from `src/infer/token0_layer4_post_attn_residual.s`. The first four
+  layer-4 post-attention residual words are `0x440c288f`, `0xc1fe4c53`,
+  `0xc2a99143`, and `0xc15f94a3`.
+- `work/oracle/token0_layer4_post_attn_residual_oracle.py` covers those four
+  residual words by reusing the layer-4 attention output oracle path and adding
+  the first four layer-3 post-FFN residual words with scalar f32 rounding.
+  `work/oracle/token0-layer4-post-attn-residual.md` records the oracle command
+  and exact comparison evidence.
 
 ## Known Blockers
 
-- No functional blocker to publishing the first layer-4 post-attention residual
-  exact-hex slice and oracle.
+- No functional blocker is known. Because the next feature step starts layer-4
+  FFN scope after the layer-4 attention/residual handoff, run review gate pass 1
+  first.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
   layer-4 residual/FFN work in focused modules.
@@ -167,6 +177,8 @@ an external oracle, while keeping the 24-byte header-only GGUF silent.
 - `work/oracle/token0_layer4_attn_v_oracle.py`
 - `work/oracle/token0-layer4-attn-output.md`
 - `work/oracle/token0_layer4_attn_output_oracle.py`
+- `work/oracle/token0-layer4-post-attn-residual.md`
+- `work/oracle/token0_layer4_post_attn_residual_oracle.py`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`
 - `work/STATE.md`
@@ -174,13 +186,14 @@ an external oracle, while keeping the 24-byte header-only GGUF silent.
 
 ## Last Verification
 
-Layer-4 post-attention residual status smoke verification passed:
+Layer-4 post-attention residual slice verification passed:
 
 - `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target focused status check reported `token0_layer3_post_ffn_residual:
-  1`, `token0_layer4_attn_output_matvec: 1`, and
-  `token0_layer4_post_attn_residual: 1`
+- real-target focused runtime/oracle diff was empty for the public layer-3
+  post-FFN residual, layer-4 attention output, and layer-4 post-attention
+  residual slices; the new residual words are `0x440c288f`, `0xc1fe4c53`,
+  `0xc2a99143`, and `0xc15f94a3`
 - 24-byte header-only GGUF reported `token0_layer4_attn_output_matvec: 0` and
   `token0_layer4_post_attn_residual: 0`, and emitted no guarded
   `token0_layer4_*_f32_hex` labels
@@ -193,12 +206,11 @@ Layer-4 post-attention residual status smoke verification passed:
   `token0_layer4_post_attn_residual_status`, and
   `token0_layer4_post_attn_residual`
 - inference/source line-count check; `src/infer/token0_layer4_attn.s` remains
-  945 lines and `src/infer/token0_layer4_post_attn_residual.s` is 126 lines
+  945 lines and `src/infer/token0_layer4_post_attn_residual.s` is 223 lines
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish the first guarded `token0_layer4_post_attn_residual*_f32_hex` slice,
-add a focused external oracle for the first four residual words, and verify the
-real target matches while the 24-byte header-only GGUF emits no layer-4
-post-attention residual slice labels.
+Run review gate pass 1 over the token-0 layer-4 post-attention residual handoff,
+including descriptor/status guards, exact-slice oracle quality, header-only
+silence, help text accuracy, and readiness to begin focused layer-4 FFN work.

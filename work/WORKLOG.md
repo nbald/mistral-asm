@@ -3183,3 +3183,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer4_post_attn_residual: 1` together with its prerequisites. A
   24-byte header-only GGUF kept the new status at `0` and emitted no guarded
   layer-4 exact-hex labels.
+
+## 2026-05-11T23:43:10+02:00
+
+- Published the first guarded layer-4 post-attention residual exact-hex slice.
+  The slice printer lives in the focused residual module, and the help text now
+  describes the layer-4 residual as an output slice instead of status-only.
+- Added a focused external oracle that reuses the layer-4 attention output
+  oracle and adds the first four layer-3 post-FFN residual words with scalar
+  f32 rounding. The new residual words are `0x440c288f`, `0xc1fe4c53`,
+  `0xc2a99143`, and `0xc15f94a3`.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  public layer-3 post-FFN residual, layer-4 attention output, and layer-4
+  post-attention residual slices. The 24-byte header-only GGUF kept the layer-4
+  output and post-attention residual statuses at `0` and emitted no guarded
+  layer-4 exact-hex labels. Because the next feature step starts layer-4 FFN
+  scope, continuation should run review gate pass 1 first.
