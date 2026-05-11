@@ -11,3 +11,7 @@ layer4_attn_q_tensor_request_end:
 layer4_attn_k_tensor_request:
 	.ascii "blk.4.attn_k.weight"
 layer4_attn_k_tensor_request_end:
+
+layer4_attn_v_tensor_request:
+	.ascii "blk.4.attn_v.weight"
+layer4_attn_v_tensor_request_end:

@@ -3044,3 +3044,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-4 key public labels. The new key words are `0xbc326305`, `0x3c2ff2f1`,
   `0x3a8970d8`, and `0xbc83c191`; the 24-byte header-only GGUF kept the
   layer-4 guarded statuses at `0` and emitted no layer-4 exact-hex labels.
+
+## 2026-05-11T22:28:39+02:00
+
+- Added descriptor-only retained lookup and summary coverage for
+  `blk.4.attn_v.weight`. This keeps the layer-4 value projection at the same
+  metadata-only boundary used for query and key before their guarded matvec
+  smokes.
+- Verification evidence: the real target reported the value descriptor as Q8_0
+  `[3072,1024]` at relative offset `952688640`, while preserving the existing
+  layer-4 norm/query/key descriptor fields and layer-3 post-FFN residual plus
+  layer-4 RMSNorm/query/key public slices. The 24-byte header-only GGUF kept all
+  layer-4 norm/query/key/value descriptor fields at `0` and kept the layer-4
+  guarded math statuses at `0`.
