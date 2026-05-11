@@ -1621,3 +1621,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   emitted no layer-1 FFN output word labels. Build, no-libc harnesses, help,
   oracle py-compile, whitespace, runtime purity, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T10:00:46+02:00
+
+- Added status-only layer-1 FFN SwiGLU coverage in the focused FFN inference
+  module. This is pure retained-buffer math: the new smoke consumes the private
+  gate/up projection outputs only after their statuses are both `1`, writes a
+  private SwiGLU output buffer for the next slice/down step, and does not read
+  mapped tensor payload bytes.
+- Verification evidence: the real target printed the unchanged layer-1 FFN
+  norm/gate/up diagnostics followed by `token0_layer1_ffn_swiglu: 1`. A
+  temporary empty valid GGUF kept layer-1 FFN norm/gate/up/SwiGLU statuses at
+  `0` and emitted no layer-1 FFN output word labels. Build, no-libc harnesses,
+  help, whitespace, runtime purity, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

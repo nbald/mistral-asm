@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-1 FFN SwiGLU coverage in
-`src/infer/token0_layer1_ffn.s`, consuming the existing private layer-1 FFN
-gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
+Add a guarded first-four exact-hex token-0 layer-1 FFN SwiGLU output slice in
+`src/infer/token0_layer1_ffn.s`, printed only when
+`token0_layer1_ffn_swiglu_status` is 1.
 
 ## Completed Work
 
@@ -77,10 +77,15 @@ gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
   exact-hex slice from the private `token0_layer1_ffn_up_output` buffer when
   its status is 1. The new up output words appear after
   `token0_layer1_ffn_up_matvec: 1`, matching the layer-0 FFN diagnostic order.
+- Status-only layer-1 FFN SwiGLU coverage now lives beside the layer-1 FFN
+  gate/up paths in `src/infer/token0_layer1_ffn.s`. It consumes only the
+  private layer-1 FFN gate/up output buffers, writes a private
+  `token0_layer1_ffn_swiglu_output` buffer and status word, and prints only
+  `token0_layer1_ffn_swiglu`.
 
 ## Known Blockers
 
-- No current blocker for the next focused layer-1 FFN SwiGLU status step.
+- No current blocker for the next focused layer-1 FFN SwiGLU output-slice step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -113,19 +118,16 @@ gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
 
 ## Last Verification
 
-- Layer-1 FFN up output verification passed: `make`; `make check`;
-  `./mistral-asm --help`; real target smoke printed
-  `token0_layer1_ffn_up_matvec: 1` followed by up output words `0x3f1797a4`,
-  `0x3f80ec8f`, `0xbe651441`, and `0x3f2943b9`; a one-off external Python
-  oracle recomputed the upstream layer-1 path and matched those words exactly;
-  a temporary 24-byte empty valid GGUF kept layer-1 FFN norm/gate/up statuses at
-  0 and emitted no layer-1 FFN output word labels; oracle py-compile;
-  `git diff --check`; runtime source purity scan;
-  static-link, undefined-symbol, exported-symbol, tracked-artifact, and
-  tracked large-file checks.
+- Layer-1 FFN SwiGLU status verification passed: `make`; `make check`;
+  `./mistral-asm --help`; real target smoke printed the unchanged layer-1 FFN
+  norm/gate/up diagnostics followed by `token0_layer1_ffn_swiglu: 1`; a
+  temporary 24-byte empty valid GGUF kept layer-1 FFN norm/gate/up/SwiGLU
+  statuses at 0 and emitted no layer-1 FFN output word labels; `git diff
+  --check`; runtime source purity scan; static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-1 FFN SwiGLU coverage in
-`src/infer/token0_layer1_ffn.s`, consuming the existing private layer-1 FFN
-gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
+Add a guarded first-four exact-hex token-0 layer-1 FFN SwiGLU output slice in
+`src/infer/token0_layer1_ffn.s`, printed only when
+`token0_layer1_ffn_swiglu_status` is 1.
