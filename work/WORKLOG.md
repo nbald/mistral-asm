@@ -2457,3 +2457,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, include dependency,
   static-link, undefined-symbol, symbol, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T17:48:20+02:00
+
+- Added descriptor-only retained lookup coverage for `blk.3.attn_k.weight` in
+  the focused layer-3 entry fragments. The runtime now publishes the key
+  descriptor summary but still has no layer-3 key matvec, output storage, or
+  payload-read path.
+- Verification evidence: the real target reported the new descriptor as found
+  with dimensions `3072x1024`, type `8`, and relative offset `798904320`, while
+  preserving the layer-2 post-FFN residual, layer-3 RMSNorm, and layer-3 query
+  output public exact-hex slices. The runtime/oracle diff for those existing
+  public labels was empty. A 24-byte header-only GGUF left all layer-3
+  descriptor slots and dependent statuses at `0`. Build, harnesses, help,
+  oracle py-compile, whitespace, runtime source extension, include dependency,
+  descriptor-only, static-link, undefined-symbol, symbol, tracked-artifact, and
+  tracked large-file scans passed.

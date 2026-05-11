@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only retained lookup/summary coverage for
-`blk.3.attn_k.weight` in focused layer-3 entry fragments, with no key matvec or
-payload reads.
+Add status-only token-0 layer-3 attention key matvec coverage in the focused
+layer-3 inference module, consuming the retained `blk.3.attn_k.weight`
+descriptor and existing layer-3 attention RMSNorm activation, with no key
+output slice yet.
 
 ## Completed Work
 
@@ -47,13 +48,17 @@ payload reads.
   exact-hex output slice only after `token0_layer3_attn_q_matvec: 1`. On the
   real target it prints `0x3de458d2`, `0x3eae6d55`, `0x3d06883d`, and
   `0xbe14568c`, matching the focused external oracle.
+- Descriptor-only retained lookup coverage now includes `blk.3.attn_k.weight`
+  with no layer-3 key payload reads. On the real target it reports found `1`,
+  dimensions `2`, dim0 `3072`, dim1 `1024`, type `8`, and relative offset
+  `798904320`.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention key descriptor step.
+- No current blocker to the layer-3 attention key matvec status step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -89,7 +94,7 @@ payload reads.
 
 ## Last Verification
 
-Layer-3 attention query output-slice verification passed:
+Layer-3 attention key descriptor verification passed:
 
 - `make`
 - `make check`
@@ -97,16 +102,16 @@ Layer-3 attention query output-slice verification passed:
 - real-target run printed layer-3 attention RMSNorm descriptor found `1`,
   dimensions `1`, dim0 `3072`, type `0`, and offset `802246656`, then printed
   layer-3 attention query descriptor found `1`, dimensions `2`, dim0 `3072`,
-  dim1 `4096`, type `8`, and offset `815628288`; it also preserved
-  `token0_layer2_post_ffn_residual: 1`, `token0_layer3_attn_norm: 1`, the
-  known guarded exact-hex words, and printed `token0_layer3_attn_q_matvec: 1`
-  followed by guarded layer-3 query output words `0x3de458d2`, `0x3eae6d55`,
-  `0x3d06883d`, and `0xbe14568c`
+  dim1 `4096`, type `8`, and offset `815628288`, then printed layer-3
+  attention key descriptor found `1`, dimensions `2`, dim0 `3072`, dim1
+  `1024`, type `8`, and offset `798904320`; it also preserved
+  `token0_layer2_post_ffn_residual: 1`, `token0_layer3_attn_norm: 1`,
+  `token0_layer3_attn_q_matvec: 1`, and the known guarded exact-hex words
 - real-target runtime/oracle diff was empty for the layer-2 post-FFN residual,
   layer-3 attention RMSNorm, and layer-3 attention query output public
   exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
-  including the new query descriptor slot, kept `token0_layer2_post_ffn_residual`
+  including the new key descriptor slot, kept `token0_layer2_post_ffn_residual`
   and `token0_layer3_attn_norm` at `0`, printed
   `token0_layer3_attn_q_matvec: 0`, and emitted no guarded layer-2 post-FFN
   residual, layer-3 attention RMSNorm, or layer-3 attention query exact-hex
@@ -115,14 +120,15 @@ Layer-3 attention query output-slice verification passed:
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
+- descriptor-only scan found no layer-3 key matvec or payload-read code
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- local/exported symbol inspection for the layer-3 query matvec runner, status,
-  internal smoke helper, guarded slice printer, and private output storage
+- local/exported symbol inspection for the layer-3 key descriptor summary
+  printer and retained descriptor fields
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add descriptor-only retained lookup/summary coverage for
-`blk.3.attn_k.weight` in focused layer-3 entry fragments, with no key matvec or
-payload reads.
+Add status-only token-0 layer-3 attention key matvec coverage in
+`src/infer/token0_layer3_attn.s`, using the retained key descriptor and
+`token0_layer3_attn_norm_activation`, with no key output slice yet.

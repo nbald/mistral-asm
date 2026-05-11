@@ -41,12 +41,13 @@
 # `blk.2.attn_output.weight`, plus FFN RMSNorm setup for
 # `blk.2.ffn_norm.weight`, `blk.2.ffn_gate.weight`, `blk.2.ffn_up.weight`, and
 # `blk.2.ffn_down.weight`, then layer-3 attention setup for
-# `blk.3.attn_norm.weight` and `blk.3.attn_q.weight`, into separate
+# `blk.3.attn_norm.weight`, `blk.3.attn_q.weight`, and
+# `blk.3.attn_k.weight`, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention descriptors and retained
 # activation outputs are consumed only by guarded focused smokes after their
-# prerequisite activations exist, including the status-only layer-3 query matvec
-# smoke.
+# prerequisite activations exist, including the layer-3 query matvec output
+# slice smoke.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
