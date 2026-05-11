@@ -2714,3 +2714,22 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Build, harnesses, help, oracle py-compile, whitespace, runtime source
   extension, include dependency, static-link, undefined-symbol, symbol,
   line-count, tracked-artifact, and tracked large-file scans passed.
+
+## 2026-05-11T19:42:43+02:00
+
+- Added the layer-3 FFN RMSNorm smoke in a focused module. The path retains the
+  `blk.3.ffn_norm.weight` descriptor, requires the layer-3 post-attention
+  residual status, bounds the full f32 weight span against the live mapping,
+  and publishes the guarded FFN-normalized activation slice.
+- Verification evidence: the real target reported
+  `layer3_ffn_norm_tensor_found: 1` and `token0_layer3_ffn_norm: 1`. The
+  focused runtime/oracle diff was empty for the layer-3 attention output,
+  post-attention residual, and FFN RMSNorm public labels; the new FFN RMSNorm
+  words are `0x422e5251`, `0xc01a339f`, `0xbffb06aa`, and `0xbf19ba93`.
+- Guard-path evidence: the corrected 24-byte header-only GGUF kept the new
+  layer-3 FFN norm descriptor fields and dependent smoke status at `0`, and it
+  emitted no guarded layer-3 attention output, post-attention residual, or FFN
+  RMSNorm exact-hex labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, symbol, line-count, tracked-artifact, and tracked
+  large-file scans passed.

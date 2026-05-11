@@ -19,3 +19,7 @@ layer3_attn_v_tensor_request_end:
 layer3_attn_output_tensor_request:
 	.ascii "blk.3.attn_output.weight"
 layer3_attn_output_tensor_request_end:
+
+layer3_ffn_norm_tensor_request:
+	.ascii "blk.3.ffn_norm.weight"
+layer3_ffn_norm_tensor_request_end:

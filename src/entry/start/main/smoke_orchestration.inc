@@ -420,6 +420,7 @@
 	call run_token0_layer3_attn_context_status
 	call run_token0_layer3_attn_output_matvec_status
 	call run_token0_layer3_post_attn_residual_status
+	call run_token0_layer3_ffn_norm_status
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.
