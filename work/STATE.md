@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_v.weight` as the
-next token-0 layer-2 attention setup step.
+Add status-only token-0 layer-2 attention value matvec coverage, consuming
+`token0_layer2_attn_norm_activation` and the reusable `blk.2.attn_v.weight`
+descriptor after checks, printing only `token0_layer2_attn_v_matvec`.
 
 ## Completed Work
 
@@ -194,10 +195,17 @@ next token-0 layer-2 attention setup step.
   `work/oracle/token0-layer2-attn-k-output.md`; the oracle recomputes the full
   layer-1 post-FFN residual, applies layer-2 attention RMSNorm, dots the first
   four rows of `blk.2.attn_k.weight`, and matches the runtime output exactly.
+- Descriptor-only reusable lookup coverage now includes `blk.2.attn_v.weight`.
+  The descriptor is stored in a separate exported layer-2 scratch slot and
+  printed as found/dimension/type/offset summary lines after the layer-2 key
+  descriptor without reading payload bytes. On the local target GGUF it reports
+  found `1`, two dimensions `3072` and `1024`, Q8_0 type `8`, and relative
+  offset `705306624`.
 
 ## Known Blockers
 
-- No current blocker to adding descriptor-only layer-2 attention value setup.
+- No current blocker to adding status-only layer-2 attention value matvec
+  coverage.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -244,28 +252,25 @@ next token-0 layer-2 attention setup step.
 
 ## Last Verification
 
-Layer-2 attention key output slice verification passed: `make`; `make check`;
-`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`;
-`python3 work/oracle/token0_layer2_attn_k_oracle.py
-models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`;
-real target runtime smoke reporting preserved layer-2 RMSNorm words
-`0xbf898056`, `0xc152dc8b`, `0x4248afc4`, `0xc0556342`, preserved query output
-words `0x3f29ab97`, `0x3fa60667`, `0x4000572f`, `0x3fb6f799`, and newly printed
-key output words `0xc0775316`, `0xbecc9c4c`, `0xbfd669ad`, `0x4005155d`, which
-match the oracle exactly; temporary 24-byte empty valid GGUF reporting zeroed
-layer-2 norm/query/key descriptor fields, `token0_layer2_attn_norm: 0`,
-`token0_layer2_attn_q_matvec: 0`, and `token0_layer2_attn_k_matvec: 0` with no
-guarded layer-2 output labels; `git diff --check`; runtime source extension
-scan allowing `.s` drivers and tracked `.inc` fragments; tracked include
-dependency scan; static-link/no-dynamic-section check; undefined-symbol check;
-exported-symbol inspection for the layer-2 key symbols; tracked-artifact and
-tracked large-file checks. `src/infer/token0_layer2_attn.s` is 749 lines after
-the slice addition.
+Layer-2 attention value descriptor verification passed: `make`; `make check`;
+`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
+runtime smoke reporting preserved layer-2 norm/query/key descriptors and
+statuses plus `layer2_attn_v_tensor_found: 1`, dimensions `3072` and `1024`,
+Q8_0 type `8`, and relative offset `705306624`; temporary 24-byte empty valid
+GGUF reporting zeroed layer-2 norm/query/key/value descriptor fields,
+`token0_layer2_attn_norm: 0`, `token0_layer2_attn_q_matvec: 0`, and
+`token0_layer2_attn_k_matvec: 0` with no guarded layer-2 output labels;
+`git diff --check`; runtime source extension scan allowing `.s` drivers and
+tracked `.inc` fragments; tracked include dependency scan;
+static-link/no-dynamic-section check; undefined-symbol check; exported-symbol
+inspection for the layer-2 value descriptor symbols; tracked-artifact and
+tracked large-file checks.
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_v.weight`: create
-separate layer-2 value descriptor storage, request the descriptor during the
-existing layer-2 lookup chain, print found/dimension/type/offset summary lines
-after the key descriptor, and verify the real target plus empty valid GGUF
-without reading value payload bytes.
+Add status-only token-0 layer-2 attention value matvec coverage in
+`src/infer/token0_layer2_attn.s`: consume `token0_layer2_attn_norm_activation`
+and the `blk.2.attn_v.weight` descriptor only after prerequisite status,
+descriptor/type/shape, mapping-base, and full Q8_0 payload bounds checks, write
+a private 1024-f32 value output buffer plus status word, and print only
+`token0_layer2_attn_v_matvec`.
