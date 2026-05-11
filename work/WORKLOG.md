@@ -3355,3 +3355,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-4 slices still diffed cleanly against the FFN up oracle. The 24-byte
   zero-count GGUF kept the new status at `0` together with the prerequisite
   layer-4 statuses and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T01:01:51+02:00
+
+- Published the first guarded layer-4 FFN SwiGLU exact-hex slice from the
+  retained activation buffer. The first four words are `0x3e718adc`,
+  `0xbc22c98e`, `0xbdf73ee4`, and `0x3d96f05d`.
+- Added a focused external oracle that reuses the layer-4 FFN up/gate oracle
+  path and applies the shared scalar `silu(gate) * up` formula to the first four
+  activation words.
+- Verification evidence: the real-target runtime/oracle comparison matched all
+  currently public layer-4 FFN chain labels through SwiGLU. The 24-byte
+  zero-count GGUF kept the layer-4 dependent statuses at `0` and emitted no
+  guarded layer-4 exact-hex labels.

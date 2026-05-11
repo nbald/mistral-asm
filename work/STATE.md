@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-4 FFN SwiGLU exact-hex slice from the
-retained activation buffer, with a focused oracle, while keeping the
-24-byte zero-count GGUF silent.
+Add descriptor-only layer-4 FFN down setup for `blk.4.ffn_down.weight`,
+without adding down-matvec payload reads yet, and keep the 24-byte zero-count
+GGUF silent.
 
 ## Completed Work
 
@@ -41,16 +41,18 @@ retained activation buffer, with a focused oracle, while keeping the
   `blk.4.ffn_up.weight`. The retained real-target descriptor is Q8_0
   `[3072 x 9216]` at relative offset `1016205312`; the first four output words
   are `0x3f630ab2`, `0x3e49f608`, `0x3ee1a851`, and `0x3dfb29a1`.
-- Layer-4 FFN SwiGLU status-only coverage is complete. It requires both
-  layer-4 FFN gate and up matvec statuses, computes `silu(gate) * up` into the
-  retained 9216-f32 `token0_layer4_ffn_swiglu_output` buffer, and publishes
-  only `token0_layer4_ffn_swiglu` for now.
+- Layer-4 FFN SwiGLU status and output-slice coverage is complete. It requires
+  both layer-4 FFN gate and up matvec statuses, computes `silu(gate) * up` into
+  the retained 9216-f32 `token0_layer4_ffn_swiglu_output` buffer, and publishes
+  the first four activation words: `0x3e718adc`, `0xbc22c98e`,
+  `0xbdf73ee4`, and `0x3d96f05d`.
 
 ## Known Blockers
 
 - No functional blocker is known.
 - Keep new layer-4 FFN work in focused modules. `src/infer/token0_layer4_ffn.s`
-  is 848 lines and still has room for the next focused layer-4 FFN slice work.
+  is 945 lines and should not receive substantial layer-4 FFN down code; use a
+  focused module for down-matvec or residual work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
@@ -81,22 +83,23 @@ retained activation buffer, with a focused oracle, while keeping the
 - `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/oracle/token0_layer4_ffn_gate_oracle.py`
 - `work/oracle/token0_layer4_ffn_up_oracle.py`
+- `work/oracle/token0_layer4_ffn_swiglu_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 FFN SwiGLU status-only verification passed:
+Layer-4 FFN SwiGLU output-slice verification passed:
 
-- `make clean all check`; after help/comment updates, `make all check`
+- `make clean all check`; after the help text update, `make all check`
 - `./mistral-asm --help`
-- real-target output kept layer-4 FFN RMSNorm, gate, and up matvec statuses at
-  `1`, reported `token0_layer4_ffn_swiglu: 1`, and emitted no
-  `token0_layer4_ffn_swiglu_output*_f32_hex` labels
+- real-target output kept layer-4 FFN RMSNorm, gate, up, and SwiGLU statuses at
+  `1`; the new `token0_layer4_ffn_swiglu_output*_f32_hex` labels were
+  `0x3e718adc`, `0xbc22c98e`, `0xbdf73ee4`, and `0x3d96f05d`
 - the existing public layer-3 post-FFN residual, layer-4 attention output,
   layer-4 post-attention residual, layer-4 FFN RMSNorm, layer-4 FFN gate
-  output, and layer-4 FFN up output slices diffed cleanly against
-  `work/oracle/token0_layer4_ffn_up_oracle.py`
+  output, layer-4 FFN up output, and layer-4 FFN SwiGLU output slices diffed
+  cleanly against `work/oracle/token0_layer4_ffn_swiglu_oracle.py`
 - 24-byte zero-count GGUF reported all `layer4_ffn_norm_tensor_*`,
   `layer4_ffn_gate_tensor_*`, and `layer4_ffn_up_tensor_*` summary fields as
   `0`, kept layer-4 output/residual/FFN-norm/gate-matvec/up-matvec/SwiGLU
@@ -108,18 +111,20 @@ Layer-4 FFN SwiGLU status-only verification passed:
 - include dependency scan covering `.include` fragments in `Makefile`
 - exported symbol check for `token0_layer4_ffn_swiglu_status`,
   `token0_layer4_ffn_swiglu_output`, and
-  `run_token0_layer4_ffn_swiglu_status`; static scan confirmed no public
-  `token0_layer4_ffn_swiglu_output*_f32_hex` labels yet
+  `run_token0_layer4_ffn_swiglu_status`
 - tracked artifact and tracked large-file scans
 - line-count check; `src/entry/start/lookup_summary/layer4.inc` is 795 lines,
-  `src/infer/token0_layer4_ffn.s` is 848 lines,
-  `src/infer/token0_layer4_attn.s` remains 945 lines, and
+  `src/infer/token0_layer4_ffn.s` is 945 lines,
+  `src/infer/token0_layer4_attn.s` is 945 lines,
+  `src/infer/token0_layer3_ffn.s` is 942 lines,
+  `src/infer/token0_layer2_ffn.s` is 943 lines,
+  `src/infer/token0_layer2_attn.s` is 997 lines, and
   `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
   tensor-directory walker
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-4 FFN SwiGLU output exact-hex slice
-from `token0_layer4_ffn_swiglu_output`, add a focused external oracle for the
-first four `silu(gate) * up` activation words, and keep the 24-byte zero-count
-GGUF silent.
+Add descriptor-only layer-4 FFN down setup for `blk.4.ffn_down.weight`: request
+and retain the descriptor, print guarded summary fields, verify the real target
+reports Q8_0 `[9216 x 3072]`, and keep zero-count GGUF dependent statuses and
+exact-hex labels silent.
