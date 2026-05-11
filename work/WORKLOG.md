@@ -1943,3 +1943,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, tracked include dependencies,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T13:34:01+02:00
+
+- Published the first guarded layer-2 attention value projection slice from the
+  focused layer-2 inference module. The new labels are emitted only after
+  `token0_layer2_attn_v_matvec: 1`, and the empty-GGUF guard path still prints
+  only zero layer-2 statuses without any guarded layer-2 output labels.
+- Verification evidence: the real target printed value output words
+  `0x3d38e19b`, `0x3ae7765b`, `0xbd4bbba8`, and `0xbf48b85f`. The focused
+  external oracle recomputed the full upstream layer-1 post-FFN residual, the
+  layer-2 attention RMSNorm activation, and the first four rows of
+  `blk.2.attn_v.weight`; its words matched the runtime exactly. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  tracked include dependencies, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
