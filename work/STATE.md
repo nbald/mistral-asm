@@ -20,8 +20,8 @@ adding layer-3 post-attention residual or FFN work.
   post-FFN residual. The layer-2 post-FFN residual words remain `0x440c1d48`,
   `0xc200a8d7`, `0xc2a8120a`, and `0xc15da38d`.
 - Layer-3 attention coverage now includes retained descriptor lookup, RMSNorm,
-  Q/K/V matvecs, single-token grouped-query context expansion, and a focused
-  status-only output-projection matvec for `blk.3.attn_output.weight`.
+  Q/K/V matvecs, single-token grouped-query context expansion, and guarded
+  output-projection matvec words for `blk.3.attn_output.weight`.
 - On the real target, the layer-3 output projection descriptor is found with
   dimensions `4096x3072`, type `8`, and relative offset `802258944`.
 - The layer-3 context words are `0x3a75acca`, `0x3baaa296`, `0xbbde3580`, and
