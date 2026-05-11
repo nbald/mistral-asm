@@ -3225,3 +3225,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   residual, layer-4 attention output, and layer-4 post-attention residual
   slices; a valid 24-byte zero-count GGUF kept the reviewed layer-4 guards at
   `0` and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T23:58:19+02:00
+
+- Added descriptor-only layer-4 FFN RMSNorm setup. The new retained slot
+  records only the directory metadata for `blk.4.ffn_norm.weight`; no layer-4
+  FFN payload read or activation math was introduced in this step.
+- Verification evidence: the real target reports the new descriptor as f32
+  `[3072]` at relative offset `1016193024`, with layer-4 attention output and
+  post-attention residual statuses still successful and the public
+  post-attention residual slice still matching its oracle exactly. A 24-byte
+  zero-count GGUF reports all new descriptor fields as `0`, keeps dependent
+  layer-4 statuses at `0`, and emits no guarded layer-4 exact-hex labels.
