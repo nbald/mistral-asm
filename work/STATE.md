@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 for the completed layer-2 attention through
+Run review gate pass 2 for the completed layer-2 attention through
 post-attention residual path before starting layer-2 FFN feature work.
 
 ## Completed Work
@@ -69,13 +69,18 @@ post-attention residual path before starting layer-2 FFN feature work.
 - The required repository-wide review gate and the completed layer-1 FFN branch
   review gate are already complete. Existing review notes remain under
   `work/reviews/`.
+- Layer-2 attention branch review gate pass 1 is complete in
+  `work/reviews/2026-05-11-layer2-attn-branch-review-1.md` with no blocking
+  findings. It checked status gates, tensor shape/type/bounds checks, exact-hex
+  slice publication, oracle arithmetic, documentation consistency, split risk,
+  real-target behavior, and empty-GGUF guard behavior.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or small
   include fragments with Makefile-tracked dependencies.
 
 ## Known Blockers
 
-- No current blocker to running the first review pass for the completed layer-2
+- No current blocker to running the second review pass for the completed layer-2
   attention branch.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
@@ -116,33 +121,32 @@ post-attention residual path before starting layer-2 FFN feature work.
 
 ## Last Verification
 
-Layer-2 post-attention residual slice verification passed:
+Layer-2 attention branch review pass 1 verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke reported `token0_layer2_post_attn_residual: 1`
-  and printed residual words `0x3e9885c8`, `0xbd0e0bd8`, `0x3e299d00`, and
-  `0x3d544d6e`
-- `work/oracle/token0_layer2_post_attn_residual_oracle.py` produced the same
-  four residual words, and a normalized runtime/oracle diff was empty
-- temporary 24-byte empty valid GGUF kept
-  `token0_layer2_attn_output_matvec: 0` and
-  `token0_layer2_post_attn_residual: 0`, with no guarded layer-2 residual
-  words
+- real target runtime smoke reported all reviewed layer-2 statuses at `1` and
+  printed layer-2 attention output words `0x3eade180`, `0x3ee0fb2f`,
+  `0xbff22222`, `0x3e24eb6b` plus post-attention residual words
+  `0x3e9885c8`, `0xbd0e0bd8`, `0x3e299d00`, and `0x3d544d6e`
+- `work/oracle/token0_layer2_post_attn_residual_oracle.py` produced matching
+  output/residual words, and a normalized runtime/oracle diff was empty
+- temporary 24-byte empty valid GGUF kept all reviewed layer-2 descriptor found
+  flags and statuses at `0`, with no guarded layer-2 exact-hex labels
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the layer-2 post-attention residual
-  runner/status/buffer
+- exported-symbol inspection for the layer-2 attention/context/output/residual
+  runners, statuses, and buffers
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Run review gate pass 1 for the completed layer-2 attention/post-attention
-residual path. Inspect status gates, tensor shape and bounds checks, exact-hex
-slice publication, oracle arithmetic, and documentation consistency; commit a
-focused review note under `work/reviews/`.
+Run review gate pass 2 for the completed layer-2 attention/post-attention
+residual path. Inspect it independently from pass 1, focusing on branch ordering,
+handoff ownership, failure modes, oracle coverage gaps, and readiness to resume
+layer-2 FFN feature work; commit a focused review note under `work/reviews/`.

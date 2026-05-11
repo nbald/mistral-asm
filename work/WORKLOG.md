@@ -2063,3 +2063,15 @@ redundant entries. Do not treat it as the primary continuation source; use
 - The layer-2 attention through post-attention residual path is now a coherent
   branch, so the next iteration should run review gate pass 1 before starting
   layer-2 FFN feature work.
+
+## 2026-05-11T14:30:12+02:00
+
+- Completed the first review-gate pass for the layer-2 attention through
+  post-attention residual branch. No blocking findings were found; the review
+  emphasized mmap lifetime, tensor shape/type/bounds gates, status-gated exact
+  slice publication, oracle arithmetic, and the near-1000-line split risk in the
+  older layer-2 attention projection module.
+- Verification evidence: build, harnesses, help, oracle py-compile, real-target
+  runtime/oracle comparison, empty-GGUF guard behavior, whitespace, runtime
+  source extension, tracked include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.
