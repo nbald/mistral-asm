@@ -3171,3 +3171,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   preservation diffs stayed empty against focused oracles, the 24-byte
   header-only GGUF kept all reviewed layer-4 guards at `0` with no guarded
   layer-4 exact-hex output, and source/dependency/static/artifact scans passed.
+
+## 2026-05-11T23:34:45+02:00
+
+- Added a focused layer-4 post-attention residual module instead of extending
+  the near-threshold layer-4 attention source. The status smoke adds the
+  retained layer-3 post-FFN residual to the retained layer-4 attention output
+  only after both prerequisite statuses are set and the layer-4 output
+  descriptor still proves a 3072-wide row.
+- Verification evidence: the real target reported
+  `token0_layer4_post_attn_residual: 1` together with its prerequisites. A
+  24-byte header-only GGUF kept the new status at `0` and emitted no guarded
+  layer-4 exact-hex labels.

@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a focused token-0 layer-4 post-attention residual status smoke without
-growing `src/infer/token0_layer4_attn.s`.
+Publish a guarded token-0 layer-4 post-attention residual exact-hex slice with
+an external oracle, while keeping the 24-byte header-only GGUF silent.
 
 ## Completed Work
 
@@ -114,10 +114,18 @@ growing `src/infer/token0_layer4_attn.s`.
   under `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`. The two-pass
   review gate is complete; feature work can resume in a focused layer-4
   post-attention residual module.
+- `src/infer/token0_layer4_post_attn_residual.s` now owns guarded status-only
+  token-0 layer-4 post-attention residual coverage. It requires
+  `token0_layer3_post_ffn_residual_status`,
+  `token0_layer4_attn_output_matvec_status`, and the retained layer-4 attention
+  output descriptor width before filling retained
+  `token0_layer4_post_attn_residual` storage and reporting
+  `token0_layer4_post_attn_residual`. No exact-hex slice is published yet.
 
 ## Known Blockers
 
-- No functional blocker to starting the layer-4 post-attention residual smoke.
+- No functional blocker to publishing the first layer-4 post-attention residual
+  exact-hex slice and oracle.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
   layer-4 residual/FFN work in focused modules.
@@ -148,6 +156,7 @@ growing `src/infer/token0_layer4_attn.s`.
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer4_attn.s`
 - `src/infer/token0_layer4_attn_slices.inc`
+- `src/infer/token0_layer4_post_attn_residual.s`
 - `work/oracle/token0-layer4-attn-norm.md`
 - `work/oracle/token0_layer4_attn_norm_oracle.py`
 - `work/oracle/token0-layer4-attn-q-output.md`
@@ -165,39 +174,31 @@ growing `src/infer/token0_layer4_attn.s`.
 
 ## Last Verification
 
-Layer-4 attention review gate pass 2 verification passed:
+Layer-4 post-attention residual status smoke verification passed:
 
 - `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target runtime/oracle diff stayed empty for layer-3 post-FFN residual,
-  layer-4 attention RMSNorm, layer-4 value, and layer-4 output-projection
-  public exact-hex labels
-- focused real-target preservation diffs stayed empty for the existing
-  layer-4 attention query and key public slices against their oracles
-- real-target run reported all reviewed layer-4 descriptors and statuses at
-  `1`, including `token0_layer4_attn_context: 1` and
-  `token0_layer4_attn_output_matvec: 1`, and kept the retained
-  `blk.4.attn_output.weight` descriptor at Q8_0 `[4096,3072]` offset
-  `925949952`
-- 24-byte header-only GGUF kept all layer-4 norm/query/key/value/output
-  descriptor fields at `0`, reported all guarded layer-4 attention statuses
-  including `token0_layer4_attn_output_matvec` as `0`, and emitted no guarded
-  layer-4 exact-hex labels
+- real-target focused status check reported `token0_layer3_post_ffn_residual:
+  1`, `token0_layer4_attn_output_matvec: 1`, and
+  `token0_layer4_post_attn_residual: 1`
+- 24-byte header-only GGUF reported `token0_layer4_attn_output_matvec: 0` and
+  `token0_layer4_post_attn_residual: 0`, and emitted no guarded
+  `token0_layer4_*_f32_hex` labels
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported symbol check for `run_token0_layer4_attn_output_matvec_status`,
-  `token0_layer4_attn_output_matvec_status`, and `token0_layer4_attn_output`
-- inference/source line-count check; `src/infer/token0_layer4_attn.s` is now
-  945 lines
+- exported symbol check for `run_token0_layer4_post_attn_residual_status`,
+  `token0_layer4_post_attn_residual_status`, and
+  `token0_layer4_post_attn_residual`
+- inference/source line-count check; `src/infer/token0_layer4_attn.s` remains
+  945 lines and `src/infer/token0_layer4_post_attn_residual.s` is 126 lines
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add a focused `token0_layer4_post_attn_residual` status smoke in a new layer-4
-post-attention residual module, guarded by
-`token0_layer4_attn_output_matvec_status` and
-`token0_layer3_post_ffn_residual_status`, then verify the real target reports
-status `1` while the 24-byte header-only GGUF keeps it at `0`.
+Publish the first guarded `token0_layer4_post_attn_residual*_f32_hex` slice,
+add a focused external oracle for the first four residual words, and verify the
+real target matches while the 24-byte header-only GGUF emits no layer-4
+post-attention residual slice labels.

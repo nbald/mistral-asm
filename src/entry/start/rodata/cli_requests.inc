@@ -38,7 +38,7 @@ help_text:
 	.ascii "output slice plus layer-4 attention RMSNorm descriptor "
 	.ascii "lookup/output slice and query/key/value/output descriptor lookup "
 	.ascii "plus query/key/value matvec output slices, context status smoke, "
-	.ascii "and output-projection slice.\n"
+	.ascii "output-projection slice, and post-attention residual status smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
