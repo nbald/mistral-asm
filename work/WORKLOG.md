@@ -2251,3 +2251,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   slice exactly. Build, harnesses, help, oracle py-compile, whitespace, runtime
   source extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T16:11:52+02:00
+
+- Added descriptor-only coverage for `blk.2.ffn_down.weight` after the layer-2
+  FFN up descriptor. The retained slot prints found, dimension count, dim0,
+  dim1, type, and relative offset; the runtime still does not read layer-2
+  FFN-down payload bytes.
+- Verification evidence: the real target printed found `1`, dimensions `2`,
+  dim0 `9216`, dim1 `3072`, type `8`, and offset `708648960` while preserving
+  the reviewed layer-2 FFN norm/gate/up/SwiGLU status and exact-hex slices. A
+  temporary 24-byte empty valid GGUF kept the new slot zeroed and emitted no
+  guarded layer-2 FFN output words. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, exported-symbol, no-payload-reference, tracked-artifact,
+  and tracked large-file checks passed.

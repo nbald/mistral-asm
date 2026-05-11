@@ -6,8 +6,11 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only retained lookup and summary coverage for
-`blk.2.ffn_down.weight`, without reading FFN-down payload bytes yet.
+Add status-only layer-2 FFN-down matvec coverage in a focused module that
+consumes the private layer-2 SwiGLU buffer and retained
+`blk.2.ffn_down.weight` descriptor. Wire it through the build and smoke
+orchestration, publish only `token0_layer2_ffn_down_matvec`, and do not publish
+an output slice yet.
 
 ## Completed Work
 
@@ -19,12 +22,18 @@ Add descriptor-only retained lookup and summary coverage for
 - Token-0 smoke coverage now reaches layer-2 post-attention residual, layer-2
   FFN RMSNorm activation, layer-2 FFN gate/up matvec output slices, and the
   first guarded layer-2 FFN SwiGLU activation output slice.
+- Descriptor-only retained lookup and summary coverage now includes
+  `blk.2.ffn_down.weight`. The real target reports found `1`, dimensions `2`,
+  dim0 `9216`, dim1 `3072`, type `8`, and relative offset `708648960`.
 - `src/infer/token0_layer2_ffn.s` owns layer-2 FFN norm status/activation,
   gate/up matvec status/output storage, and private SwiGLU output storage. The
   SwiGLU path requires both layer-2 FFN gate and up matvec statuses before
   calling the shared scalar `swiglu_f32` helper over 9216 f32 values.
 - The layer-2 FFN SwiGLU status now prints four guarded exact-hex output words:
   `0x450e084e`, `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`.
+- No layer-2 FFN-down payload bytes are read yet; `layer2_ffn_down` references
+  are currently limited to entry-side descriptor request, storage, lookup, and
+  summary printing.
 - Durable external oracle coverage exists through the layer-2 FFN RMSNorm,
   gate, up, and SwiGLU slices in `work/oracle/`.
 - Repository-wide, layer-1 FFN branch, and layer-2 attention branch review gates
@@ -35,7 +44,7 @@ Add descriptor-only retained lookup and summary coverage for
 
 ## Known Blockers
 
-- No current blocker to adding descriptor-only layer-2 FFN-down coverage.
+- No current blocker to adding the focused layer-2 FFN-down status smoke.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 942 lines after publishing the SwiGLU
@@ -71,18 +80,20 @@ Add descriptor-only retained lookup and summary coverage for
 
 ## Last Verification
 
-Layer-2 FFN SwiGLU output-slice verification passed:
+Layer-2 FFN-down descriptor-only verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- `python3 work/oracle/token0_layer2_ffn_swiglu_oracle.py <target-gguf>`
-- real target runtime smoke printed `token0_layer2_ffn_swiglu: 1` and
-  `token0_layer2_ffn_swiglu_output{0..3}_f32_hex` as `0x450e084e`,
-  `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`, matching the oracle exactly
+- real target runtime smoke printed `layer2_ffn_down_tensor_found: 1`,
+  `layer2_ffn_down_tensor_n_dimensions: 2`, `layer2_ffn_down_tensor_dim0: 9216`,
+  `layer2_ffn_down_tensor_dim1: 3072`, `layer2_ffn_down_tensor_ggml_type: 8`,
+  and `layer2_ffn_down_tensor_offset: 708648960`, while preserving the reviewed
+  layer-2 FFN norm/gate/up/SwiGLU status and exact-hex output slices
 - temporary 24-byte empty valid GGUF kept `layer2_ffn_norm_tensor_*`,
   `layer2_ffn_gate_tensor_*`, `layer2_ffn_up_tensor_*`,
+  `layer2_ffn_down_tensor_*`,
   `token0_layer2_ffn_norm`, `token0_layer2_ffn_gate_matvec`,
   `token0_layer2_ffn_up_matvec`, and `token0_layer2_ffn_swiglu` at `0`, and
   emitted no guarded layer-2 FFN norm/gate/up/SwiGLU output words
@@ -91,12 +102,16 @@ Layer-2 FFN SwiGLU output-slice verification passed:
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for `run_token0_layer2_ffn_swiglu_status` and
-  `token0_layer2_ffn_swiglu_status`, with
-  `token0_layer2_ffn_swiglu_output` remaining private
+- exported-symbol inspection for the new retained
+  `layer2_ffn_down_tensor_*` fields and existing layer-2 FFN status runners
+- targeted scan confirmed no `layer2_ffn_down` references outside entry-side
+  descriptor code
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add descriptor-only retained lookup and summary coverage for
-`blk.2.ffn_down.weight`, without reading FFN-down payload bytes yet.
+Add status-only layer-2 FFN-down matvec coverage in a focused module that
+consumes the private layer-2 SwiGLU buffer and retained
+`blk.2.ffn_down.weight` descriptor. Wire it through the build and smoke
+orchestration, publish only `token0_layer2_ffn_down_matvec`, and do not publish
+an output slice yet.

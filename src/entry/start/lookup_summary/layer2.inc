@@ -793,3 +793,106 @@ print_layer2_ffn_up_lookup_summary:
 	ret
 
 .size print_layer2_ffn_up_lookup_summary, . - print_layer2_ffn_up_lookup_summary
+
+.type print_layer2_ffn_down_lookup_summary, @function
+
+# Contract: print the reusable descriptor-lookup smoke slot for
+# `blk.2.ffn_down.weight`.
+# Inputs: no register inputs. Reads the process-owned generic descriptor slot
+# filled by gguf_lookup_tensor_info after model validation.
+# Outputs: writes found flag, dimension count, first two dimensions, ggml_type,
+# and relative payload offset to stdout.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u64_decimal.
+# Ownership/lifetime: reads static scratch storage only during this call and
+# does not retain mapped-file pointers or inspect tensor payload bytes.
+# Error behavior: this is diagnostic summary output; write failures are not
+# surfaced separately.
+print_layer2_ffn_down_lookup_summary:
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_found_text]
+	mov rdx, layer2_ffn_down_tensor_found_text_end - layer2_ffn_down_tensor_found_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_found]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_n_dimensions_text]
+	mov rdx, layer2_ffn_down_tensor_n_dimensions_text_end - layer2_ffn_down_tensor_n_dimensions_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_n_dimensions]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_dim0_text]
+	mov rdx, layer2_ffn_down_tensor_dim0_text_end - layer2_ffn_down_tensor_dim0_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_dim0]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_dim1_text]
+	mov rdx, layer2_ffn_down_tensor_dim1_text_end - layer2_ffn_down_tensor_dim1_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_dim1]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_ggml_type_text]
+	mov rdx, layer2_ffn_down_tensor_ggml_type_text_end - layer2_ffn_down_tensor_ggml_type_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_ggml_type]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + layer2_ffn_down_tensor_offset_text]
+	mov rdx, layer2_ffn_down_tensor_offset_text_end - layer2_ffn_down_tensor_offset_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + layer2_ffn_down_tensor_offset]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size print_layer2_ffn_down_lookup_summary, . - print_layer2_ffn_down_lookup_summary
