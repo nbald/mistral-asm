@@ -3432,3 +3432,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   37 exact-hex labels covered by the new oracle, and the 24-byte zero-count
   GGUF kept the layer-4 post-attention/down/post-FFN statuses at `0` with no
   guarded post-FFN residual labels.
+
+## 2026-05-12T01:43:44+02:00
+
+- Review gate pass 1 over the layer-4 FFN/down/post-FFN residual chain found no
+  blocking runtime issue. The main durable note for the next reviewer is that
+  the current public boundary is status/slice output only; when layer-5 work
+  consumes the layer-4 post-FFN residual, the private residual buffer should be
+  exported deliberately as a handoff surface.
+- Verification evidence: clean rebuild/check, oracle compile, real-target
+  runtime/oracle exact-hex diff through layer-4 post-FFN residual, zero-count
+  GGUF guard silence, static/no-undefined checks, source/include/artifact scans,
+  and line-count review all passed.

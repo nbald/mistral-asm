@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 over the completed layer-4 FFN/down/post-FFN residual
+Run review gate pass 2 over the completed layer-4 FFN/down/post-FFN residual
 chain before expanding feature scope.
 
 ## Completed Work
@@ -61,6 +61,9 @@ chain before expanding feature scope.
   `blk.4.ffn_down.weight` output guard, writes a private 3072-f32 residual
   buffer, and publishes the first four residual words: `0x440c31ce`,
   `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`.
+- Review gate pass 1 for the completed layer-4 FFN/down/post-FFN residual chain
+  completed cleanly under `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`.
+  No blocking runtime findings were recorded.
 
 ## Known Blockers
 
@@ -102,28 +105,27 @@ chain before expanding feature scope.
 - `work/oracle/token0_layer4_ffn_swiglu_oracle.py`
 - `work/oracle/token0_layer4_ffn_down_oracle.py`
 - `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
+- `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 post-FFN residual output-slice verification passed:
+Layer-4 FFN/down/post-FFN residual review gate pass 1 verification passed:
 
-- `make all check`
+- `make clean all check`
 - `./mistral-asm --help` mentions the layer-4 post-FFN residual output slice
 - `python3 -m py_compile work/oracle/*.py`
 - real-target output reported `token0_layer4_post_attn_residual: 1`,
+  `token0_layer4_ffn_norm: 1`, `token0_layer4_ffn_gate_matvec: 1`,
+  `token0_layer4_ffn_up_matvec: 1`, `token0_layer4_ffn_swiglu: 1`,
   `token0_layer4_ffn_down_matvec: 1`, and
   `token0_layer4_post_ffn_residual: 1`
-- real-target output published
-  `token0_layer4_post_ffn_residual{0..3}_f32_hex` as `0x440c31ce`,
-  `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`
 - the real-target runtime/oracle diff was empty for the 37 exact-hex labels
   covered by `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
-- a 24-byte zero-count GGUF kept `token0_layer4_post_attn_residual`,
-  `token0_layer4_ffn_down_matvec`, and `token0_layer4_post_ffn_residual`
-  statuses at `0` and emitted no
-  `token0_layer4_post_ffn_residual{0..3}_f32_hex` labels
+- a 24-byte zero-count GGUF kept the reviewed layer-4 FFN descriptor found
+  flags and dependent statuses at `0` and emitted no guarded
+  `token0_layer4_*_f32_hex` labels
 - `git diff --check`
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
@@ -142,6 +144,6 @@ Layer-4 post-FFN residual output-slice verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 1 for the layer-4 FFN/down/post-FFN residual chain; commit
-a focused review note under `work/reviews/` with findings or an explicit clean
-result.
+Run review gate pass 2 for the layer-4 FFN/down/post-FFN residual chain; commit
+a focused independent review note under `work/reviews/` with findings or an
+explicit clean result.
