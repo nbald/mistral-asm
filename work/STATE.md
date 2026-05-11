@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual
+Run review gate pass 2 of 2 for the token-0 layer-3 FFN/down/post-residual
 chain before extending feature work to the next layer.
 
 ## Completed Work
@@ -43,11 +43,13 @@ chain before extending feature work to the next layer.
   the layer-3 post-FFN residual slice by reusing the full layer-3 FFN down
   oracle path and adding the layer-3 post-attention residual with scalar f32
   rounding.
+- Review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual chain
+  found no blocking issues and required no source changes.
 
 ## Known Blockers
 
-- Review gate required before extending the token-0 forward chain beyond the
-  completed layer-3 post-FFN residual slice.
+- Review gate pass 2 remains required before extending the token-0 forward
+  chain beyond the completed layer-3 post-FFN residual slice.
 - `src/infer/token0_layer3_ffn.s` is 942 lines. Do not add substantial down or
   residual code there; keep layer-3 down/residual work in the focused module.
 - `src/infer/token0_layer2_attn.s` is 997 lines and
@@ -73,30 +75,28 @@ chain before extending feature work to the next layer.
 - `work/oracle/token0_layer3_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer3-ffn-down.md`
 - `work/oracle/token0-layer3-post-ffn-residual.md`
+- `work/reviews/2026-05-11-layer3-ffn-chain-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 post-FFN residual slice verification passed:
+Layer-3 FFN chain review pass 1 verification passed:
 
-- `make all check`
+- `make clean all check`
+- post-documentation `make all check`
 - `./mistral-asm --help`
-- real-target run reported `layer3_ffn_down_tensor_found: 1`,
-  `layer3_ffn_down_tensor_dim1: 3072`,
-  `token0_layer3_post_attn_residual: 1`,
-  `token0_layer3_ffn_down_matvec: 1`, and
-  `token0_layer3_post_ffn_residual: 1`
+- `python3 -m py_compile work/oracle/*.py`
+- real-target run reported all reviewed layer-3 FFN descriptors/statuses at
+  `1`, including `layer3_ffn_down_tensor_dim1: 3072`
 - focused runtime/oracle diff was empty for layer-3 post-attention residual,
-  FFN RMSNorm, FFN gate, FFN up, FFN SwiGLU, FFN down, and new post-FFN
+  FFN RMSNorm, FFN gate, FFN up, FFN SwiGLU, FFN down, and post-FFN
   residual public exact-hex labels
 - 24-byte header-only GGUF kept the layer-3 FFN down descriptor fields at `0`,
   kept `token0_layer3_ffn_norm`, `token0_layer3_ffn_gate_matvec`,
   `token0_layer3_ffn_up_matvec`, `token0_layer3_ffn_swiglu`,
   `token0_layer3_ffn_down_matvec`, and `token0_layer3_post_ffn_residual` at
   `0`, and emitted no guarded layer-3 FFN or post-FFN residual exact-hex labels
-- `make clean all check`
-- `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
@@ -108,5 +108,5 @@ Layer-3 post-FFN residual slice verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual
+Run review gate pass 2 of 2 for the token-0 layer-3 FFN/down/post-residual
 chain before extending feature work to the next layer.

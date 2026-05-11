@@ -2902,3 +2902,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`; the 24-byte
   header-only GGUF kept layer-3 FFN/residual statuses at `0` and emitted no
   guarded layer-3 FFN or post-FFN residual exact-hex labels.
+
+## 2026-05-11T21:10:06+02:00
+
+- Completed review gate pass 1 for the token-0 layer-3 FFN/down/post-residual
+  chain. No blocking issues were found and no source changes were required.
+- Verification evidence: clean build and harnesses passed, followed by a
+  post-documentation build/check rerun; the real-target runtime/oracle diff was
+  empty across layer-3 post-attention residual, FFN RMSNorm, gate, up, SwiGLU,
+  down, and post-FFN residual public labels; the empty-header GGUF kept the
+  reviewed layer-3 FFN/residual statuses at `0` and emitted no guarded
+  exact-hex labels from the reviewed chain. Static purity, include dependency,
+  symbol, line-count, artifact, and large-file scans passed.
