@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 for the token-0 layer-4 attention chain before starting
+Run review gate pass 2 for the token-0 layer-4 attention chain before starting
 layer-4 post-attention residual feature work.
 
 ## Completed Work
@@ -105,10 +105,15 @@ layer-4 post-attention residual feature work.
   four `blk.4.attn_output.weight` rows using ordered scalar f32 Q8_0
   accumulation. `work/oracle/token0-layer4-attn-output.md` records the oracle
   command and exact comparison evidence.
+- Review gate pass 1 for the token-0 layer-4 attention chain completed cleanly
+  under `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`. It found no
+  blocking issues in descriptor guards, single-token context semantics,
+  output-projection oracle quality, source-size pressure handling, or
+  header-only guard behavior.
 
 ## Known Blockers
 
-- No functional blocker to review gate pass 1 for the layer-4 attention chain.
+- No functional blocker to review gate pass 2 for the layer-4 attention chain.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
   layer-4 residual/FFN work in focused modules.
@@ -149,29 +154,30 @@ layer-4 post-attention residual feature work.
 - `work/oracle/token0_layer4_attn_v_oracle.py`
 - `work/oracle/token0-layer4-attn-output.md`
 - `work/oracle/token0_layer4_attn_output_oracle.py`
+- `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention output-projection slice verification passed:
+Layer-4 attention review gate pass 1 verification passed:
 
-- `make all check` and `./mistral-asm --help`
+- `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target run reported `token0_layer4_attn_context: 1` and
-  `token0_layer4_attn_output_matvec: 1`, kept the retained
+- real-target runtime/oracle diff stayed empty for layer-3 post-FFN residual,
+  layer-4 attention RMSNorm, layer-4 value, and layer-4 output-projection
+  public exact-hex labels
+- focused real-target preservation diffs stayed empty for the existing
+  layer-4 attention query and key public slices against their oracles
+- real-target run reported all reviewed layer-4 descriptors and statuses at
+  `1`, including `token0_layer4_attn_context: 1` and
+  `token0_layer4_attn_output_matvec: 1`, and kept the retained
   `blk.4.attn_output.weight` descriptor at Q8_0 `[4096,3072]` offset
-  `925949952`, and emitted `token0_layer4_attn_output0_f32_hex` through
-  `token0_layer4_attn_output3_f32_hex`
-- real-target runtime/oracle diff stayed empty for the new layer-4 attention
-  output-projection slice plus the layer-3 post-FFN residual, layer-4 attention
-  RMSNorm, and layer-4 attention value prerequisite public slices
-- focused preservation diffs stayed empty for the existing layer-4 attention
-  query and key public slices against their oracles
-- 24-byte header-only GGUF kept all layer-4 query/key/value/output descriptor
-  fields at `0`, reported all guarded layer-4 attention statuses including
-  `token0_layer4_attn_output_matvec` as `0`, and emitted no guarded layer-4
-  exact-hex labels
+  `925949952`
+- 24-byte header-only GGUF kept all layer-4 norm/query/key/value/output
+  descriptor fields at `0`, reported all guarded layer-4 attention statuses
+  including `token0_layer4_attn_output_matvec` as `0`, and emitted no guarded
+  layer-4 exact-hex labels
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
@@ -185,6 +191,6 @@ Layer-4 attention output-projection slice verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 1 for the token-0 layer-4 attention chain, covering
+Run review gate pass 2 for the token-0 layer-4 attention chain, covering
 descriptor guards, single-token context semantics, output-projection oracle
 quality, source-size pressure, and 24-byte header-only guard behavior.

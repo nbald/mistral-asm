@@ -3145,3 +3145,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x3e2382d0`, `0xbd9ca89f`, and `0xbd9a5c81`. Existing layer-4 query/key
   public slices still matched their focused oracles, and the 24-byte
   header-only GGUF still emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T23:23:12+02:00
+
+- Review gate pass 1 over the token-0 layer-4 attention chain found no blocking
+  issues. The key review decision is that the current single-token context path
+  is acceptable only because it is explicitly gated as a one-token grouped-query
+  expansion; future multi-token attention must add real score/mask/softmax
+  coverage rather than extending this shortcut.
+- Verification evidence: rebuild/check passed, the real target matched the
+  layer-4 output oracle for the public output slice and prerequisite public
+  slices, query/key preservation diffs stayed empty against their focused
+  oracles, and the 24-byte header-only GGUF kept all reviewed layer-4 descriptor
+  found flags and dependent statuses at `0` with no guarded layer-4 exact-hex
+  output.
