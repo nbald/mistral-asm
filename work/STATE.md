@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-2 attention RMSNorm coverage in a focused
-inference module, consuming the retained layer-1 post-FFN residual and the
-`blk.2.attn_norm.weight` descriptor only after descriptor/type/shape/bounds
-checks.
+Add a guarded first-four exact-hex slice for the token-0 layer-2 attention
+RMSNorm activation, and verify it against an external oracle.
 
 ## Completed Work
 
@@ -143,10 +141,17 @@ checks.
   found/dimension/type/offset summary lines without reading payload bytes; the
   new print routine lives in a focused lookup-summary include to avoid growing
   the existing summary file toward the 1000-line threshold.
+- Status-only token-0 layer-2 attention RMSNorm coverage now lives in
+  `src/infer/token0_layer2_attn.s`. It consumes the retained layer-1 post-FFN
+  residual and the focused `blk.2.attn_norm.weight` descriptor only after
+  prerequisite status, epsilon, descriptor/type/shape, mapping-base, and full
+  f32 payload bounds checks, writes a private activation buffer plus status
+  word, and prints only `token0_layer2_attn_norm`.
 
 ## Known Blockers
 
-- No current blocker to starting status-only layer-2 attention RMSNorm work.
+- No current blocker to publishing the first layer-2 attention RMSNorm
+  activation slice and adding oracle evidence for it.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -165,6 +170,7 @@ checks.
 - `src/gguf/load_header/*.inc`
 - `src/infer/token0_layer1_ffn.s`
 - `src/infer/token0_layer1_ffn_down.s`
+- `src/infer/token0_layer2_attn.s`
 - `src/math/q8_0_dot.s`
 - `src/math/rmsnorm.s`
 - `src/math/swiglu.s`
@@ -186,20 +192,18 @@ checks.
 
 ## Last Verification
 
-- Layer-2 descriptor setup verification passed: `make`; `make check`;
-  `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
-  runtime smoke reporting `layer2_attn_norm_tensor_found: 1`,
-  `n_dimensions: 1`, `dim0: 3072`, `ggml_type: 0`, and
-  `offset: 678555648`; temporary 24-byte empty valid GGUF reporting zeroed
-  layer-2 attention norm descriptor fields and no guarded post-FFN residual
-  output words; `git diff --check`; runtime source extension scan allowing
-  `.s` drivers and tracked `.inc` fragments; static-link/no-dynamic-section
-  check; undefined-symbol check; exported-symbol inspection; tracked-artifact
-  and tracked large-file checks.
+Layer-2 attention RMSNorm status verification passed: `make`; `make check`;
+`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
+runtime smoke reporting the existing layer-2 descriptor summary, retained
+`token0_layer1_post_ffn_residual: 1`, and `token0_layer2_attn_norm: 1`;
+temporary 24-byte empty valid GGUF reporting zeroed layer-2 descriptor fields,
+`token0_layer1_post_ffn_residual: 0`, and `token0_layer2_attn_norm: 0`;
+`git diff --check`; runtime source extension scan allowing `.s` drivers and
+tracked `.inc` fragments; static-link/no-dynamic-section check;
+undefined-symbol check; exported-symbol inspection; tracked-artifact and
+tracked large-file checks.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-2 attention RMSNorm coverage in a focused
-inference module, consuming the retained layer-1 post-FFN residual and the
-`blk.2.attn_norm.weight` descriptor only after descriptor/type/shape/bounds
-checks.
+Add a guarded first-four exact-hex slice for the token-0 layer-2 attention
+RMSNorm activation, and verify it against an external oracle.

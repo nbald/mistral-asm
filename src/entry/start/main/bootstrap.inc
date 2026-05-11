@@ -25,17 +25,18 @@
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
-# residual smokes to focused inference code, and publishing status-gated
-# exact-hex slices from the audited output buffers. It also performs non-math
+# residual smokes plus the layer-2 attention RMSNorm smoke to focused inference
+# code, and publishing status-gated exact-hex slices from the audited output
+# buffers. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
 # `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, `blk.1.ffn_up.weight`, and
-# `blk.1.ffn_down.weight`, plus descriptor-only setup for
+# `blk.1.ffn_down.weight`, plus layer-2 attention RMSNorm setup for
 # `blk.2.attn_norm.weight`, into separate process-owned scratch slots before
-# the token-0 math path. The layer-1 FFN descriptors and retained activation
-# outputs are consumed only by the guarded layer-1 FFN smokes after their
-# prerequisite activations exist.
+# the token-0 math path. The layer-1 FFN and layer-2 attention RMSNorm
+# descriptors and retained activation outputs are consumed only by guarded
+# focused smokes after their prerequisite activations exist.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
@@ -371,9 +372,9 @@ _start:
 	jmp .Llookup_unknown_error
 
 .Llookup_layer2_attn_norm_tensor:
-	# Start layer-2 setup with a descriptor-only RMSNorm lookup. The payload
-	# stays unread until a future guarded layer-2 attention RMSNorm smoke has a
-	# retained layer-1 post-FFN residual activation to consume.
+	# Start layer-2 setup with a dedicated RMSNorm descriptor. The payload is
+	# read only by the guarded focused layer-2 attention RMSNorm smoke after the
+	# layer-1 post-FFN residual activation exists.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]

@@ -28,6 +28,11 @@
 .global layer1_ffn_down_tensor_dim1
 .global layer1_ffn_down_tensor_ggml_type
 .global layer1_ffn_down_tensor_offset
+.global layer2_attn_norm_tensor_found
+.global layer2_attn_norm_tensor_n_dimensions
+.global layer2_attn_norm_tensor_dim0
+.global layer2_attn_norm_tensor_ggml_type
+.global layer2_attn_norm_tensor_offset
 .global token0_layer1_post_attn_residual_status
 .global token0_layer1_post_attn_residual
 .global token0_layer1_ffn_norm_status

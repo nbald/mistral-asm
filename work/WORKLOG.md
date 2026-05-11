@@ -1790,3 +1790,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, static-link,
   undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
   checks passed.
+
+## 2026-05-11T11:55:51+02:00
+
+- Added status-only layer-2 attention RMSNorm coverage in a focused inference
+  module. The new path reads `blk.2.attn_norm.weight` only after the layer-1
+  post-FFN residual status is present and the f32 descriptor shape plus full
+  payload span have been checked against the live mapping.
+- Verification evidence: the real target kept the existing layer-1 post-FFN
+  residual words and reported `token0_layer2_attn_norm: 1`; a temporary empty
+  valid GGUF reported zeroed layer-2 descriptor fields and
+  `token0_layer2_attn_norm: 0`. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.
