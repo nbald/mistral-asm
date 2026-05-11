@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only retained lookup and summary coverage for
+Add guarded status-only token-0 layer-4 attention key matvec coverage for
 `blk.4.attn_k.weight`.
 
 ## Completed Work
@@ -49,10 +49,14 @@ Add descriptor-only retained lookup and summary coverage for
   covered by `work/oracle/token0_layer4_attn_q_oracle.py`. The first four
   layer-4 attention query words are `0xbe996fc1`, `0xbefb10d3`,
   `0x3f524ef6`, and `0x3ea056cc`.
+- Layer-4 attention scope now also has descriptor-only retained lookup and
+  summary coverage for `blk.4.attn_k.weight`. On the real target it is Q8_0
+  `[3072,1024]`, relative offset `922595328`. The descriptor is summary-only
+  in the current committed step; no layer-4 key payload bytes are read yet.
 
 ## Known Blockers
 
-- No functional blocker to the layer-4 attention key descriptor step.
+- No functional blocker to the layer-4 attention key matvec step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -88,10 +92,10 @@ Add descriptor-only retained lookup and summary coverage for
 
 ## Last Verification
 
-Layer-4 attention query output slice verification passed:
+Layer-4 attention key descriptor verification passed:
 
 - `make clean all check`
-- `./mistral-asm --help`
+- `make all check && ./mistral-asm --help`
 - real-target run reported `layer4_attn_norm_tensor_found: 1`,
   `layer4_attn_norm_tensor_n_dimensions: 1`,
   `layer4_attn_norm_tensor_dim0: 3072`,
@@ -103,6 +107,12 @@ Layer-4 attention query output slice verification passed:
   `layer4_attn_q_tensor_dim1: 4096`,
   `layer4_attn_q_tensor_ggml_type: 8`, and
   `layer4_attn_q_tensor_offset: 939319296`
+- real-target run reported `layer4_attn_k_tensor_found: 1`,
+  `layer4_attn_k_tensor_n_dimensions: 2`,
+  `layer4_attn_k_tensor_dim0: 3072`,
+  `layer4_attn_k_tensor_dim1: 1024`,
+  `layer4_attn_k_tensor_ggml_type: 8`, and
+  `layer4_attn_k_tensor_offset: 922595328`
 - real-target run kept the published layer-3 post-FFN residual words unchanged
   and reported `token0_layer4_attn_norm: 1` and
   `token0_layer4_attn_q_matvec: 1`
@@ -111,8 +121,8 @@ Layer-4 attention query output slice verification passed:
   attention query output slice
 - real-target run reported layer-4 attention query output words
   `0xbe996fc1`, `0xbefb10d3`, `0x3f524ef6`, and `0x3ea056cc`
-- 24-byte header-only GGUF kept all layer-4 attention norm and query descriptor
-  fields at `0`, and reported `token0_layer4_attn_norm: 0`
+- 24-byte header-only GGUF kept all layer-4 attention norm, query, and key
+  descriptor fields at `0`, and reported `token0_layer4_attn_norm: 0`
 - 24-byte header-only GGUF reported `token0_layer4_attn_q_matvec: 0` and
   emitted no guarded layer-4 query output labels
 - `python3 -m py_compile work/oracle/*.py`
@@ -121,12 +131,12 @@ Layer-4 attention query output slice verification passed:
 - include dependency scan covering `.include` fragments in `Makefile`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- layer-4 descriptor symbol inspection
+- layer-4 descriptor symbol inspection, including the new key descriptor slot
 - inference source line-count check
 - tracked artifact and tracked large-file scans
 - post-documentation `make all check`
 
 ## Next Exact Step
 
-Add descriptor-only retained lookup and summary coverage for
+Add guarded status-only token-0 layer-4 attention key matvec coverage for
 `blk.4.attn_k.weight`.

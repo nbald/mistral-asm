@@ -9,3 +9,9 @@
 .global layer4_attn_q_tensor_dim1
 .global layer4_attn_q_tensor_ggml_type
 .global layer4_attn_q_tensor_offset
+.global layer4_attn_k_tensor_found
+.global layer4_attn_k_tensor_n_dimensions
+.global layer4_attn_k_tensor_dim0
+.global layer4_attn_k_tensor_dim1
+.global layer4_attn_k_tensor_ggml_type
+.global layer4_attn_k_tensor_offset

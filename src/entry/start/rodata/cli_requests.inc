@@ -36,7 +36,7 @@ help_text:
 	.ascii "FFN up matvec slice plus FFN SwiGLU activation slice "
 	.ascii "and FFN down matvec output slice plus post-FFN residual "
 	.ascii "output slice plus layer-4 attention RMSNorm descriptor "
-	.ascii "lookup/output slice and query descriptor lookup plus "
+	.ascii "lookup/output slice and query/key descriptor lookup plus "
 	.ascii "query matvec output slice.\n"
 help_text_end:
 

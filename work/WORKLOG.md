@@ -3005,3 +3005,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0xbefb10d3`, `0x3f524ef6`, and `0x3ea056cc`; the 24-byte header-only GGUF
   kept the layer-4 norm/query statuses at `0` and emitted no layer-4 query
   output labels.
+
+## 2026-05-11T22:10:04+02:00
+
+- Added descriptor-only retained lookup and summary coverage for
+  `blk.4.attn_k.weight`. This extends layer-4 attention setup with key
+  projection metadata only; the Q8_0 key payload remains unread until a guarded
+  matvec smoke is added.
+- Verification evidence: the real target reported the key descriptor as Q8_0
+  `[3072,1024]` at relative offset `922595328`, while preserving the existing
+  layer-4 norm/query descriptor fields and the published layer-3 post-FFN
+  residual plus layer-4 RMSNorm/query oracle slices. The 24-byte header-only
+  GGUF kept all layer-4 norm/query/key descriptor fields at `0` and kept
+  layer-4 guarded math statuses at `0`.
