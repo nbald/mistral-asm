@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded first-four-word exact-hex slice for the token-0 layer-3
-attention output projection, with a focused oracle comparison for the real
-target.
+Run review gate pass 1 for the completed token-0 layer-3 attention chain before
+adding layer-3 post-attention residual or FFN work.
 
 ## Completed Work
 
@@ -31,19 +30,22 @@ target.
 - Added `src/infer/token0_layer3_attn_output.s`. It requires
   `token0_layer3_attn_context: 1`, rechecks the retained
   `blk.3.attn_output.weight` shape/type, bounds the complete Q8_0 matrix
-  payload against the live mapping, fills private 3072-f32 output storage, and
-  prints only `token0_layer3_attn_output_matvec: 1` on the real target.
-- No layer-3 attention output-projection exact-hex words are published yet.
+  payload against the live mapping, and fills private 3072-f32 output storage.
+- Published the first guarded layer-3 attention output-projection words:
+  `0x3ce80ee7`, `0x3da84154`, `0xbd1e4c02`, and `0xbd11752d`.
+- Added the focused external oracle script and note for the layer-3 attention
+  output projection; the runtime/oracle diff is empty for the layer-2 post-FFN
+  residual, layer-3 RMSNorm, layer-3 value, layer-3 context, and new layer-3
+  output public labels.
 
 ## Known Blockers
 
-- No functional blocker to publishing layer-3 output-projection exact-hex words
-  next.
+- No functional blocker to the next review pass.
 - Keep layer-3 output-projection work in
   `src/infer/token0_layer3_attn_output.s`.
-- Keep layer-3 attention slice labels and printer code in
-  `src/infer/token0_layer3_attn_slices.inc`; it is tracked in `Makefile` so
-  edits rebuild `build/infer/token0_layer3_attn.o`.
+- Existing layer-3 attention RMSNorm/query/key/value slice labels and printer
+  code live in `src/infer/token0_layer3_attn_slices.inc`; it is tracked in
+  `Makefile` so edits rebuild `build/infer/token0_layer3_attn.o`.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -62,28 +64,29 @@ target.
 - `src/infer/token0_layer3_attn_slices.inc`
 - `work/oracle/token0_layer3_attn_context_oracle.py`
 - `work/oracle/token0-layer3-attn-context.md`
+- `work/oracle/token0_layer3_attn_output_oracle.py`
+- `work/oracle/token0-layer3-attn-output.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention output-projection status-only matvec verification passed:
+Layer-3 attention output-projection exact-hex slice verification passed:
 
 - `make clean && make && make check`
 - `./mistral-asm --help`
-- real-target run reported `token0_layer3_attn_context: 1` and
-  `token0_layer3_attn_output_matvec: 1`; it still emitted the guarded layer-3
-  context exact-hex slice and emitted no `token0_layer3_attn_output*_f32_hex`
-  labels
+- real-target run reported `token0_layer3_attn_output_matvec: 1` and emitted
+  `token0_layer3_attn_output0_f32_hex` through
+  `token0_layer3_attn_output3_f32_hex`
 - temporary 24-byte empty valid GGUF reported `token0_layer3_attn_context: 0`
   and `token0_layer3_attn_output_matvec: 0`
 - focused runtime/oracle diff was empty for the layer-2 post-FFN residual,
-  layer-3 attention RMSNorm, layer-3 value, and layer-3 context public labels
+  layer-3 attention RMSNorm, layer-3 value, layer-3 context, and new layer-3
+  output public labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- no layer-3 output-projection exact-hex source labels or runtime labels
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
 - layer-3 output-projection symbol inspection
@@ -92,6 +95,5 @@ Layer-3 attention output-projection status-only matvec verification passed:
 
 ## Next Exact Step
 
-Publish a guarded first-four-word exact-hex slice for the token-0 layer-3
-attention output projection, with a focused oracle comparison for the real
-target.
+Run review gate pass 1 for the completed token-0 layer-3 attention chain before
+adding layer-3 post-attention residual or FFN work.

@@ -2650,3 +2650,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   were emitted. Clean build, harnesses, help, oracle py-compile, whitespace,
   runtime source extension, include dependency, static-link, undefined-symbol,
   symbol, line-count, tracked-artifact, and tracked large-file scans passed.
+
+## 2026-05-11T19:04:15+02:00
+
+- Published the first guarded layer-3 attention output-projection slice from
+  the focused output module. The words are emitted only after
+  `token0_layer3_attn_output_matvec: 1`, using the bounded Q8_0 matvec output
+  storage already filled from the layer-3 single-token context.
+- Verification evidence: the focused runtime/oracle diff was empty for the
+  layer-2 post-FFN residual, layer-3 attention RMSNorm, layer-3 value, layer-3
+  context, and new layer-3 output public labels. The new output words are
+  `0x3ce80ee7`, `0x3da84154`, `0xbd1e4c02`, and `0xbd11752d`; the 24-byte empty
+  valid GGUF kept the layer-3 context and output matvec statuses at `0` and
+  emitted no guarded layer-3 context or output words.
+- Planning note: the layer-3 attention chain now has public checks through the
+  output projection. The next feature step would broaden scope into residual or
+  FFN work, so the next iteration should start review gate pass 1.
