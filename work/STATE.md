@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-4 attention value output exact-hex
-slice and add a focused external oracle for `blk.4.attn_v.weight`.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_output.weight`.
 
 ## Completed Work
 
@@ -69,11 +69,19 @@ slice and add a focused external oracle for `blk.4.attn_v.weight`.
   attention RMSNorm activation, exact Q8_0 `[3072,1024]`
   `blk.4.attn_v.weight` descriptor, and a bounded payload span before filling
   private value output storage and reporting `token0_layer4_attn_v_matvec`.
-  Value output labels are intentionally not published yet.
+- Layer-4 attention value output slice printing is published from
+  `src/infer/token0_layer4_attn_slices.inc`, which also owns the existing
+  layer-4 attention RMSNorm/query/key slice printers to keep the focused
+  layer-4 attention `.s` file below the source-size guard. The first four
+  layer-4 attention value words are `0x3bb659d7`, `0xbc5c2ba7`,
+  `0x3bf35210`, and `0xbc1e7f5f`.
+- `work/oracle/token0_layer4_attn_v_oracle.py` covers the first four
+  `blk.4.attn_v.weight` rows by reusing the full layer-4 attention RMSNorm
+  oracle path and ordered scalar f32 Q8_0 accumulation.
 
 ## Known Blockers
 
-- No functional blocker to publishing the layer-4 attention value output slice.
+- No functional blocker to adding the layer-4 attention output descriptor.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -100,18 +108,21 @@ slice and add a focused external oracle for `blk.4.attn_v.weight`.
 - `src/entry/start/main/summary_header.inc`
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer4_attn.s`
+- `src/infer/token0_layer4_attn_slices.inc`
 - `work/oracle/token0-layer4-attn-norm.md`
 - `work/oracle/token0_layer4_attn_norm_oracle.py`
 - `work/oracle/token0-layer4-attn-q-output.md`
 - `work/oracle/token0_layer4_attn_q_oracle.py`
 - `work/oracle/token0-layer4-attn-k-output.md`
 - `work/oracle/token0_layer4_attn_k_oracle.py`
+- `work/oracle/token0-layer4-attn-v-output.md`
+- `work/oracle/token0_layer4_attn_v_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention value matvec status verification passed:
+Layer-4 attention value output slice verification passed:
 
 - `make clean all check`
 - `make all check && ./mistral-asm --help`
@@ -143,10 +154,10 @@ Layer-4 attention value matvec status verification passed:
   `token0_layer4_attn_q_matvec: 1`, `token0_layer4_attn_k_matvec: 1`, and
   `token0_layer4_attn_v_matvec: 1`
 - real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
-  residual prerequisite slice, layer-4 attention RMSNorm slice, layer-4
-  attention query output slice, and layer-4 attention key output slice
-- real-target run reported layer-4 attention key output words `0xbc326305`,
-  `0x3c2ff2f1`, `0x3a8970d8`, and `0xbc83c191`
+  residual prerequisite slice, layer-4 attention RMSNorm slice, and layer-4
+  attention value output slice
+- real-target run reported layer-4 attention value output words `0x3bb659d7`,
+  `0xbc5c2ba7`, `0x3bf35210`, and `0xbc1e7f5f`
 - 24-byte header-only GGUF kept all layer-4 attention norm, query, key, and
   value descriptor fields at `0`, and reported `token0_layer4_attn_norm: 0`
 - 24-byte header-only GGUF reported `token0_layer4_attn_q_matvec: 0`,
@@ -160,16 +171,17 @@ Layer-4 attention value matvec status verification passed:
 - undefined-symbol check
 - layer-4 value matvec symbol inspection, including
   `run_token0_layer4_attn_v_matvec_status`,
+  `print_token0_layer4_attn_v_output_slice`,
   `token0_layer4_attn_v_matvec_smoke`,
   `token0_layer4_attn_v_matvec_status`, private
-  `token0_layer4_attn_v_output`, and no value output label/slice references
+  `token0_layer4_attn_v_output`, and the four value output label symbols
 - inference source line-count check
 - tracked artifact and tracked large-file scans
 - post-documentation `make all check` and `git diff --check`
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-4 attention value output exact-hex
-slice from `src/infer/token0_layer4_attn.s`, add a matching external
-oracle/note for the first four value rows, and keep the 24-byte header-only GGUF
-silent.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_output.weight`, with no payload reads yet, while preserving the
+existing layer-4 attention RMSNorm/query/key/value public slices and the
+24-byte header-only GGUF guard behavior.

@@ -3069,3 +3069,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-4 query, and layer-4 key exact-hex oracle slices. A 24-byte header-only
   GGUF kept all layer-4 guarded statuses at `0` and emitted no layer-4 exact-hex
   labels.
+
+## 2026-05-11T22:45:57+02:00
+
+- Published the first guarded layer-4 attention value output slice. To avoid
+  growing the focused layer-4 attention source toward the size guard, the
+  existing layer-4 RMSNorm/query/key slice printers moved with the new value
+  printer into a dedicated include that is listed in `Makefile` dependencies.
+- Added a focused external layer-4 attention value oracle. It reuses the full
+  layer-4 attention RMSNorm oracle path and dots that activation with the first
+  four value rows using ordered f32 Q8_0 accumulation.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-3 post-FFN residual prerequisite, layer-4 attention RMSNorm, and new
+  layer-4 value public labels. The new value words are `0x3bb659d7`,
+  `0xbc5c2ba7`, `0x3bf35210`, and `0xbc1e7f5f`; the 24-byte header-only GGUF
+  kept layer-4 guarded statuses at `0` and emitted no layer-4 exact-hex labels.
