@@ -2493,3 +2493,19 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification note: two static probe invocations were corrected during
   verification because they inspected tool behavior rather than repository
   state; the corrected include-dependency and dynamic-section checks passed.
+
+## 2026-05-11T18:02:46+02:00
+
+- Published the first guarded layer-3 attention key output slice from the
+  focused layer-3 module. The labels are emitted only after
+  `token0_layer3_attn_k_matvec: 1`, and the help text now describes layer-3 key
+  as an output slice rather than a status-only smoke.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-2 post-FFN residual, layer-3 attention RMSNorm, and layer-3 attention
+  key public labels. The new key words are `0xbaf936b2`, `0xbcf1bab9`,
+  `0x3c7af998`, and `0x3c825ee2`; the 24-byte empty valid GGUF kept the
+  layer-3 descriptor fields and dependent statuses at `0` and emitted no
+  guarded layer-3 key output words. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  static-link, undefined-symbol, symbol, tracked-artifact, and tracked
+  large-file scans passed.
