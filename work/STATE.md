@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-2 FFN SwiGLU activation output slice
-from `src/infer/token0_layer2_ffn.s`, and add/update a focused external oracle
-note for the expected first four exact-hex words.
+Add descriptor-only retained lookup and summary coverage for
+`blk.2.ffn_down.weight`, without reading FFN-down payload bytes yet.
 
 ## Completed Work
 
@@ -18,18 +17,16 @@ note for the expected first four exact-hex words.
   metadata summaries, tensor directory walking, retained descriptor lookups, and
   bounded tensor payload reads.
 - Token-0 smoke coverage now reaches layer-2 post-attention residual, layer-2
-  FFN RMSNorm activation, layer-2 FFN gate/up matvec outputs, and status-only
-  layer-2 FFN SwiGLU activation.
+  FFN RMSNorm activation, layer-2 FFN gate/up matvec output slices, and the
+  first guarded layer-2 FFN SwiGLU activation output slice.
 - `src/infer/token0_layer2_ffn.s` owns layer-2 FFN norm status/activation,
-  gate/up matvec status/output storage, and the new private SwiGLU output
-  buffer. The SwiGLU path requires both layer-2 FFN gate and up matvec statuses
-  before calling the shared scalar `swiglu_f32` helper over 9216 f32 values.
-- The layer-2 FFN SwiGLU step currently publishes only
-  `token0_layer2_ffn_swiglu`; it intentionally emits no SwiGLU output words and
-  keeps `token0_layer2_ffn_swiglu_output` non-global until a later output-slice
-  or handoff step.
+  gate/up matvec status/output storage, and private SwiGLU output storage. The
+  SwiGLU path requires both layer-2 FFN gate and up matvec statuses before
+  calling the shared scalar `swiglu_f32` helper over 9216 f32 values.
+- The layer-2 FFN SwiGLU status now prints four guarded exact-hex output words:
+  `0x450e084e`, `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`.
 - Durable external oracle coverage exists through the layer-2 FFN RMSNorm,
-  gate, and up slices in `work/oracle/`.
+  gate, up, and SwiGLU slices in `work/oracle/`.
 - Repository-wide, layer-1 FFN branch, and layer-2 attention branch review gates
   are complete with no blocking findings.
 - Operator guidance to keep new feature work out of catch-all entry files is
@@ -38,12 +35,12 @@ note for the expected first four exact-hex words.
 
 ## Known Blockers
 
-- No current blocker to publishing the layer-2 FFN SwiGLU output slice.
+- No current blocker to adding descriptor-only layer-2 FFN-down coverage.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
-- `src/infer/token0_layer2_ffn.s` is 845 lines after the status-only SwiGLU
-  step. Keep new work focused and split before it approaches the 1000-line
-  threshold.
+- `src/infer/token0_layer2_ffn.s` is 942 lines after publishing the SwiGLU
+  slice. Do not add the FFN-down matvec there; use a focused module or split
+  before substantial new layer-2 FFN code.
 - `src/gguf/load_header/tensor_infos.inc` remains over 1000 lines, but it is a
   coherent tensor-directory walker. Reduce it only when changing that logic.
 
@@ -67,20 +64,23 @@ note for the expected first four exact-hex words.
 - `work/oracle/token0-layer2-ffn-gate.md`
 - `work/oracle/token0_layer2_ffn_up_oracle.py`
 - `work/oracle/token0-layer2-ffn-up.md`
+- `work/oracle/token0_layer2_ffn_swiglu_oracle.py`
+- `work/oracle/token0-layer2-ffn-swiglu.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-2 FFN status-only SwiGLU verification passed:
+Layer-2 FFN SwiGLU output-slice verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke printed `token0_layer2_ffn_swiglu: 1` after the
-  retained layer-2 FFN norm, gate, and up statuses/slices, and printed no
-  `token0_layer2_ffn_swiglu_output*_f32_hex` labels
+- `python3 work/oracle/token0_layer2_ffn_swiglu_oracle.py <target-gguf>`
+- real target runtime smoke printed `token0_layer2_ffn_swiglu: 1` and
+  `token0_layer2_ffn_swiglu_output{0..3}_f32_hex` as `0x450e084e`,
+  `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`, matching the oracle exactly
 - temporary 24-byte empty valid GGUF kept `layer2_ffn_norm_tensor_*`,
   `layer2_ffn_gate_tensor_*`, `layer2_ffn_up_tensor_*`,
   `token0_layer2_ffn_norm`, `token0_layer2_ffn_gate_matvec`,
@@ -98,6 +98,5 @@ Layer-2 FFN status-only SwiGLU verification passed:
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-2 FFN SwiGLU activation output slice
-from `src/infer/token0_layer2_ffn.s`, and add/update a focused external oracle
-note for the expected first four exact-hex words.
+Add descriptor-only retained lookup and summary coverage for
+`blk.2.ffn_down.weight`, without reading FFN-down payload bytes yet.

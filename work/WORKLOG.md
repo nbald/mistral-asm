@@ -2236,3 +2236,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, include dependency,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T16:05:07+02:00
+
+- Published the first guarded layer-2 FFN SwiGLU activation slice from the
+  focused FFN module. The four exact-hex labels are emitted only after
+  `token0_layer2_ffn_swiglu: 1`; the 24-byte empty valid GGUF guard path keeps
+  layer-2 FFN norm, gate, up, and SwiGLU statuses at `0` and emits no guarded
+  layer-2 FFN output words.
+- Verification evidence: the real target printed SwiGLU words `0x450e084e`,
+  `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`. The focused external oracle
+  reused the full layer-2 FFN RMSNorm path, recomputed the first four gate/up
+  projection words, applied `silu(gate[i]) * up[i]`, and matched the runtime
+  slice exactly. Build, harnesses, help, oracle py-compile, whitespace, runtime
+  source extension, include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

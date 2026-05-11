@@ -30,6 +30,22 @@ token0_layer2_ffn_swiglu_text:
 	.ascii "token0_layer2_ffn_swiglu: "
 token0_layer2_ffn_swiglu_text_end:
 
+token0_layer2_ffn_swiglu_output0_f32_text:
+	.ascii "token0_layer2_ffn_swiglu_output0_f32_hex: "
+token0_layer2_ffn_swiglu_output0_f32_text_end:
+
+token0_layer2_ffn_swiglu_output1_f32_text:
+	.ascii "token0_layer2_ffn_swiglu_output1_f32_hex: "
+token0_layer2_ffn_swiglu_output1_f32_text_end:
+
+token0_layer2_ffn_swiglu_output2_f32_text:
+	.ascii "token0_layer2_ffn_swiglu_output2_f32_hex: "
+token0_layer2_ffn_swiglu_output2_f32_text_end:
+
+token0_layer2_ffn_swiglu_output3_f32_text:
+	.ascii "token0_layer2_ffn_swiglu_output3_f32_hex: "
+token0_layer2_ffn_swiglu_output3_f32_text_end:
+
 token0_layer2_ffn_gate_output0_f32_text:
 	.ascii "token0_layer2_ffn_gate_output0_f32_hex: "
 token0_layer2_ffn_gate_output0_f32_text_end:
@@ -763,20 +779,21 @@ token0_layer2_ffn_up_matvec_smoke:
 .type run_token0_layer2_ffn_swiglu_status, @function
 
 # Contract: run the token-0 layer-2 FFN SwiGLU smoke and publish its status
-# line.
+# line plus the fixed exact-hex oracle slice on success.
 # Inputs: no register inputs. Reads token0_layer2_ffn_gate_matvec_status,
 # token0_layer2_ffn_up_matvec_status, token0_layer2_ffn_gate_output, and
 # token0_layer2_ffn_up_output.
 # Outputs: writes token0_layer2_ffn_swiglu_status and, on success, fills the
 # private token0_layer2_ffn_swiglu_output buffer. Always prints exactly one
-# status label/value/newline sequence to stdout. The return register is
+# status label/value/newline sequence to stdout and prints the first four
+# exact-hex output words only when the status is 1. The return register is
 # unspecified.
 # Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags
 # through the shared scalar SwiGLU helper and summary writers.
 # Ownership/lifetime: reads only module-owned gate and up projection buffers and
 # writes only module-owned SwiGLU output storage. The model mmap is not read by
-# this pure activation step, and the activation buffer intentionally remains
-# private until a later handoff or output-slice step.
+# this pure activation step, and the activation buffer remains private until a
+# later handoff step.
 # Error behavior: status is 1 only after both prerequisite projection statuses
 # are available and the shared SwiGLU helper completes; otherwise status is 0.
 # Output write errors remain diagnostic-only and are not surfaced separately.
@@ -798,9 +815,89 @@ run_token0_layer2_ffn_swiglu_status:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_layer2_ffn_swiglu_output_slice
 	ret
 
 .size run_token0_layer2_ffn_swiglu_status, . - run_token0_layer2_ffn_swiglu_status
+
+.type print_token0_layer2_ffn_swiglu_output_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-2 FFN SwiGLU
+# activation when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer2_ffn_swiglu_status and the
+# first four f32 words of token0_layer2_ffn_swiglu_output.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer2_ffn_swiglu_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads private module-owned layer-2 FFN SwiGLU activation
+# storage only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer2_ffn_swiglu_output_slice:
+	cmp qword ptr [rip + token0_layer2_ffn_swiglu_status], 1
+	jne .Lprint_layer2_ffn_swiglu_output_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_ffn_swiglu_output0_f32_text]
+	mov rdx, token0_layer2_ffn_swiglu_output0_f32_text_end - token0_layer2_ffn_swiglu_output0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_ffn_swiglu_output]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_ffn_swiglu_output1_f32_text]
+	mov rdx, token0_layer2_ffn_swiglu_output1_f32_text_end - token0_layer2_ffn_swiglu_output1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_ffn_swiglu_output + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_ffn_swiglu_output2_f32_text]
+	mov rdx, token0_layer2_ffn_swiglu_output2_f32_text_end - token0_layer2_ffn_swiglu_output2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_ffn_swiglu_output + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_ffn_swiglu_output3_f32_text]
+	mov rdx, token0_layer2_ffn_swiglu_output3_f32_text_end - token0_layer2_ffn_swiglu_output3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_ffn_swiglu_output + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer2_ffn_swiglu_output_slice_done:
+	ret
+
+.size print_token0_layer2_ffn_swiglu_output_slice, . - print_token0_layer2_ffn_swiglu_output_slice
 
 .type token0_layer2_ffn_swiglu_smoke, @function
 
