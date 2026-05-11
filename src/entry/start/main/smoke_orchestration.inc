@@ -407,6 +407,7 @@
 	call run_token0_layer2_attn_context_status
 	call run_token0_layer2_attn_output_matvec_status
 	call run_token0_layer2_post_attn_residual_status
+	call run_token0_layer2_ffn_norm_status
 
 	# The live mapping has now served parser summary and guarded tensor payload
 	# smoke paths. Ownership remains explicit and is released before exit.

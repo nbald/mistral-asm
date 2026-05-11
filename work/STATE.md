@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-2 FFN RMSNorm smoke coverage after the retained
-post-attention residual, using `blk.2.ffn_norm.weight`.
+Publish the first guarded layer-2 FFN RMSNorm activation slice and add a
+focused oracle note for `blk.2.ffn_norm.weight`.
 
 ## Completed Work
 
@@ -52,6 +52,12 @@ post-attention residual, using `blk.2.ffn_norm.weight`.
   rechecks the 3072-wide output descriptor, writes a private 3072-f32 residual
   buffer with scalar f32 adds, and publishes first-four exact-hex residual
   words only when `token0_layer2_post_attn_residual_status == 1`.
+- Layer-2 FFN RMSNorm status-only coverage now lives in
+  `src/infer/token0_layer2_ffn.s`. It waits for the retained layer-2
+  post-attention residual and `blk.2.ffn_norm.weight` descriptor, checks the
+  retained RMSNorm epsilon, f32 type, `[3072]` shape, mapping base, and complete
+  payload bounds, writes a private 3072-f32 activation buffer on success, and
+  prints only `token0_layer2_ffn_norm` status for this step.
 - Durable external oracle coverage for the layer-2 value projection lives in
   `work/oracle/token0_layer2_attn_v_oracle.py` and
   `work/oracle/token0-layer2-attn-v-output.md`. It recomputes the full upstream
@@ -88,7 +94,7 @@ post-attention residual, using `blk.2.ffn_norm.weight`.
 
 ## Known Blockers
 
-- No current blocker to starting status-only layer-2 FFN RMSNorm work.
+- No current blocker to publishing the layer-2 FFN RMSNorm activation slice.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -105,6 +111,7 @@ post-attention residual, using `blk.2.ffn_norm.weight`.
 - `src/infer/token0_layer2_attn_context.s`
 - `src/infer/token0_layer2_attn_output.s`
 - `src/infer/token0_layer2_post_attn_residual.s`
+- `src/infer/token0_layer2_ffn.s`
 - `src/entry/start/constants.inc`
 - `src/entry/start/state.inc`
 - `src/entry/start/main/bootstrap.inc`
@@ -135,7 +142,7 @@ post-attention residual, using `blk.2.ffn_norm.weight`.
 
 ## Last Verification
 
-Layer-2 FFN RMSNorm descriptor-only verification passed:
+Layer-2 FFN RMSNorm status-only verification passed:
 
 - `make`
 - `make check`
@@ -146,22 +153,27 @@ Layer-2 FFN RMSNorm descriptor-only verification passed:
   `layer2_ffn_norm_tensor_ggml_type: 0`, and
   `layer2_ffn_norm_tensor_offset: 768811008`, while preserving
   `token0_layer2_attn_output_matvec: 1` and
-  `token0_layer2_post_attn_residual: 1`
+  `token0_layer2_post_attn_residual: 1`, and newly printing
+  `token0_layer2_ffn_norm: 1`
 - temporary 24-byte empty valid GGUF kept the layer-2 output and FFN norm
-  descriptor slots zeroed and kept the reviewed layer-2 output/residual statuses
-  at `0`
+  descriptor slots zeroed and kept the reviewed layer-2 output/residual and new
+  layer-2 FFN norm statuses at `0`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the new layer-2 FFN norm descriptor handoff
-  symbols
+- exported-symbol inspection for
+  `run_token0_layer2_ffn_norm_status`,
+  `token0_layer2_ffn_norm_status`, and
+  `token0_layer2_ffn_norm_activation`
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add a focused layer-2 FFN RMSNorm status-only runtime module. It should consume
-the retained layer-2 post-attention residual and `blk.2.ffn_norm.weight`
-descriptor, check epsilon/type/shape/mapping bounds, write a private 3072-f32
-activation buffer, and print only `token0_layer2_ffn_norm` status in this step.
+Extend `src/infer/token0_layer2_ffn.s` to print
+`token0_layer2_ffn_norm0_f32_hex` through
+`token0_layer2_ffn_norm3_f32_hex` only when
+`token0_layer2_ffn_norm_status == 1`, and add a focused oracle note/script that
+recomputes those four words from the retained layer-2 post-attention residual
+path.

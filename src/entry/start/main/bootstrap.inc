@@ -26,9 +26,9 @@
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
 # residual smokes plus the layer-2 attention RMSNorm, query/key/value matvec,
-# single-token context, and output-projection matvec smokes to focused inference
-# code, and publishing status-gated exact-hex slices from the audited output
-# buffers. It also performs non-math
+# single-token context, output-projection matvec, post-attention residual, and
+# FFN RMSNorm smokes to focused inference code, and publishing status-gated
+# exact-hex slices from the audited output buffers. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
@@ -53,7 +53,9 @@
 # retained descriptor for the first-layer attention RMSNorm weights, query
 # projection, key projection, value projection, output projection, FFN RMSNorm
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
-# attention/FFN setup descriptors.
+# attention/FFN setup descriptors. The layer-2 FFN RMSNorm smoke consumes the
+# retained layer-2 post-attention residual and publishes only a status line for
+# this step.
 # Error behavior: maps gguf_validate_file and post-validation tensor lookup
 # status codes to stderr diagnostics after releasing any live mapping.
 _start:

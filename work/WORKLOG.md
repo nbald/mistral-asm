@@ -2105,3 +2105,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   at `0`. Build, harnesses, help, oracle py-compile, whitespace, runtime source
   extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:00:21+02:00
+
+- Added status-only layer-2 FFN RMSNorm smoke coverage after the retained
+  layer-2 post-attention residual. The path requires the retained
+  `blk.2.ffn_norm.weight` descriptor, epsilon metadata, f32 `[3072]` shape, and
+  complete mapped payload bounds before filling private activation storage. It
+  intentionally publishes only `token0_layer2_ffn_norm` in this step.
+- Verification evidence: the real target preserved the reviewed layer-2 output
+  and post-attention residual statuses and printed `token0_layer2_ffn_norm: 1`.
+  A temporary 24-byte empty valid GGUF kept the new status at `0`. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  include dependency, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
