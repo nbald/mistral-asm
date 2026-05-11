@@ -2046,3 +2046,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, tracked include dependencies,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T14:24:38+02:00
+
+- Published the first guarded layer-2 post-attention residual slice from the
+  focused residual module. The new labels are emitted only after
+  `token0_layer2_post_attn_residual: 1`; the empty-GGUF guard path still prints
+  only the zero output/residual statuses and no guarded layer-2 residual words.
+- Verification evidence: the real target printed residual words `0x3e9885c8`,
+  `0xbd0e0bd8`, `0x3e299d00`, and `0x3d544d6e`. The focused external oracle
+  reused the layer-2 attention output oracle path, performed the f32 residual
+  adds, and matched those words exactly. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, tracked include
+  dependencies, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
+- The layer-2 attention through post-attention residual path is now a coherent
+  branch, so the next iteration should run review gate pass 1 before starting
+  layer-2 FFN feature work.

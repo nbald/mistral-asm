@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first four exact-hex words of the token-0 layer-2 post-attention
-residual behind its status gate and add focused oracle coverage for that slice.
+Run review gate pass 1 for the completed layer-2 attention through
+post-attention residual path before starting layer-2 FFN feature work.
 
 ## Completed Work
 
@@ -42,12 +42,12 @@ residual behind its status gate and add focused oracle coverage for that slice.
   `q8_0_matvec_f32`, fills a private 3072-f32 output buffer on success, and
   publishes a guarded first-four exact-hex output slice only when
   `token0_layer2_attn_output_matvec_status == 1`.
-- Layer-2 post-attention residual status now lives in
+- Layer-2 post-attention residual coverage now lives in
   `src/infer/token0_layer2_post_attn_residual.s`. It waits for the retained
   layer-1 post-FFN residual and layer-2 attention output-projection statuses,
   rechecks the 3072-wide output descriptor, writes a private 3072-f32 residual
-  buffer with scalar f32 adds, and prints only
-  `token0_layer2_post_attn_residual: 1/0`.
+  buffer with scalar f32 adds, and publishes first-four exact-hex residual
+  words only when `token0_layer2_post_attn_residual_status == 1`.
 - Durable external oracle coverage for the layer-2 value projection lives in
   `work/oracle/token0_layer2_attn_v_oracle.py` and
   `work/oracle/token0-layer2-attn-v-output.md`. It recomputes the full upstream
@@ -60,6 +60,12 @@ residual behind its status gate and add focused oracle coverage for that slice.
   1024 layer-2 value rows, expands the 4096-f32 single-token grouped-query
   context, dots the first four rows of `blk.2.attn_output.weight`, and matches
   the runtime exactly.
+- Durable external oracle coverage for the layer-2 post-attention residual
+  lives in `work/oracle/token0_layer2_post_attn_residual_oracle.py` and
+  `work/oracle/token0-layer2-post-attn-residual.md`. It reuses the layer-2
+  attention output oracle path, adds the first four layer-1 post-FFN residual
+  and layer-2 attention output words with f32 rounding, and matches the runtime
+  exactly.
 - The required repository-wide review gate and the completed layer-1 FFN branch
   review gate are already complete. Existing review notes remain under
   `work/reviews/`.
@@ -69,8 +75,8 @@ residual behind its status gate and add focused oracle coverage for that slice.
 
 ## Known Blockers
 
-- No current blocker to publishing the layer-2 post-attention residual slice
-  and oracle.
+- No current blocker to running the first review pass for the completed layer-2
+  attention branch.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -100,27 +106,31 @@ residual behind its status gate and add focused oracle coverage for that slice.
 - `work/oracle/token0_layer2_attn_k_oracle.py`
 - `work/oracle/token0_layer2_attn_v_oracle.py`
 - `work/oracle/token0_layer2_attn_output_oracle.py`
+- `work/oracle/token0_layer2_post_attn_residual_oracle.py`
 - `work/oracle/token0-layer2-attn-v-output.md`
 - `work/oracle/token0-layer2-attn-output.md`
+- `work/oracle/token0-layer2-post-attn-residual.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 - `work/prompts/continue.md`
 
 ## Last Verification
 
-Layer-2 post-attention residual status verification passed:
+Layer-2 post-attention residual slice verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke reported `token0_layer1_post_ffn_residual: 1`,
-  `token0_layer2_attn_output_matvec: 1`, and
-  `token0_layer2_post_attn_residual: 1`
+- real target runtime smoke reported `token0_layer2_post_attn_residual: 1`
+  and printed residual words `0x3e9885c8`, `0xbd0e0bd8`, `0x3e299d00`, and
+  `0x3d544d6e`
+- `work/oracle/token0_layer2_post_attn_residual_oracle.py` produced the same
+  four residual words, and a normalized runtime/oracle diff was empty
 - temporary 24-byte empty valid GGUF kept
   `token0_layer2_attn_output_matvec: 0` and
-  `token0_layer2_post_attn_residual: 0`, with no guarded layer-2
-  output-projection words
+  `token0_layer2_post_attn_residual: 0`, with no guarded layer-2 residual
+  words
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
@@ -132,8 +142,7 @@ Layer-2 post-attention residual status verification passed:
 
 ## Next Exact Step
 
-Publish `token0_layer2_post_attn_residual0_f32_hex` through
-`token0_layer2_post_attn_residual3_f32_hex` only when
-`token0_layer2_post_attn_residual_status == 1`, add a focused external oracle
-that recomputes the layer-2 residual slice, and verify exact runtime/oracle
-match on the real target plus a quiet empty-GGUF guard path.
+Run review gate pass 1 for the completed layer-2 attention/post-attention
+residual path. Inspect status gates, tensor shape and bounds checks, exact-hex
+slice publication, oracle arithmetic, and documentation consistency; commit a
+focused review note under `work/reviews/`.

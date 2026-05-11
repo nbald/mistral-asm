@@ -9,6 +9,22 @@ token0_layer2_post_attn_residual_text:
 	.ascii "token0_layer2_post_attn_residual: "
 token0_layer2_post_attn_residual_text_end:
 
+token0_layer2_post_attn_residual0_f32_text:
+	.ascii "token0_layer2_post_attn_residual0_f32_hex: "
+token0_layer2_post_attn_residual0_f32_text_end:
+
+token0_layer2_post_attn_residual1_f32_text:
+	.ascii "token0_layer2_post_attn_residual1_f32_hex: "
+token0_layer2_post_attn_residual1_f32_text_end:
+
+token0_layer2_post_attn_residual2_f32_text:
+	.ascii "token0_layer2_post_attn_residual2_f32_hex: "
+token0_layer2_post_attn_residual2_f32_text_end:
+
+token0_layer2_post_attn_residual3_f32_text:
+	.ascii "token0_layer2_post_attn_residual3_f32_hex: "
+token0_layer2_post_attn_residual3_f32_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -37,7 +53,8 @@ token0_layer2_post_attn_residual:
 # token0_layer1_post_ffn_residual, and token0_layer2_attn_output.
 # Outputs: writes token0_layer2_post_attn_residual_status and, on success,
 # fills token0_layer2_post_attn_residual with 3072 scalar f32 residual sums.
-# Always prints exactly one status label/value/newline sequence to stdout. The
+# Always prints exactly one status label/value/newline sequence to stdout, then
+# prints the first four exact-hex residual words only when the status is 1. The
 # return register is unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1 and flags through the smoke
 # helper and summary writers.
@@ -66,6 +83,8 @@ run_token0_layer2_post_attn_residual_status:
 	lea rsi, [rip + newline_text]
 	mov rdx, newline_text_end - newline_text
 	call sys_write
+
+	call print_token0_layer2_post_attn_residual_slice
 	ret
 
 .size run_token0_layer2_post_attn_residual_status, . - run_token0_layer2_post_attn_residual_status
@@ -121,5 +140,84 @@ token0_layer2_post_attn_residual_smoke:
 	ret
 
 .size token0_layer2_post_attn_residual_smoke, . - token0_layer2_post_attn_residual_smoke
+
+.type print_token0_layer2_post_attn_residual_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-2
+# post-attention residual when the residual smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer2_post_attn_residual_status
+# and the first four f32 words of token0_layer2_post_attn_residual.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer2_post_attn_residual_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads private module-owned layer-2 post-attention
+# residual storage only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer2_post_attn_residual_slice:
+	cmp qword ptr [rip + token0_layer2_post_attn_residual_status], 1
+	jne .Lprint_layer2_post_attn_residual_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_post_attn_residual0_f32_text]
+	mov rdx, token0_layer2_post_attn_residual0_f32_text_end - token0_layer2_post_attn_residual0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_post_attn_residual]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_post_attn_residual1_f32_text]
+	mov rdx, token0_layer2_post_attn_residual1_f32_text_end - token0_layer2_post_attn_residual1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_post_attn_residual + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_post_attn_residual2_f32_text]
+	mov rdx, token0_layer2_post_attn_residual2_f32_text_end - token0_layer2_post_attn_residual2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_post_attn_residual + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_post_attn_residual3_f32_text]
+	mov rdx, token0_layer2_post_attn_residual3_f32_text_end - token0_layer2_post_attn_residual3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_post_attn_residual + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer2_post_attn_residual_slice_done:
+	ret
+
+.size print_token0_layer2_post_attn_residual_slice, . - print_token0_layer2_post_attn_residual_slice
 
 .section .note.GNU-stack,"",@progbits
