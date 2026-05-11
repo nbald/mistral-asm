@@ -56,6 +56,22 @@ token0_layer2_attn_q_output3_f32_text:
 	.ascii "token0_layer2_attn_q_output3_f32_hex: "
 token0_layer2_attn_q_output3_f32_text_end:
 
+token0_layer2_attn_k_output0_f32_text:
+	.ascii "token0_layer2_attn_k_output0_f32_hex: "
+token0_layer2_attn_k_output0_f32_text_end:
+
+token0_layer2_attn_k_output1_f32_text:
+	.ascii "token0_layer2_attn_k_output1_f32_hex: "
+token0_layer2_attn_k_output1_f32_text_end:
+
+token0_layer2_attn_k_output2_f32_text:
+	.ascii "token0_layer2_attn_k_output2_f32_hex: "
+token0_layer2_attn_k_output2_f32_text_end:
+
+token0_layer2_attn_k_output3_f32_text:
+	.ascii "token0_layer2_attn_k_output3_f32_hex: "
+token0_layer2_attn_k_output3_f32_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -194,7 +210,9 @@ run_token0_layer2_attn_q_matvec_status:
 # token0_layer2_attn_norm_activation buffer owned by this module.
 # Outputs: writes token0_layer2_attn_k_matvec_status and, on success, fills the
 # private token0_layer2_attn_k_output buffer. Always prints exactly one status
-# label/value/newline sequence to stdout. The return register is unspecified.
+# label/value/newline sequence to stdout and prints the first four exact-hex
+# key output words only when the status is 1. The return register is
+# unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the callee-saved
 # registers it uses internally.
@@ -222,6 +240,7 @@ run_token0_layer2_attn_k_matvec_status:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_layer2_attn_k_output_slice
 	ret
 
 .size run_token0_layer2_attn_k_matvec_status, . - run_token0_layer2_attn_k_matvec_status
@@ -647,5 +666,84 @@ print_token0_layer2_attn_q_output_slice:
 	ret
 
 .size print_token0_layer2_attn_q_output_slice, . - print_token0_layer2_attn_q_output_slice
+
+.type print_token0_layer2_attn_k_output_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-2 attention
+# key projection when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer2_attn_k_matvec_status and the
+# first four f32 words of token0_layer2_attn_k_output.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer2_attn_k_matvec_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads private module-owned layer-2 key projection storage
+# only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer2_attn_k_output_slice:
+	cmp qword ptr [rip + token0_layer2_attn_k_matvec_status], 1
+	jne .Lprint_layer2_attn_k_output_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_attn_k_output0_f32_text]
+	mov rdx, token0_layer2_attn_k_output0_f32_text_end - token0_layer2_attn_k_output0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_attn_k_output]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_attn_k_output1_f32_text]
+	mov rdx, token0_layer2_attn_k_output1_f32_text_end - token0_layer2_attn_k_output1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_attn_k_output + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_attn_k_output2_f32_text]
+	mov rdx, token0_layer2_attn_k_output2_f32_text_end - token0_layer2_attn_k_output2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_attn_k_output + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_attn_k_output3_f32_text]
+	mov rdx, token0_layer2_attn_k_output3_f32_text_end - token0_layer2_attn_k_output3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer2_attn_k_output + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer2_attn_k_output_slice_done:
+	ret
+
+.size print_token0_layer2_attn_k_output_slice, . - print_token0_layer2_attn_k_output_slice
 
 .section .note.GNU-stack,"",@progbits
