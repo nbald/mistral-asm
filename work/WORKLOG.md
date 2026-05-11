@@ -2949,3 +2949,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`; the 24-byte
   header-only GGUF reported `token0_layer4_attn_norm: 0`. No layer-4 exact-hex
   activation labels are published yet.
+
+## 2026-05-11T21:39:11+02:00
+
+- Published the first guarded layer-4 attention RMSNorm slice from the focused
+  layer-4 module. The smoke still requires the retained layer-3 post-FFN
+  residual, captured epsilon, exact f32 `[3072]` `blk.4.attn_norm.weight`, and
+  a bounded payload span before printing the first four activation words.
+- Added a focused external layer-4 attention RMSNorm oracle and note. The
+  oracle recomputes the complete layer-3 post-FFN residual, then applies
+  `blk.4.attn_norm.weight` across all 3072 words before comparing the public
+  slice.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-3 post-FFN residual prerequisite and new layer-4 RMSNorm public labels.
+  The new layer-4 words are `0x420c4b32`, `0xc0768887`, `0xc14b813f`, and
+  `0xbffefae6`; the 24-byte header-only GGUF kept the layer-4 RMSNorm status at
+  `0` and emitted no guarded layer-4 exact-hex labels.
