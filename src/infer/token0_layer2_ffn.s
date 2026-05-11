@@ -9,6 +9,8 @@
 .equ TOKEN0_LAYER2_FFN_GATE_OUTPUT_BYTES, TOKEN0_LAYER2_FFN_GATE_OUTPUT_VALUES * 4
 .equ TOKEN0_LAYER2_FFN_UP_OUTPUT_VALUES, 9216
 .equ TOKEN0_LAYER2_FFN_UP_OUTPUT_BYTES, TOKEN0_LAYER2_FFN_UP_OUTPUT_VALUES * 4
+.equ TOKEN0_LAYER2_FFN_SWIGLU_VALUES, 9216
+.equ TOKEN0_LAYER2_FFN_SWIGLU_BYTES, TOKEN0_LAYER2_FFN_SWIGLU_VALUES * 4
 
 .section .rodata
 
@@ -23,6 +25,10 @@ token0_layer2_ffn_gate_matvec_text_end:
 token0_layer2_ffn_up_matvec_text:
 	.ascii "token0_layer2_ffn_up_matvec: "
 token0_layer2_ffn_up_matvec_text_end:
+
+token0_layer2_ffn_swiglu_text:
+	.ascii "token0_layer2_ffn_swiglu: "
+token0_layer2_ffn_swiglu_text_end:
 
 token0_layer2_ffn_gate_output0_f32_text:
 	.ascii "token0_layer2_ffn_gate_output0_f32_hex: "
@@ -105,6 +111,15 @@ token0_layer2_ffn_up_matvec_status:
 .balign 4
 token0_layer2_ffn_up_output:
 	.skip TOKEN0_LAYER2_FFN_UP_OUTPUT_BYTES
+
+.global token0_layer2_ffn_swiglu_status
+.balign 8
+token0_layer2_ffn_swiglu_status:
+	.skip 8
+
+.balign 4
+token0_layer2_ffn_swiglu_output:
+	.skip TOKEN0_LAYER2_FFN_SWIGLU_BYTES
 
 .section .text
 
@@ -743,5 +758,88 @@ token0_layer2_ffn_up_matvec_smoke:
 	ret
 
 .size token0_layer2_ffn_up_matvec_smoke, . - token0_layer2_ffn_up_matvec_smoke
+
+.global run_token0_layer2_ffn_swiglu_status
+.type run_token0_layer2_ffn_swiglu_status, @function
+
+# Contract: run the token-0 layer-2 FFN SwiGLU smoke and publish its status
+# line.
+# Inputs: no register inputs. Reads token0_layer2_ffn_gate_matvec_status,
+# token0_layer2_ffn_up_matvec_status, token0_layer2_ffn_gate_output, and
+# token0_layer2_ffn_up_output.
+# Outputs: writes token0_layer2_ffn_swiglu_status and, on success, fills the
+# private token0_layer2_ffn_swiglu_output buffer. Always prints exactly one
+# status label/value/newline sequence to stdout. The return register is
+# unspecified.
+# Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags
+# through the shared scalar SwiGLU helper and summary writers.
+# Ownership/lifetime: reads only module-owned gate and up projection buffers and
+# writes only module-owned SwiGLU output storage. The model mmap is not read by
+# this pure activation step, and the activation buffer intentionally remains
+# private until a later handoff or output-slice step.
+# Error behavior: status is 1 only after both prerequisite projection statuses
+# are available and the shared SwiGLU helper completes; otherwise status is 0.
+# Output write errors remain diagnostic-only and are not surfaced separately.
+run_token0_layer2_ffn_swiglu_status:
+	call token0_layer2_ffn_swiglu_smoke
+	mov qword ptr [rip + token0_layer2_ffn_swiglu_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer2_ffn_swiglu_text]
+	mov rdx, token0_layer2_ffn_swiglu_text_end - token0_layer2_ffn_swiglu_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer2_ffn_swiglu_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size run_token0_layer2_ffn_swiglu_status, . - run_token0_layer2_ffn_swiglu_status
+
+.type token0_layer2_ffn_swiglu_smoke, @function
+
+# Contract: derive the token-0 layer-2 FFN SwiGLU activation from retained gate
+# and up projection outputs.
+# Inputs: no register inputs. Reads token0_layer2_ffn_gate_matvec_status,
+# token0_layer2_ffn_up_matvec_status, token0_layer2_ffn_gate_output, and
+# token0_layer2_ffn_up_output.
+# Outputs: rax = 1 after writing TOKEN0_LAYER2_FFN_SWIGLU_VALUES f32 values to
+# token0_layer2_ffn_swiglu_output, each equal to
+# silu(token0_layer2_ffn_gate_output[i]) * token0_layer2_ffn_up_output[i];
+# otherwise rax = 0 and no activation bytes are written.
+# Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags.
+# Ownership/lifetime: reads only private module-owned gate and up projection
+# outputs and writes only private module-owned activation storage. This function
+# reads no mapped tensor payload bytes.
+# Error behavior: this is a smoke gate for the layer-2 FFN activation, not final
+# graph setup. Missing prerequisite projection statuses are skipped with status
+# 0.
+token0_layer2_ffn_swiglu_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer2_ffn_gate_matvec_status], 1
+	jne .Llayer2_ffn_swiglu_done
+	cmp qword ptr [rip + token0_layer2_ffn_up_matvec_status], 1
+	jne .Llayer2_ffn_swiglu_done
+
+	# Projection statuses prove both retained buffers have the target 9216-f32
+	# width, so the activation step only combines those private rows.
+	lea rdi, [rip + token0_layer2_ffn_gate_output]
+	lea rsi, [rip + token0_layer2_ffn_up_output]
+	lea rdx, [rip + token0_layer2_ffn_swiglu_output]
+	mov ecx, TOKEN0_LAYER2_FFN_SWIGLU_VALUES
+	call swiglu_f32
+
+	mov eax, 1
+
+.Llayer2_ffn_swiglu_done:
+	ret
+
+.size token0_layer2_ffn_swiglu_smoke, . - token0_layer2_ffn_swiglu_smoke
 
 .section .note.GNU-stack,"",@progbits

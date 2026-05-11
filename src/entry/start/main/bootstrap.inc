@@ -26,10 +26,10 @@
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
 # residual smokes plus the layer-2 attention RMSNorm, query/key/value matvec,
-# single-token context, output-projection matvec, post-attention residual, and
-# FFN RMSNorm and gate matvec smokes to focused inference code, and publishing
-# status-gated exact-hex slices from the audited output buffers where this
-# milestone has oracle slices. It also performs non-math
+# single-token context, output-projection matvec, post-attention residual, FFN
+# RMSNorm, gate/up matvec, and SwiGLU smokes to focused inference code, and
+# publishing status-gated exact-hex slices from the audited output buffers where
+# this milestone has oracle slices. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and

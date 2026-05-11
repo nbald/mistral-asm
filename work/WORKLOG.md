@@ -2222,3 +2222,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   exactly. Build, harnesses, help, oracle py-compile, whitespace, runtime
   source extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:59:01+02:00
+
+- Added status-only layer-2 FFN SwiGLU smoke coverage in the focused FFN module.
+  The path is a pure activation step over the retained private gate/up matvec
+  buffers, requires both projection statuses, fills a private 9216-f32 SwiGLU
+  buffer, and publishes only `token0_layer2_ffn_swiglu`.
+- Verification evidence: the real target printed `token0_layer2_ffn_swiglu: 1`
+  after the reviewed layer-2 FFN norm/gate/up slices and printed no guarded
+  SwiGLU output labels. A temporary 24-byte empty valid GGUF kept layer-2 FFN
+  norm, gate, up, and SwiGLU statuses at `0`. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.
