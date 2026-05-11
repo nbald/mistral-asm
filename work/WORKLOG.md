@@ -2837,3 +2837,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, symbol, line-count, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T20:38:44+02:00
+
+- Added retained `blk.3.ffn_down.weight` descriptor coverage and a focused
+  status-only layer-3 FFN down projection module. The new smoke requires the
+  guarded layer-3 FFN SwiGLU activation, validates the down descriptor as
+  Q8_0 `[9216 x 3072]`, bounds the complete payload, fills private down output
+  storage, and deliberately publishes no down exact-hex words yet.
+- Verification evidence: the real target reported the down descriptor at
+  relative offset `832339968` and `token0_layer3_ffn_down_matvec: 1`. The
+  existing layer-3 FFN public slices still matched the external SwiGLU oracle
+  exactly; the 24-byte header-only GGUF kept the down descriptor and dependent
+  status at `0` with no guarded layer-3 FFN down output labels.

@@ -133,6 +133,7 @@ token0_layer3_ffn_up_output:
 token0_layer3_ffn_swiglu_status:
 	.skip 8
 
+.global token0_layer3_ffn_swiglu_output
 .balign 4
 token0_layer3_ffn_swiglu_output:
 	.skip TOKEN0_LAYER3_FFN_SWIGLU_BYTES
