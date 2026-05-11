@@ -1726,3 +1726,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   negative empty-GGUF guard check, oracle py-compile, whitespace, source
   extension, static-link, undefined-symbol, exported-symbol, tracked-artifact,
   and tracked large-file checks passed.
+
+## 2026-05-11T10:54:05+02:00
+
+- Review pass 1 over the completed layer-1 FFN down and post-FFN residual slice
+  path found the runtime guards and output ordering coherent, but treated the
+  missing durable oracle for the committed layer-1 FFN branch as a blocker
+  before layer-2 scope increases. The current evidence is good enough to trust
+  the status gates, but not durable enough for a repeatable branch-level
+  comparison.
+- Verification evidence for the review: the real target still publishes the
+  layer-1 down descriptor, down words, and post-FFN residual words recorded in
+  state; a 24-byte empty valid GGUF keeps the reviewed statuses at zero and
+  emits no guarded output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, source extension, static-link, tracked-artifact, and tracked
+  large-file checks passed.

@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 over the completed token-0 layer-1 FFN down and
-post-FFN residual slice path before adding layer-2 or broader feature work.
+Fix review pass 1's durable oracle coverage finding for the completed token-0
+layer-1 FFN branch before adding layer-2 or broader feature work.
 
 ## Completed Work
 
@@ -115,10 +115,19 @@ post-FFN residual slice path before adding layer-2 or broader feature work.
   its status is 1. The new words appear immediately after
   `token0_layer1_post_ffn_residual: 1`, and the help milestone line now
   describes the layer-1 post-FFN residual output slice.
+- Review gate pass 1 over the completed layer-1 FFN down and post-FFN residual
+  slice path is recorded in
+  `work/reviews/2026-05-11-layer1-ffn-down-review-1.md`. It found no runtime
+  bounds or status-gating blocker, but it found a durable oracle coverage gap
+  for the committed layer-1 FFN gate/up/SwiGLU/down and post-FFN residual
+  public diagnostics.
 
 ## Known Blockers
 
-- No current blocker for review gate pass 1.
+- Durable oracle coverage now lags the committed layer-1 FFN branch:
+  `work/oracle/` has tracked layer-1 oracle coverage through FFN norm, but no
+  repeatable script/note for gate/up/SwiGLU/down or the post-FFN residual
+  slices. Fix this before layer-2 or broader feature work.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -144,6 +153,7 @@ post-FFN residual slice path before adding layer-2 or broader feature work.
 - `tests/*.s`
 - `Makefile`
 - `work/oracle/`
+- `work/reviews/2026-05-11-layer1-ffn-down-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-2.md`
 - `work/STATE.md`
@@ -152,22 +162,20 @@ post-FFN residual slice path before adding layer-2 or broader feature work.
 
 ## Last Verification
 
-- Layer-1 post-FFN residual output-slice verification passed: `make`;
-  `make check`; `./mistral-asm --help`; real target smoke printed the existing
-  layer-1 post-attention residual words `0xbd4055c4`, `0xbf0fbbb6`,
-  `0x401af18e`, `0xbe6a002c`, the existing down output words `0x3babc025`,
-  `0x3db2eb07`, `0xbeba3568`, `0x3df45039`, then
-  `token0_layer1_post_ffn_residual: 1` and post-FFN residual words
-  `0xbd2addbf`, `0xbef2bcaa`, `0x4003aae1`, `0xbddfb01f`; a one-off f32 add
-  oracle from those adjacent published upstream words matched the new residual
-  words exactly; a temporary 24-byte empty valid GGUF kept
-  `token0_layer1_ffn_down_matvec` and `token0_layer1_post_ffn_residual` at 0 and
-  emitted no post-FFN residual output labels; oracle py-compile;
-  `git diff --check`; runtime source extension scan allowing `.s` drivers and
-  tracked `.inc` fragments; static-link, no-dynamic-section, undefined-symbol,
-  exported-symbol, tracked-artifact, and tracked large-file checks.
+- Review gate pass 1 verification passed: `make`; `make check`;
+  `./mistral-asm --help`; real target smoke reported the layer-1 down
+  descriptor as `9216x3072` Q8_0 at offset `584957952`, down output words
+  `0x3babc025`, `0x3db2eb07`, `0xbeba3568`, `0x3df45039`, and post-FFN residual
+  words `0xbd2addbf`, `0xbef2bcaa`, `0x4003aae1`, `0xbddfb01f`; a temporary
+  24-byte empty valid GGUF kept the reviewed statuses at 0 and emitted no down
+  or post-FFN residual output labels; oracle py-compile; `git diff --check`;
+  runtime source extension scan allowing `.s` drivers and tracked `.inc`
+  fragments; static-link, no-dynamic-section, tracked-artifact, and tracked
+  large-file checks.
 
 ## Next Exact Step
 
-Run review gate pass 1 over the completed token-0 layer-1 FFN down and
-post-FFN residual slice path before adding layer-2 or broader feature work.
+Add durable external oracle coverage for the committed token-0 layer-1 FFN
+gate/up/SwiGLU/down and post-FFN residual slices, compare it against the current
+runtime output for the local target GGUF, then update state so the two-pass
+review gate can restart before layer-2 work.
