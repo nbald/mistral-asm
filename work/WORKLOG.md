@@ -2424,3 +2424,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime source extension, include dependency, no-layer3-query-matvec,
   static-link, undefined-symbol, symbol, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T17:34:13+02:00
+
+- Added status-only layer-3 attention query projection coverage in the focused
+  layer-3 module. The smoke waits for `token0_layer3_attn_norm`, rechecks the
+  retained query descriptor shape/type, bounds the complete Q8_0 matrix payload,
+  fills private query-output storage, and prints no query output words yet.
+- Verification evidence: the real target reported
+  `token0_layer3_attn_q_matvec: 1` while preserving the layer-2 post-FFN
+  residual and layer-3 RMSNorm guarded
+  words, and a runtime/oracle diff for those existing public slices was empty.
+  The 24-byte empty valid GGUF kept the layer-3 descriptors and dependent
+  statuses at `0`, printed `token0_layer3_attn_q_matvec: 0`, and emitted no
+  guarded output labels. Build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, static-link, undefined-symbol,
+  symbol, no-layer3-query-output-label, tracked-artifact, and tracked large-file
+  scans passed.

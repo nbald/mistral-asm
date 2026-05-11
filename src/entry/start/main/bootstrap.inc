@@ -45,7 +45,8 @@
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention descriptors and retained
 # activation outputs are consumed only by guarded focused smokes after their
-# prerequisite activations exist.
+# prerequisite activations exist, including the status-only layer-3 query matvec
+# smoke.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata

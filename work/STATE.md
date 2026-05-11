@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-3 attention query matvec coverage from the retained
-`blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation,
-without publishing an output slice.
+Publish a guarded first-four-word layer-3 attention query output slice from the
+private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
 
 ## Completed Work
 
@@ -38,13 +37,18 @@ without publishing an output slice.
   with no layer-3 query payload reads. On the real target it reports found `1`,
   dimensions `2`, dim0 `3072`, dim1 `4096`, type `8`, and relative offset
   `815628288`.
+- Status-only layer-3 attention query matvec coverage now consumes the retained
+  `blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation.
+  It bounds the full row-major Q8_0 [3072 x 4096] payload, fills private
+  `token0_layer3_attn_q_output` storage, and publishes only
+  `token0_layer3_attn_q_matvec`.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention query matvec status step.
+- No current blocker to the layer-3 attention query output-slice step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -78,7 +82,7 @@ without publishing an output slice.
 
 ## Last Verification
 
-Layer-3 attention query descriptor-only verification passed:
+Layer-3 attention query matvec status-only verification passed:
 
 - `make`
 - `make check`
@@ -87,27 +91,27 @@ Layer-3 attention query descriptor-only verification passed:
   dimensions `1`, dim0 `3072`, type `0`, and offset `802246656`, then printed
   layer-3 attention query descriptor found `1`, dimensions `2`, dim0 `3072`,
   dim1 `4096`, type `8`, and offset `815628288`; it also preserved
-  `token0_layer3_attn_norm: 1` and words `0x41be7bcf`, `0xc06721de`,
-  `0xc13cb538`, and `0xbfe354dc`
+  `token0_layer2_post_ffn_residual: 1`, `token0_layer3_attn_norm: 1`, the
+  known guarded exact-hex words, and printed `token0_layer3_attn_q_matvec: 1`
 - real-target runtime/oracle diff was empty for the layer-2 post-FFN residual
   and layer-3 attention RMSNorm public exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
   including the new query descriptor slot, kept `token0_layer2_post_ffn_residual`
-  and `token0_layer3_attn_norm` at `0`, and emitted no guarded layer-2
-  post-FFN residual or layer-3 attention RMSNorm exact-hex output labels
+  and `token0_layer3_attn_norm` at `0`, printed
+  `token0_layer3_attn_q_matvec: 0`, and emitted no guarded layer-2 post-FFN
+  residual or layer-3 attention RMSNorm exact-hex output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- scan found no layer-3 attention query matvec/output expansion
+- real-target scan found no `token0_layer3_attn_q_output*_f32_hex` labels
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- local/exported symbol inspection for the retained layer-3 query descriptor
-  slot and summary printer
+- local/exported symbol inspection for the layer-3 query matvec runner, status,
+  internal smoke helper, and private output storage
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add status-only layer-3 attention query matvec coverage from the retained
-`blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation,
-without publishing an output slice.
+Publish a guarded first-four-word layer-3 attention query output slice from the
+private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
