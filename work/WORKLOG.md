@@ -2599,3 +2599,20 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification note: one initial empty-GGUF check accidentally created a
   21-byte file, and one static-link probe treated `readelf -d`'s zero exit
   status as a failure. Both probes were corrected and passed before commit.
+
+## 2026-05-11T18:43:12+02:00
+
+- Added a status-only layer-3 attention context smoke in a focused module. The
+  context path requires the layer-3 Q/K/V matvec statuses, checks Q/K/V
+  descriptor shapes, uses the retained output projection descriptor only as a
+  shape guard, and expands the single-token grouped-query context from the
+  existing layer-3 value output without reading output-projection payload bytes.
+- Verification evidence: the real target reported
+  `token0_layer3_attn_context: 1` while preserving the existing layer-2
+  post-FFN residual, layer-3 attention RMSNorm, and layer-3 value public
+  exact-hex labels against the focused external oracle. The 24-byte empty valid
+  GGUF kept every layer-3 descriptor field and dependent status at `0`,
+  including the new context status, and emitted no guarded layer-3 exact-hex
+  labels. Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, no-output-payload, no-context-label,
+  static-link, undefined-symbol, and symbol checks passed.

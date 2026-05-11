@@ -69,6 +69,7 @@ token0_layer3_attn_k_output:
 token0_layer3_attn_v_matvec_status:
 	.skip 8
 
+.global token0_layer3_attn_v_output
 .balign 4
 token0_layer3_attn_v_output:
 	.skip TOKEN0_LAYER3_ATTN_V_OUTPUT_BYTES

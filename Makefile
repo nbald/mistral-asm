@@ -17,6 +17,7 @@ ASM_SOURCES := \
 	src/infer/token0_layer2_ffn.s \
 	src/infer/token0_layer2_ffn_down.s \
 	src/infer/token0_layer3_attn.s \
+	src/infer/token0_layer3_attn_context.s \
 	src/infer/token0_layer1_ffn_down.s \
 	src/infer/token0_layer1_ffn.s \
 	src/math/q8_0_dot.s \
