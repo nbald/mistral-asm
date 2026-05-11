@@ -3341,3 +3341,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-4 FFN up output slices. The 24-byte zero-count GGUF kept the layer-4
   output/residual/FFN-norm/gate/up statuses at `0` and emitted no guarded
   layer-4 exact-hex labels.
+
+## 2026-05-12T00:54:19+02:00
+
+- Added status-only layer-4 FFN SwiGLU coverage. The smoke requires both
+  retained layer-4 FFN gate/up matvec statuses, combines their private
+  9216-f32 buffers with the shared scalar SwiGLU helper, and retains
+  `token0_layer4_ffn_swiglu_output` for the next slice/down work without
+  publishing exact-hex activation labels yet.
+- Verification evidence: the real target reported `token0_layer4_ffn_swiglu:
+  1` after the existing layer-4 FFN norm/gate/up diagnostics, emitted no
+  `token0_layer4_ffn_swiglu_output*_f32_hex` labels, and the previously public
+  layer-4 slices still diffed cleanly against the FFN up oracle. The 24-byte
+  zero-count GGUF kept the new status at `0` together with the prerequisite
+  layer-4 statuses and emitted no guarded layer-4 exact-hex labels.

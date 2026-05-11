@@ -81,7 +81,8 @@
 # RMSNorm smoke after the post-attention residual handoff exists and the f32
 # payload span is proven inside the live mapping. The layer-4 FFN gate
 # descriptor is consumed only after that FFN RMSNorm activation exists; the
-# layer-4 FFN up descriptor is consumed by a similarly guarded matvec slice.
+# layer-4 FFN up descriptor is consumed by a similarly guarded matvec slice,
+# then the retained gate/up outputs feed a status-only SwiGLU activation smoke.
 # The layer-2 FFN RMSNorm smoke consumes the retained layer-2 post-attention
 # residual and publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
 # descriptors and layer-3 FFN gate/up/down descriptors feed shape-gated Q8_0
