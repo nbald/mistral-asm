@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-4 attention output-projection
-exact-hex slice and external oracle, with only minimal wiring in the near-guard
-`src/infer/token0_layer4_attn.s` file.
+Run review gate pass 1 for the token-0 layer-4 attention chain before starting
+layer-4 post-attention residual feature work.
 
 ## Completed Work
 
@@ -94,15 +93,25 @@ exact-hex slice and external oracle, with only minimal wiring in the near-guard
   context success plus the exact Q8_0 `[4096,3072]`
   `blk.4.attn_output.weight` descriptor, bounds-checks the full payload span,
   runs `q8_0_matvec_f32`, reports `token0_layer4_attn_output_matvec`, and
-  publishes no output exact-hex slice yet.
+  retains `token0_layer4_attn_output`.
+- The first guarded layer-4 attention output-projection exact-hex slice is
+  published from `src/infer/token0_layer4_attn_slices.inc`, with only minimal
+  call wiring in `src/infer/token0_layer4_attn.s`. The first four layer-4
+  attention output words are `0x3cfe6cdc`, `0x3e2382d0`, `0xbd9ca89f`, and
+  `0xbd9a5c81`.
+- `work/oracle/token0_layer4_attn_output_oracle.py` covers those four output
+  projection rows by computing the full layer-4 value projection, expanding the
+  single-token grouped-query context, and dotting the context with the first
+  four `blk.4.attn_output.weight` rows using ordered scalar f32 Q8_0
+  accumulation. `work/oracle/token0-layer4-attn-output.md` records the oracle
+  command and exact comparison evidence.
 
 ## Known Blockers
 
-- No functional blocker to publishing the first guarded layer-4 attention
-  output-projection exact-hex slice and oracle.
-- `src/infer/token0_layer4_attn.s` is 942 lines after the output-projection
-  status smoke. Keep the next slice step's `.s` edit to minimal call wiring and
-  put substantial slice/oracle logic in focused files.
+- No functional blocker to review gate pass 1 for the layer-4 attention chain.
+- `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
+  slice call wiring. Keep future edits minimal there and put substantial new
+  layer-4 residual/FFN work in focused modules.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -138,24 +147,31 @@ exact-hex slice and external oracle, with only minimal wiring in the near-guard
 - `work/oracle/token0_layer4_attn_k_oracle.py`
 - `work/oracle/token0-layer4-attn-v-output.md`
 - `work/oracle/token0_layer4_attn_v_oracle.py`
+- `work/oracle/token0-layer4-attn-output.md`
+- `work/oracle/token0_layer4_attn_output_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention output-projection status verification passed:
+Layer-4 attention output-projection slice verification passed:
 
 - `make all check` and `./mistral-asm --help`
-- real-target run reported `token0_layer4_attn_output_matvec: 1`, kept the
-  retained `blk.4.attn_output.weight` descriptor at Q8_0 `[4096,3072]` offset
-  `925949952`, and emitted no `token0_layer4_attn_output*_f32_hex` labels
-- real-target runtime/oracle diffs stayed empty for the layer-3 post-FFN
-  residual prerequisite slice and layer-4 attention RMSNorm/query/key/value
-  public slices
-- 24-byte header-only GGUF kept all layer-4 query/key/value/output descriptor
-  fields at `0`, reported `token0_layer4_attn_output_matvec: 0`, and emitted
-  no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
+- real-target run reported `token0_layer4_attn_context: 1` and
+  `token0_layer4_attn_output_matvec: 1`, kept the retained
+  `blk.4.attn_output.weight` descriptor at Q8_0 `[4096,3072]` offset
+  `925949952`, and emitted `token0_layer4_attn_output0_f32_hex` through
+  `token0_layer4_attn_output3_f32_hex`
+- real-target runtime/oracle diff stayed empty for the new layer-4 attention
+  output-projection slice plus the layer-3 post-FFN residual, layer-4 attention
+  RMSNorm, and layer-4 attention value prerequisite public slices
+- focused preservation diffs stayed empty for the existing layer-4 attention
+  query and key public slices against their oracles
+- 24-byte header-only GGUF kept all layer-4 query/key/value/output descriptor
+  fields at `0`, reported all guarded layer-4 attention statuses including
+  `token0_layer4_attn_output_matvec` as `0`, and emitted no guarded layer-4
+  exact-hex labels
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
@@ -164,11 +180,11 @@ Layer-4 attention output-projection status verification passed:
 - exported symbol check for `run_token0_layer4_attn_output_matvec_status`,
   `token0_layer4_attn_output_matvec_status`, and `token0_layer4_attn_output`
 - inference/source line-count check; `src/infer/token0_layer4_attn.s` is now
-  942 lines
+  945 lines
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-4 attention output-projection
-exact-hex slice and external oracle, preserving the existing public slices and
-24-byte header-only GGUF guard behavior.
+Run review gate pass 1 for the token-0 layer-4 attention chain, covering
+descriptor guards, single-token context semantics, output-projection oracle
+quality, source-size pressure, and 24-byte header-only guard behavior.

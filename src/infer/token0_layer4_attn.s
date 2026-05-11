@@ -342,13 +342,15 @@ run_token0_layer4_attn_context_status:
 .type run_token0_layer4_attn_output_matvec_status, @function
 
 # Contract: run the token-0 layer-4 attention output-projection matvec smoke
-# and publish its status line without adding a public exact-hex output slice.
+# and publish its status line plus the fixed exact-hex oracle slice on success.
 # Inputs: no register inputs. Reads the live mapping handoff slots, retained
 # blk.4.attn_output.weight descriptor, token0_layer4_attn_context_status, and
 # token0_layer4_attn_context.
 # Outputs: writes token0_layer4_attn_output_matvec_status and, on success,
 # fills token0_layer4_attn_output. Always prints exactly one status
-# label/value/newline sequence to stdout. The return register is unspecified.
+# label/value/newline sequence to stdout and prints the first four exact-hex
+# output-projection words only when the status is 1. The return register is
+# unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the callee-saved
 # registers it uses internally.
@@ -358,7 +360,7 @@ run_token0_layer4_attn_context_status:
 # be released separately.
 # Error behavior: status is 1 only after a bounded Q8_0 matvec completes.
 # Otherwise status is 0, no output-projection matrix payload bytes are read,
-# and no public exact-hex output words are printed. Output write failures are
+# and no exact-hex output words are printed. Output write failures are
 # diagnostic-only in the current milestone.
 run_token0_layer4_attn_output_matvec_status:
 	call token0_layer4_attn_output_matvec_smoke
@@ -378,6 +380,7 @@ run_token0_layer4_attn_output_matvec_status:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_layer4_attn_output_slice
 	ret
 
 .size run_token0_layer4_attn_output_matvec_status, . - run_token0_layer4_attn_output_matvec_status

@@ -3128,3 +3128,20 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Source-size note: the layer-4 attention `.s` file is now close to the
   threshold; the next slice publication should keep only minimal call wiring in
   that file and place substantial work in the existing slice include and oracle.
+
+## 2026-05-11T23:15:58+02:00
+
+- Published the first guarded layer-4 attention output-projection slice while
+  keeping the near-threshold layer-4 attention `.s` edit to a slice-printer call
+  and contract/help text updates. Substantial printing code lives in the
+  existing focused slice include.
+- Added a focused external layer-4 attention output oracle. It computes the
+  full layer-4 value projection, expands the single-token grouped-query context,
+  and dots that context with the first four output-projection rows using
+  ordered scalar f32 Q8_0 accumulation.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  new output-projection slice and its layer-3 post-FFN residual, layer-4
+  RMSNorm, and value prerequisites. The new output words are `0x3cfe6cdc`,
+  `0x3e2382d0`, `0xbd9ca89f`, and `0xbd9a5c81`. Existing layer-4 query/key
+  public slices still matched their focused oracles, and the 24-byte
+  header-only GGUF still emitted no guarded layer-4 exact-hex labels.
