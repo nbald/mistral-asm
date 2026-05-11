@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-2 attention key matvec coverage in the focused
-layer-2 attention module, consuming the existing layer-2 attention RMSNorm
-activation and the new `blk.2.attn_k.weight` descriptor only after guarded
-shape/type/bounds checks.
+Add a guarded first-four exact-hex slice for the token-0 layer-2 attention key
+projection and durable oracle coverage that recomputes the same upstream
+activation before checking `blk.2.attn_k.weight`.
 
 ## Completed Work
 
@@ -182,11 +181,18 @@ shape/type/bounds checks.
   descriptor without reading payload bytes. On the local target GGUF it reports
   found `1`, two dimensions `3072` and `1024`, Q8_0 type `8`, and relative
   offset `675213312`.
+- Status-only token-0 layer-2 attention key matvec coverage now lives beside
+  the layer-2 attention RMSNorm/query paths in `src/infer/token0_layer2_attn.s`.
+  It consumes `token0_layer2_attn_norm_activation` and the focused
+  `blk.2.attn_k.weight` descriptor only after prerequisite status,
+  descriptor/type/shape, mapping-base, and full Q8_0 payload bounds checks,
+  writes a private 1024-f32 key output buffer plus status word, and prints only
+  `token0_layer2_attn_k_matvec`.
 
 ## Known Blockers
 
-- No current blocker to adding status-only layer-2 attention key matvec coverage
-  as the next layer-2 attention step.
+- No current blocker to publishing a guarded layer-2 attention key output slice
+  with matching durable oracle coverage.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -231,26 +237,23 @@ shape/type/bounds checks.
 
 ## Last Verification
 
-Layer-2 attention key descriptor lookup verification passed: `make`;
-`make check`; `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`;
-real target runtime smoke reporting preserved layer-2 RMSNorm words
-`0xbf898056`, `0xc152dc8b`, `0x4248afc4`, `0xc0556342`,
-`token0_layer2_attn_q_matvec: 1`, and query output words `0x3f29ab97`,
-`0x3fa60667`, `0x4000572f`, `0x3fb6f799`, and reported
-`layer2_attn_k_tensor_found: 1`, `layer2_attn_k_tensor_n_dimensions: 2`,
-`layer2_attn_k_tensor_dim0: 3072`, `layer2_attn_k_tensor_dim1: 1024`,
-`layer2_attn_k_tensor_ggml_type: 8`, and
-`layer2_attn_k_tensor_offset: 675213312`; temporary 24-byte empty valid GGUF
-reporting zeroed layer-2 norm/query/key descriptor fields,
-`token0_layer2_attn_norm: 0`, and `token0_layer2_attn_q_matvec: 0` with no
+Layer-2 attention key matvec status verification passed: `make`; `make check`;
+`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
+runtime smoke reporting preserved layer-2 RMSNorm words `0xbf898056`,
+`0xc152dc8b`, `0x4248afc4`, `0xc0556342`, preserved
+`token0_layer2_attn_q_matvec: 1` and query output words `0x3f29ab97`,
+`0x3fa60667`, `0x4000572f`, `0x3fb6f799`, and newly reported
+`token0_layer2_attn_k_matvec: 1`; temporary 24-byte empty valid GGUF reporting
+zeroed layer-2 norm/query/key descriptor fields, `token0_layer2_attn_norm: 0`,
+`token0_layer2_attn_q_matvec: 0`, and `token0_layer2_attn_k_matvec: 0` with no
 guarded layer-2 output labels; `git diff --check`; runtime source extension
 scan allowing `.s` drivers and tracked `.inc` fragments; tracked include
 dependency scan; static-link/no-dynamic-section check; undefined-symbol check;
-exported-symbol inspection; tracked-artifact and tracked large-file checks.
+exported-symbol inspection for the new key symbols; tracked-artifact and
+tracked large-file checks.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-2 attention key matvec coverage in the focused
-layer-2 attention module, consuming the existing layer-2 attention RMSNorm
-activation and the new `blk.2.attn_k.weight` descriptor only after guarded
-shape/type/bounds checks.
+Add a guarded first-four exact-hex slice for the token-0 layer-2 attention key
+projection and durable oracle coverage that recomputes the same upstream
+activation before checking `blk.2.attn_k.weight`.

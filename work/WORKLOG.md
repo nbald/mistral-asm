@@ -1880,3 +1880,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   help, oracle py-compile, whitespace, runtime source extension, tracked include
   dependencies, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T12:52:45+02:00
+
+- Added status-only layer-2 attention key matvec coverage in the focused
+  layer-2 attention module. The new path waits for the layer-2 attention
+  RMSNorm activation and requires `blk.2.attn_k.weight` to be a bounded Q8_0
+  `[3072 x 1024]` matrix before handing its mmap span to the shared matvec
+  helper.
+- Verification evidence: the real target preserved the published layer-2
+  RMSNorm/query words and reported `token0_layer2_attn_k_matvec: 1`. A
+  temporary empty valid GGUF kept layer-2 descriptor slots zeroed and reported
+  `token0_layer2_attn_norm: 0`, `token0_layer2_attn_q_matvec: 0`, and
+  `token0_layer2_attn_k_matvec: 0`, with no guarded layer-2 output labels.
+  Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, tracked include dependencies, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

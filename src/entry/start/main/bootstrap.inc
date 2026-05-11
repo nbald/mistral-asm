@@ -25,9 +25,9 @@
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
-# residual smokes plus the layer-2 attention RMSNorm and query matvec smokes to
-# focused inference code, and publishing status-gated exact-hex slices from the
-# audited output buffers. It also performs non-math
+# residual smokes plus the layer-2 attention RMSNorm and query/key matvec
+# smokes to focused inference code, and publishing status-gated exact-hex slices
+# from the audited output buffers. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
