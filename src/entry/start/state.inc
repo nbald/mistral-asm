@@ -62,6 +62,12 @@
 .global layer2_ffn_norm_tensor_dim0
 .global layer2_ffn_norm_tensor_ggml_type
 .global layer2_ffn_norm_tensor_offset
+.global layer2_ffn_gate_tensor_found
+.global layer2_ffn_gate_tensor_n_dimensions
+.global layer2_ffn_gate_tensor_dim0
+.global layer2_ffn_gate_tensor_dim1
+.global layer2_ffn_gate_tensor_ggml_type
+.global layer2_ffn_gate_tensor_offset
 .global token0_layer1_post_attn_residual_status
 .global token0_layer1_post_attn_residual
 .global token0_layer1_ffn_norm_status
@@ -609,6 +615,27 @@ layer2_ffn_norm_tensor_dim3:
 layer2_ffn_norm_tensor_ggml_type:
 	.skip 8
 layer2_ffn_norm_tensor_offset:
+	.skip 8
+
+.balign 8
+layer2_ffn_gate_tensor_slot:
+layer2_ffn_gate_tensor_found:
+	.skip 8
+layer2_ffn_gate_tensor_name:
+	.skip LAYER2_FFN_GATE_TENSOR_NAME_CAP
+layer2_ffn_gate_tensor_n_dimensions:
+	.skip 8
+layer2_ffn_gate_tensor_dim0:
+	.skip 8
+layer2_ffn_gate_tensor_dim1:
+	.skip 8
+layer2_ffn_gate_tensor_dim2:
+	.skip 8
+layer2_ffn_gate_tensor_dim3:
+	.skip 8
+layer2_ffn_gate_tensor_ggml_type:
+	.skip 8
+layer2_ffn_gate_tensor_offset:
 	.skip 8
 
 .balign 8

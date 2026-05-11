@@ -2134,3 +2134,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime exactly. Build, harnesses, help, oracle py-compile, whitespace,
   runtime source extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:17:15+02:00
+
+- Added descriptor-only layer-2 FFN gate coverage in the entry-side lookup
+  chain. The retained `blk.2.ffn_gate.weight` slot prints found, dimension
+  count, dim0, dim1, type, and relative offset, and no new runtime path reads
+  gate payload bytes in this step.
+- Verification evidence: the real target printed found `1`, dimensions `2`,
+  dim0 `3072`, dim1 `9216`, type `8`, and offset `738729984` while preserving
+  the reviewed layer-2 post-attention residual and FFN RMSNorm slices. A
+  temporary 24-byte empty valid GGUF kept the new slot zeroed and emitted no
+  guarded layer-2 FFN norm words. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.
