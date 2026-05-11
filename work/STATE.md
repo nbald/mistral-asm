@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a focused status-only token-0 layer-2 post-attention residual smoke that
-waits for the layer-1 post-FFN residual and layer-2 attention output-projection
-statuses, guards the 3072-wide hidden dimension, writes private residual
-storage, and prints only `token0_layer2_post_attn_residual: 1/0`.
+Publish the first four exact-hex words of the token-0 layer-2 post-attention
+residual behind its status gate and add focused oracle coverage for that slice.
 
 ## Completed Work
 
@@ -44,6 +42,12 @@ storage, and prints only `token0_layer2_post_attn_residual: 1/0`.
   `q8_0_matvec_f32`, fills a private 3072-f32 output buffer on success, and
   publishes a guarded first-four exact-hex output slice only when
   `token0_layer2_attn_output_matvec_status == 1`.
+- Layer-2 post-attention residual status now lives in
+  `src/infer/token0_layer2_post_attn_residual.s`. It waits for the retained
+  layer-1 post-FFN residual and layer-2 attention output-projection statuses,
+  rechecks the 3072-wide output descriptor, writes a private 3072-f32 residual
+  buffer with scalar f32 adds, and prints only
+  `token0_layer2_post_attn_residual: 1/0`.
 - Durable external oracle coverage for the layer-2 value projection lives in
   `work/oracle/token0_layer2_attn_v_oracle.py` and
   `work/oracle/token0-layer2-attn-v-output.md`. It recomputes the full upstream
@@ -65,7 +69,8 @@ storage, and prints only `token0_layer2_post_attn_residual: 1/0`.
 
 ## Known Blockers
 
-- No current blocker to adding layer-2 post-attention residual status coverage.
+- No current blocker to publishing the layer-2 post-attention residual slice
+  and oracle.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -81,6 +86,7 @@ storage, and prints only `token0_layer2_post_attn_residual: 1/0`.
 - `src/infer/token0_layer2_attn.s`
 - `src/infer/token0_layer2_attn_context.s`
 - `src/infer/token0_layer2_attn_output.s`
+- `src/infer/token0_layer2_post_attn_residual.s`
 - `src/entry/start/rodata/cli_requests.inc`
 - `src/infer/token0_layer1_ffn.s`
 - `src/infer/token0_layer1_ffn_down.s`
@@ -102,39 +108,32 @@ storage, and prints only `token0_layer2_post_attn_residual: 1/0`.
 
 ## Last Verification
 
-Layer-2 attention output-projection slice/oracle verification passed:
+Layer-2 post-attention residual status verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- `python3 work/oracle/token0_layer2_attn_output_oracle.py
-  models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`
-- real target runtime smoke reported the layer-2 output descriptor found `1`
-  with shape `[4096 x 3072]`, Q8_0 type `8`, and relative offset `678567936`;
-  `token0_layer2_attn_context: 1`;
-  `token0_layer2_attn_output_matvec: 1`; and output words `0x3eade180`,
-  `0x3ee0fb2f`, `0xbff22222`, and `0x3e24eb6b`
-- the focused external oracle printed the same four
-  `oracle_token0_layer2_attn_output*_f32_hex` words exactly and preserved the
-  prerequisite layer-2 context words `0x3d38e19b`, `0x3ae7765b`,
-  `0xbd4bbba8`, and `0xbf48b85f`
-- temporary 24-byte empty valid GGUF kept layer-2 output descriptor slots
-  zeroed, kept layer-2 norm/query/key/value/context/output statuses at `0`,
-  and emitted no guarded layer-2 output-projection words
+- real target runtime smoke reported `token0_layer1_post_ffn_residual: 1`,
+  `token0_layer2_attn_output_matvec: 1`, and
+  `token0_layer2_post_attn_residual: 1`
+- temporary 24-byte empty valid GGUF kept
+  `token0_layer2_attn_output_matvec: 0` and
+  `token0_layer2_post_attn_residual: 0`, with no guarded layer-2
+  output-projection words
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the layer-2 output runner/status/buffer
+- exported-symbol inspection for the layer-2 post-attention residual
+  runner/status/buffer
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add a focused status-only token-0 layer-2 post-attention residual smoke in a
-new small runtime module. It should add `token0_layer1_post_ffn_residual` and
-`token0_layer2_attn_output` with scalar f32 rounding only after both statuses
-are 1, guard the hidden width at 3072, write private residual storage, print a
-single status line, and defer exact-hex slice/oracle publication to the
-following step.
+Publish `token0_layer2_post_attn_residual0_f32_hex` through
+`token0_layer2_post_attn_residual3_f32_hex` only when
+`token0_layer2_post_attn_residual_status == 1`, add a focused external oracle
+that recomputes the layer-2 residual slice, and verify exact runtime/oracle
+match on the real target plus a quiet empty-GGUF guard path.

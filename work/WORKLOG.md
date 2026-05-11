@@ -2030,3 +2030,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, tracked include
   dependencies, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T14:17:31+02:00
+
+- Added status-only layer-2 post-attention residual coverage in a new focused
+  inference module. The path waits for the retained layer-1 post-FFN residual
+  and layer-2 attention output-projection statuses, rechecks the 3072-wide
+  output descriptor, and writes private residual storage without publishing any
+  residual exact-hex words yet.
+- Verification evidence: the real target reported the upstream residual and
+  layer-2 output statuses at `1`, then reported
+  `token0_layer2_post_attn_residual: 1`. A temporary 24-byte empty valid GGUF
+  kept the layer-2 output and post-attention residual statuses at `0`, with no
+  guarded layer-2 output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, tracked include dependencies,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.
