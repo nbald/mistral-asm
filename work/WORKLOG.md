@@ -1592,3 +1592,18 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: the runtime rebuilt, all no-libc harness checks
   passed, and concatenating the new entry fragments reproduced the prior
   `_start.s` exactly.
+
+## 2026-05-11T09:29:02+02:00
+
+- Followed up on the remaining large-file risk with behavior-preserving include
+  splits for the GGUF loader and the largest entry fragments. The split stays
+  conservative: each driver assembles its fragments as one translation unit, so
+  local-label reachability and diagnostic order are unchanged.
+- Added a durable continuation rule to prevent this pattern from recurring:
+  substantial new runtime code should not be added to files near or above 1000
+  lines without first splitting by responsibility or moving the work into a
+  focused module, and introduced include fragments must be listed as Makefile
+  dependencies.
+- Verification evidence: reconstruction checks passed for the GGUF loader and
+  the split entry fragments after normalizing terminal blank lines, then
+  `make`, `make check`, and `git diff --check` passed.

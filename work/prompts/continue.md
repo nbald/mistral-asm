@@ -36,6 +36,11 @@ Project contract:
 - Do not revert user changes unless explicitly instructed.
 - Honor ignored `work/control/INBOX.md`; newer operator instructions override
   older conflicting instructions.
+- Do not let runtime source files become catch-all monoliths. Before adding
+  substantial code to a file near or above 1000 lines, split it by clear
+  responsibility or move the work into a focused module. If `.include`
+  fragments are introduced, list every fragment in the Makefile dependencies so
+  incremental rebuilds notice edits.
 
 Assembly comment policy:
 

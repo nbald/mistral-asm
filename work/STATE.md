@@ -66,21 +66,32 @@ preserving the existing output order.
   live under `src/entry/start/` as responsibility-named fragments. The fragments
   are still assembled as one translation unit, so local labels and diagnostic
   ordering are preserved.
+- The remaining large structural files have had a second behavior-preserving
+  split pass: `src/gguf/load_header.s` is now an include driver, and the largest
+  entry fragments (`main.inc`, `rodata.inc`, `output_slices.inc`, and
+  `token0_smokes.inc`) now delegate to smaller responsibility-named fragments.
+  `work/prompts/continue.md` now requires splitting or moving focused work
+  before adding substantial code to files near or above 1000 lines, and requires
+  Makefile dependencies for introduced include fragments.
 
 ## Known Blockers
 
 - No current blocker for the next focused layer-1 FFN up output slice step.
-- Residual maintainability risk remains in the entry fragments:
-  `src/entry/start/main.inc`, `token0_smokes.inc`, `output_slices.inc`, and
-  `rodata.inc` are still large and should be reduced before large graph
-  expansions. `src/gguf/load_header.s` is also a good next structural split
-  candidate.
+- Residual maintainability risk remains in
+  `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
+  but it is a single coherent tensor-directory walker and should be reduced with
+  helper extraction only when changing that logic.
 
 ## Relevant Files
 
 - `src/entry/_start.s`
 - `src/entry/start/*.inc`
+- `src/entry/start/main/*.inc`
+- `src/entry/start/rodata/*.inc`
+- `src/entry/start/output_slices/*.inc`
+- `src/entry/start/token0_smokes/*.inc`
 - `src/gguf/load_header.s`
+- `src/gguf/load_header/*.inc`
 - `src/infer/token0_layer1_ffn.s`
 - `src/math/q8_0_dot.s`
 - `src/math/rmsnorm.s`
@@ -94,12 +105,16 @@ preserving the existing output order.
 - `work/reviews/2026-05-11-repository-wide-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
+- `work/prompts/continue.md`
 
 ## Last Verification
 
-- Entry split verification passed: `make`; `make check`; exact reconstruction
-  comparison between the pre-split `src/entry/_start.s` and the concatenated
-  `src/entry/start/*.inc` fragments reported `reconstruction matches`.
+- Large-file split verification passed: reconstruction comparisons after
+  normalizing terminal blank lines for `src/gguf/load_header.s`,
+  `src/entry/start/main.inc`, `src/entry/start/rodata.inc`,
+  `src/entry/start/output_slices.inc`, and
+  `src/entry/start/token0_smokes.inc`; `make`; `make check`;
+  `git diff --check`.
 
 ## Next Exact Step
 

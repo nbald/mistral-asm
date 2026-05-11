@@ -33,6 +33,50 @@ ENTRY_START_INCLUDES := \
 	src/entry/start/token0_smokes.inc \
 	src/entry/start/gnu_stack.inc
 
+ENTRY_RODATA_INCLUDES := \
+	src/entry/start/rodata/cli_requests.inc \
+	src/entry/start/rodata/summary_labels.inc \
+	src/entry/start/rodata/layer0_tensor_labels.inc \
+	src/entry/start/rodata/smoke_status_labels.inc \
+	src/entry/start/rodata/slice_labels.inc \
+	src/entry/start/rodata/common_error_labels.inc
+
+ENTRY_MAIN_INCLUDES := \
+	src/entry/start/main/bootstrap.inc \
+	src/entry/start/main/summary_header.inc \
+	src/entry/start/main/summary_first_lookup.inc \
+	src/entry/start/main/summary_layer0_attn_tensors.inc \
+	src/entry/start/main/summary_layer0_ffn_tensors.inc \
+	src/entry/start/main/smoke_orchestration.inc \
+	src/entry/start/main/exit.inc
+
+ENTRY_OUTPUT_SLICE_INCLUDES := \
+	src/entry/start/output_slices/layer0_attn.inc \
+	src/entry/start/output_slices/layer0_ffn.inc \
+	src/entry/start/output_slices/layer1_attn.inc
+
+ENTRY_TOKEN0_SMOKE_INCLUDES := \
+	src/entry/start/token0_smokes/layer0_attn.inc \
+	src/entry/start/token0_smokes/layer0_ffn.inc \
+	src/entry/start/token0_smokes/layer1_attn.inc
+
+ENTRY_START_ALL_INCLUDES := \
+	$(ENTRY_START_INCLUDES) \
+	$(ENTRY_RODATA_INCLUDES) \
+	$(ENTRY_MAIN_INCLUDES) \
+	$(ENTRY_OUTPUT_SLICE_INCLUDES) \
+	$(ENTRY_TOKEN0_SMOKE_INCLUDES)
+
+GGUF_LOAD_HEADER_INCLUDES := \
+	src/gguf/load_header/constants.inc \
+	src/gguf/load_header/rodata.inc \
+	src/gguf/load_header/mapping.inc \
+	src/gguf/load_header/metadata_walk.inc \
+	src/gguf/load_header/tensor_infos.inc \
+	src/gguf/load_header/lookup.inc \
+	src/gguf/load_header/skip_helpers.inc \
+	src/gguf/load_header/gnu_stack.inc
+
 OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)
 Q8_0_DOT_CHECK := $(BUILD_DIR)/tests/q8_0_dot_check
 RMSNORM_CHECK := $(BUILD_DIR)/tests/rmsnorm_check
@@ -105,7 +149,9 @@ $(BUILD_DIR)/%.o: src/%.s
 	mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(BUILD_DIR)/entry/_start.o: $(ENTRY_START_INCLUDES)
+$(BUILD_DIR)/entry/_start.o: $(ENTRY_START_ALL_INCLUDES)
+
+$(BUILD_DIR)/gguf/load_header.o: $(GGUF_LOAD_HEADER_INCLUDES)
 
 $(BUILD_DIR)/tests/%.o: tests/%.s
 	mkdir -p $(dir $@)
