@@ -40,7 +40,7 @@ help_text:
 	.ascii "plus query/key/value matvec output slices, context status smoke, "
 	.ascii "output-projection slice, post-attention residual output slice, "
 	.ascii "FFN RMSNorm descriptor lookup/output slice, and FFN gate "
-	.ascii "matvec status smoke.\n"
+	.ascii "matvec output slice.\n"
 help_text_end:
 
 lookup_tensor_request:

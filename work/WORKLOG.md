@@ -3291,3 +3291,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   public layer-4 slices still diff cleanly against the FFN RMSNorm oracle. A
   24-byte zero-count GGUF keeps the new status at `0`, and real-target output
   contains no `token0_layer4_ffn_gate_output*_f32_hex` labels.
+
+## 2026-05-12T00:28:26+02:00
+
+- Published the first guarded layer-4 FFN gate matvec exact-hex slice. The first
+  four words are `0x3ee0150a`, `0xbdd9edb2`, `0xbfbf1ff1`, and `0x3f5b31a5`.
+- Added a focused external oracle that reuses the full layer-4 FFN RMSNorm
+  activation and dots it with the first four rows of `blk.4.ffn_gate.weight`
+  using the same scalar f32 Q8_0 accumulation order as the runtime.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  public layer-3 post-FFN residual, layer-4 attention output, layer-4
+  post-attention residual, layer-4 FFN RMSNorm, and layer-4 FFN gate output
+  slices. The 24-byte zero-count GGUF kept the layer-4 output/residual/FFN-norm
+  and gate statuses at `0` and emitted no guarded layer-4 exact-hex labels.
