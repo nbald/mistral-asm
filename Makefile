@@ -41,18 +41,26 @@ ENTRY_START_INCLUDES := \
 	src/entry/start/gnu_stack.inc
 
 ENTRY_LOOKUP_SUMMARY_INCLUDES := \
-	src/entry/start/lookup_summary/layer2.inc
+	src/entry/start/lookup_summary/layer2.inc \
+	src/entry/start/lookup_summary/layer3.inc
 
 ENTRY_RODATA_INCLUDES := \
 	src/entry/start/rodata/cli_requests.inc \
+	src/entry/start/rodata/layer3_cli_requests.inc \
 	src/entry/start/rodata/summary_labels.inc \
+	src/entry/start/rodata/layer3_summary_labels.inc \
 	src/entry/start/rodata/layer0_tensor_labels.inc \
 	src/entry/start/rodata/smoke_status_labels.inc \
 	src/entry/start/rodata/slice_labels.inc \
 	src/entry/start/rodata/common_error_labels.inc
 
+ENTRY_STATE_INCLUDES := \
+	src/entry/start/state/layer3_globals.inc \
+	src/entry/start/state/layer3_bss.inc
+
 ENTRY_MAIN_INCLUDES := \
 	src/entry/start/main/bootstrap.inc \
+	src/entry/start/main/bootstrap/layer3.inc \
 	src/entry/start/main/summary_header.inc \
 	src/entry/start/main/summary_first_lookup.inc \
 	src/entry/start/main/summary_layer0_attn_tensors.inc \
@@ -74,6 +82,7 @@ ENTRY_START_ALL_INCLUDES := \
 	$(ENTRY_START_INCLUDES) \
 	$(ENTRY_LOOKUP_SUMMARY_INCLUDES) \
 	$(ENTRY_RODATA_INCLUDES) \
+	$(ENTRY_STATE_INCLUDES) \
 	$(ENTRY_MAIN_INCLUDES) \
 	$(ENTRY_OUTPUT_SLICE_INCLUDES) \
 	$(ENTRY_TOKEN0_SMOKE_INCLUDES)

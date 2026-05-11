@@ -2363,3 +2363,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   work may resume, but layer-3 work should start in focused layer-3 modules or
   Makefile-tracked include fragments rather than extending near-threshold
   layer-2 files.
+
+## 2026-05-11T17:02:01+02:00
+
+- Started layer-3 attention scope with descriptor-only retained lookup coverage
+  for `blk.3.attn_norm.weight`. The bootstrap lookup, summary printer, request
+  text, summary labels, and retained state live in focused Makefile-tracked
+  layer-3 fragments; no layer-3 payload-read logic was added.
+- Verification evidence: the real target printed found `1`, dimensions `1`,
+  dim0 `3072`, type `0`, and offset `802246656` for the new descriptor while
+  preserving the reviewed layer-2 post-FFN residual status and exact-hex words.
+  A temporary 24-byte empty valid GGUF kept the new descriptor slot zeroed and
+  emitted no guarded layer-2 post-FFN residual exact-hex labels. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  include dependency, descriptor-only, static-link, undefined-symbol, and symbol
+  checks passed.

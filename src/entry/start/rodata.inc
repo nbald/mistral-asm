@@ -1,5 +1,7 @@
 .include "src/entry/start/rodata/cli_requests.inc"
+.include "src/entry/start/rodata/layer3_cli_requests.inc"
 .include "src/entry/start/rodata/summary_labels.inc"
+.include "src/entry/start/rodata/layer3_summary_labels.inc"
 .include "src/entry/start/rodata/layer0_tensor_labels.inc"
 .include "src/entry/start/rodata/smoke_status_labels.inc"
 .include "src/entry/start/rodata/slice_labels.inc"
