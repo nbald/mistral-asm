@@ -2681,3 +2681,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   emitted no guarded layer-3 exact-hex labels; static-link, undefined-symbol,
   source-extension, include-dependency, line-count, tracked-artifact, and
   tracked large-file scans passed.
+
+## 2026-05-11T19:19:37+02:00
+
+- Review gate pass 2 over the completed token-0 layer-3 attention chain found
+  no blocking issue and required no source change. The two-pass review gate is
+  complete; the remaining documented risk is that context expansion is still a
+  one-token grouped-query smoke and not a general attention implementation.
+- Verification evidence: clean build and harnesses passed, with a
+  post-documentation harness rerun; real-target runtime/oracle diff was empty
+  for the reviewed layer-3 public labels; the empty valid GGUF kept reviewed
+  layer-3 descriptors/statuses at `0` and emitted no guarded layer-3 exact-hex
+  labels; static-link, undefined-symbol, source-extension, include-dependency,
+  line-count, exported-symbol, tracked-artifact, and tracked large-file scans
+  passed.
