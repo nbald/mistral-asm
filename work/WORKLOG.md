@@ -3277,3 +3277,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   still match the existing oracle exactly. A 24-byte zero-count GGUF keeps the
   new gate descriptor fields at `0`, keeps dependent layer-4 statuses at `0`,
   and emits no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T00:22:42+02:00
+
+- Added status-only layer-4 FFN gate matvec coverage in the focused layer-4 FFN
+  module. The smoke reuses the retained layer-4 FFN RMSNorm activation, proves
+  the `blk.4.ffn_gate.weight` Q8_0 `[3072 x 9216]` payload span, and writes the
+  private gate output buffer for the next step without publishing exact-hex
+  gate words yet.
+- Verification evidence: the real target reports
+  `token0_layer4_ffn_gate_matvec: 1` with the prerequisite layer-4 FFN RMSNorm
+  status still `1`; the existing
+  public layer-4 slices still diff cleanly against the FFN RMSNorm oracle. A
+  24-byte zero-count GGUF keeps the new status at `0`, and real-target output
+  contains no `token0_layer4_ffn_gate_output*_f32_hex` labels.

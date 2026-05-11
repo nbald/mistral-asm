@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-4 FFN gate matvec smoke from the retained layer-4 FFN
-RMSNorm activation and `blk.4.ffn_gate.weight`, without publishing exact-hex
-gate output yet.
+Publish the first guarded exact-hex slice for the layer-4 FFN gate matvec
+output and add a focused oracle for that slice.
 
 ## Completed Work
 
@@ -41,14 +40,21 @@ gate output yet.
   `work/oracle/token0_layer4_ffn_norm_oracle.py`.
 - Layer-4 FFN gate descriptor coverage has retained lookup and summary output
   for `blk.4.ffn_gate.weight`. On the real target it is Q8_0 `[3072 x 9216]`,
-  relative offset `986112000`. No layer-4 FFN gate matvec or gate payload read
-  has been added yet.
+  relative offset `986112000`.
+- Layer-4 FFN gate status-only matvec coverage now consumes the retained
+  layer-4 FFN RMSNorm activation and `blk.4.ffn_gate.weight`, proves the
+  complete Q8_0 payload span, writes the private 9216-f32 gate output buffer on
+  success, and publishes only `token0_layer4_ffn_gate_matvec`. On the real
+  target the status is `1`; no `token0_layer4_ffn_gate_output*_f32_hex` labels
+  are published yet.
 
 ## Known Blockers
 
 - No functional blocker is known.
 - Keep new layer-4 FFN work in focused modules. `src/infer/token0_layer4_attn.s`
   is 945 lines and should only receive minimal wiring.
+- `src/infer/token0_layer4_ffn.s` is 406 lines after the status-only gate
+  matvec step and still has room for the next focused slice publication.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -80,40 +86,35 @@ gate output yet.
 
 ## Last Verification
 
-Layer-4 FFN gate descriptor verification passed:
+Layer-4 FFN gate status-only matvec verification passed:
 
 - `make clean all check`
 - `./mistral-asm --help`
-- real-target summary output reported `layer4_ffn_gate_tensor_found: 1`,
-  `layer4_ffn_gate_tensor_n_dimensions: 2`,
-  `layer4_ffn_gate_tensor_dim0: 3072`,
-  `layer4_ffn_gate_tensor_dim1: 9216`,
-  `layer4_ffn_gate_tensor_ggml_type: 8`, and
-  `layer4_ffn_gate_tensor_offset: 986112000`
-- real-target layer-4 attention output, post-attention residual, and FFN
-  RMSNorm statuses remained `1`; the public layer-4 attention output,
-  post-attention residual, and FFN RMSNorm slices diffed cleanly against
-  `work/oracle/token0_layer4_ffn_norm_oracle.py`
+- real-target output reported the retained `layer4_ffn_gate_tensor_*`
+  descriptor as Q8_0 `[3072 x 9216]` at relative offset `986112000`, kept
+  layer-4 attention output, post-attention residual, and FFN RMSNorm statuses
+  at `1`, and reported `token0_layer4_ffn_gate_matvec: 1`
+- real-target output emitted no `token0_layer4_ffn_gate_output*_f32_hex` labels
+- the public layer-3 post-FFN residual, layer-4 attention output, layer-4
+  post-attention residual, and layer-4 FFN RMSNorm slices diffed cleanly
+  against `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - 24-byte zero-count GGUF reported all `layer4_ffn_gate_tensor_*` summary
-  fields as `0`, kept layer-4 output/residual/FFN-norm statuses at `0`, and
-  emitted no guarded layer-4 exact-hex labels
+  fields as `0`, kept layer-4 output/residual/FFN-norm/gate-matvec statuses at
+  `0`, and emitted no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
-- descriptor-only scan found no `layer4_ffn_gate` payload/status/slice wiring in
-  inference modules or smoke orchestration
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- exported symbol check for the retained `layer4_ffn_gate_tensor_*` fields
+- exported symbol check for `run_token0_layer4_ffn_gate_matvec_status` and
+  `token0_layer4_ffn_gate_matvec_status`
 - tracked artifact and tracked large-file scans
-- line-count check; `src/entry/start/lookup_summary/layer4.inc` is 692 lines,
-  `src/infer/token0_layer4_ffn.s` remains 253 lines,
+- line-count check; `src/infer/token0_layer4_ffn.s` is 406 lines,
   `src/infer/token0_layer4_attn.s` remains 945 lines, and
   `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
   tensor-directory walker
 
 ## Next Exact Step
 
-Add status-only layer-4 FFN gate matvec smoke from the retained layer-4 FFN
-RMSNorm activation and `blk.4.ffn_gate.weight`, without publishing exact-hex
-gate output yet.
+Publish the first guarded exact-hex slice for the layer-4 FFN gate matvec
+output and add a focused oracle for that slice.
