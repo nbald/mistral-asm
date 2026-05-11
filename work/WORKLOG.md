@@ -2345,3 +2345,21 @@ redundant entries. Do not treat it as the primary continuation source; use
   guarded exact-hex labels; whitespace, source-extension, include-dependency,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and
   large-file scans passed.
+
+## 2026-05-11T16:54:48+02:00
+
+- Ran layer-2 FFN branch review gate pass 2. No blocking findings: exported and
+  non-trivial internal contracts are present, handoff storage ownership is
+  explicit, CLI/help text and smoke orchestration match the published layer-2
+  FFN/post-residual surface, and Makefile dependency coverage remains explicit.
+- Verification evidence: build/check/help/oracle py-compile passed; the
+  real-target runtime/oracle comparison was empty for the reviewed layer-2
+  public exact-hex labels; the empty valid GGUF guard path kept reviewed
+  descriptor/status gates at `0` and emitted no guarded layer-2 output labels;
+  whitespace, source-extension, include-dependency, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and large-file scans
+  passed.
+- Decision: the two-pass layer-2 FFN branch review gate is complete. Feature
+  work may resume, but layer-3 work should start in focused layer-3 modules or
+  Makefile-tracked include fragments rather than extending near-threshold
+  layer-2 files.

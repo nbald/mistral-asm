@@ -6,7 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
+Begin layer-3 attention scope with descriptor-only retained lookup/summary
+coverage for `blk.3.attn_norm.weight` in focused Makefile-tracked layer-3
+entry fragments.
 
 ## Completed Work
 
@@ -39,13 +41,17 @@ Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
   The pass checked live-mmap ordering, descriptor and bounds gates, retained
   buffer dependencies, status-gated slice printing, oracle coverage, and module
   sizes.
+- Layer-2 FFN branch review gate pass 2 is complete with no blocking findings.
+  The pass checked exported and internal contracts, handoff ownership, CLI and
+  orchestration wiring, Makefile dependency coverage, symbol surface, and
+  readiness to resume feature work in focused layer-3 files/fragments.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to layer-2 FFN branch review gate pass 2.
+- No current blocker to the layer-3 attention descriptor-only lookup step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -78,12 +84,13 @@ Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
 - `work/oracle/token0_layer2_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer2-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer2-ffn-branch-review-1.md`
+- `work/reviews/2026-05-11-layer2-ffn-branch-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-2 FFN branch review gate pass 1 verification passed:
+Layer-2 FFN branch review gate pass 2 verification passed:
 
 - `make`
 - `make check`
@@ -106,12 +113,11 @@ Layer-2 FFN branch review gate pass 1 verification passed:
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
 - exported/local symbol inspection for
-  `run_token0_layer2_post_ffn_residual_status`,
-  `print_token0_layer2_post_ffn_residual_slice`,
-  `token0_layer2_post_ffn_residual_status`, and
-  `token0_layer2_post_ffn_residual`
+  the reviewed layer-2 FFN runners, statuses, and retained handoff buffers
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
+Begin layer-3 attention scope with descriptor-only retained lookup/summary
+coverage for `blk.3.attn_norm.weight` in focused Makefile-tracked layer-3
+entry fragments.
