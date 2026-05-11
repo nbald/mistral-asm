@@ -3265,3 +3265,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   post-attention residual, and layer-4 FFN RMSNorm slices. The 24-byte
   zero-count GGUF kept the layer-4 output/residual/FFN-norm statuses at `0` and
   emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T00:17:49+02:00
+
+- Added descriptor-only layer-4 FFN gate setup. The new retained slot records
+  `blk.4.ffn_gate.weight` directory metadata only; no layer-4 FFN gate matvec,
+  status, output slice, or Q8_0 payload read was introduced.
+- Verification evidence: the real target reports the descriptor as Q8_0
+  `[3072 x 9216]` at relative offset `986112000`, while the already-published
+  layer-4 attention output, post-attention residual, and FFN RMSNorm slices
+  still match the existing oracle exactly. A 24-byte zero-count GGUF keeps the
+  new gate descriptor fields at `0`, keeps dependent layer-4 statuses at `0`,
+  and emits no guarded layer-4 exact-hex labels.

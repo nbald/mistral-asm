@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only retained lookup and summary coverage for
-`blk.4.ffn_gate.weight`, keeping layer-4 FFN gate payload reads out of scope.
+Add status-only layer-4 FFN gate matvec smoke from the retained layer-4 FFN
+RMSNorm activation and `blk.4.ffn_gate.weight`, without publishing exact-hex
+gate output yet.
 
 ## Completed Work
 
@@ -38,6 +39,10 @@ Add descriptor-only retained lookup and summary coverage for
   guarded exact-hex activation words. The real-target words are `0x423a3384`,
   `0xc014dd2f`, `0xc0183cf3`, and `0xbf63db6c`, matching
   `work/oracle/token0_layer4_ffn_norm_oracle.py`.
+- Layer-4 FFN gate descriptor coverage has retained lookup and summary output
+  for `blk.4.ffn_gate.weight`. On the real target it is Q8_0 `[3072 x 9216]`,
+  relative offset `986112000`. No layer-4 FFN gate matvec or gate payload read
+  has been added yet.
 
 ## Known Blockers
 
@@ -75,38 +80,40 @@ Add descriptor-only retained lookup and summary coverage for
 
 ## Last Verification
 
-Layer-4 FFN RMSNorm exact-hex slice verification passed:
+Layer-4 FFN gate descriptor verification passed:
 
 - `make clean all check`
 - `./mistral-asm --help`
-- real-target summary/status output reported `layer4_ffn_norm_tensor_found: 1`,
-  `layer4_ffn_norm_tensor_n_dimensions: 1`,
-  `layer4_ffn_norm_tensor_dim0: 3072`,
-  `layer4_ffn_norm_tensor_ggml_type: 0`, and
-  `layer4_ffn_norm_tensor_offset: 1016193024`, with
-  `token0_layer4_ffn_norm: 1`
-- real-target layer-4 attention output and post-attention residual statuses
-  remained `1`; the public layer-3 post-FFN residual, layer-4 attention output,
-  layer-4 post-attention residual, and layer-4 FFN RMSNorm slices diffed
-  cleanly against `work/oracle/token0_layer4_ffn_norm_oracle.py`
-- 24-byte zero-count GGUF reported all `layer4_ffn_norm_tensor_*` summary fields
-  as `0`, kept layer-4 output/residual/FFN-norm statuses at `0`, and emitted no
-  guarded layer-4 exact-hex labels
+- real-target summary output reported `layer4_ffn_gate_tensor_found: 1`,
+  `layer4_ffn_gate_tensor_n_dimensions: 2`,
+  `layer4_ffn_gate_tensor_dim0: 3072`,
+  `layer4_ffn_gate_tensor_dim1: 9216`,
+  `layer4_ffn_gate_tensor_ggml_type: 8`, and
+  `layer4_ffn_gate_tensor_offset: 986112000`
+- real-target layer-4 attention output, post-attention residual, and FFN
+  RMSNorm statuses remained `1`; the public layer-4 attention output,
+  post-attention residual, and FFN RMSNorm slices diffed cleanly against
+  `work/oracle/token0_layer4_ffn_norm_oracle.py`
+- 24-byte zero-count GGUF reported all `layer4_ffn_gate_tensor_*` summary
+  fields as `0`, kept layer-4 output/residual/FFN-norm statuses at `0`, and
+  emitted no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
+- descriptor-only scan found no `layer4_ffn_gate` payload/status/slice wiring in
+  inference modules or smoke orchestration
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- exported symbol check for `run_token0_layer4_ffn_norm_status`,
-  `token0_layer4_ffn_norm_status`, and
-  `token0_layer4_ffn_norm_activation`
+- exported symbol check for the retained `layer4_ffn_gate_tensor_*` fields
 - tracked artifact and tracked large-file scans
-- line-count check; `src/infer/token0_layer4_ffn.s` is 253 lines,
+- line-count check; `src/entry/start/lookup_summary/layer4.inc` is 692 lines,
+  `src/infer/token0_layer4_ffn.s` remains 253 lines,
   `src/infer/token0_layer4_attn.s` remains 945 lines, and
-  `src/infer/token0_layer4_post_attn_residual.s` remains 223 lines
+  `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
+  tensor-directory walker
 
 ## Next Exact Step
 
-Add descriptor-only retained lookup and summary coverage for
-`blk.4.ffn_gate.weight`, without adding a layer-4 FFN gate matvec or payload
-read yet.
+Add status-only layer-4 FFN gate matvec smoke from the retained layer-4 FFN
+RMSNorm activation and `blk.4.ffn_gate.weight`, without publishing exact-hex
+gate output yet.
