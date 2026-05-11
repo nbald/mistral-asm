@@ -3444,3 +3444,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime/oracle exact-hex diff through layer-4 post-FFN residual, zero-count
   GGUF guard silence, static/no-undefined checks, source/include/artifact scans,
   and line-count review all passed.
+
+## 2026-05-12T01:52:37+02:00
+
+- Review gate pass 2 over the layer-4 FFN/down/post-FFN residual chain found no
+  blocking runtime issue. The review confirmed that feature work can resume by
+  starting layer-5 attention descriptor coverage, with the layer-4 post-FFN
+  residual exported only when the first layer-5 consumer needs it.
+- Verification evidence: clean rebuild/check, oracle compile, real-target
+  runtime/oracle exact-hex diff for 37 labels through layer-4 post-FFN residual,
+  zero-count GGUF guard silence, static/no-undefined checks, exported-symbol
+  inspection, source/include/artifact scans, and line-count review all passed.

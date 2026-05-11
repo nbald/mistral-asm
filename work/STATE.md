@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 over the completed layer-4 FFN/down/post-FFN residual
-chain before expanding feature scope.
+Start focused layer-5 attention descriptor-only coverage by adding retained
+lookup/summary wiring for `blk.5.attn_norm.weight` without consuming layer-4
+post-FFN residual bytes yet.
 
 ## Completed Work
 
@@ -61,9 +62,13 @@ chain before expanding feature scope.
   `blk.4.ffn_down.weight` output guard, writes a private 3072-f32 residual
   buffer, and publishes the first four residual words: `0x440c31ce`,
   `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`.
-- Review gate pass 1 for the completed layer-4 FFN/down/post-FFN residual chain
-  completed cleanly under `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`.
-  No blocking runtime findings were recorded.
+- The two-pass review gate for the completed layer-4 FFN/down/post-FFN residual
+  chain completed cleanly under
+  `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md` and
+  `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`. No blocking runtime
+  findings were recorded. Layer-5 work can resume, but must export the
+  layer-4 post-FFN residual handoff deliberately when it first consumes that
+  private buffer.
 
 ## Known Blockers
 
@@ -106,14 +111,16 @@ chain before expanding feature scope.
 - `work/oracle/token0_layer4_ffn_down_oracle.py`
 - `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
+- `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 FFN/down/post-FFN residual review gate pass 1 verification passed:
+Layer-4 FFN/down/post-FFN residual review gate pass 2 verification passed:
 
 - `make clean all check`
+- post-documentation `make all check`
 - `./mistral-asm --help` mentions the layer-4 post-FFN residual output slice
 - `python3 -m py_compile work/oracle/*.py`
 - real-target output reported `token0_layer4_post_attn_residual: 1`,
@@ -131,6 +138,8 @@ Layer-4 FFN/down/post-FFN residual review gate pass 1 verification passed:
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - tracked artifact and tracked large-file scans
+- exported-symbol inspection for the reviewed layer-4 FFN runner entry points,
+  descriptor slots, statuses, and retained activation handoff buffers
 - line-count check; `src/infer/token0_layer4_ffn_down.s` is 471 lines,
   `src/entry/start/main/smoke_orchestration.inc` is 452 lines,
   `src/entry/start/rodata/cli_requests.inc` is 122 lines,
@@ -144,6 +153,7 @@ Layer-4 FFN/down/post-FFN residual review gate pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the layer-4 FFN/down/post-FFN residual chain; commit
-a focused independent review note under `work/reviews/` with findings or an
-explicit clean result.
+Add descriptor-only layer-5 attention RMSNorm lookup/summary coverage for
+`blk.5.attn_norm.weight`, keeping payload reads out of the step and recording
+the new focused files or Makefile-tracked fragments before any substantial
+layer-5 smoke code is added.
