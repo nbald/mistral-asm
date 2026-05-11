@@ -2886,3 +2886,19 @@ redundant entries. Do not treat it as the primary continuation source; use
 - The next residual slice oracle should expect the first four post-FFN residual
   words to be `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`
   when computed as f32-rounded post-attention residual plus FFN-down output.
+
+## 2026-05-11T21:03:38+02:00
+
+- Published the first guarded layer-3 post-FFN residual slice from the focused
+  down module. The runtime still requires the layer-3 post-attention residual
+  and FFN-down statuses, then prints only the first four residual words when
+  `token0_layer3_post_ffn_residual: 1`.
+- Added an external layer-3 post-FFN residual oracle and note. The oracle
+  reuses the full layer-3 FFN down path and performs the final scalar f32 add
+  against the retained layer-3 post-attention residual.
+- Verification evidence: the real-target runtime/oracle diff was empty for
+  layer-3 post-attention residual, FFN RMSNorm, gate, up, SwiGLU, down, and
+  new post-FFN residual public labels. The new residual words are
+  `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`; the 24-byte
+  header-only GGUF kept layer-3 FFN/residual statuses at `0` and emitted no
+  guarded layer-3 FFN or post-FFN residual exact-hex labels.

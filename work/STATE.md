@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first token-0 layer-3 post-FFN residual exact-hex slice from the
-focused down module. Add external oracle coverage for
-`token0_layer3_post_ffn_residual*_f32_hex`, then print the first four words
-only when `token0_layer3_post_ffn_residual: 1`.
+Run review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual
+chain before extending feature work to the next layer.
 
 ## Completed Work
 
@@ -18,37 +16,38 @@ only when `token0_layer3_post_ffn_residual: 1`.
 - GGUF support remains narrow and guarded: v3 little-endian target parsing,
   metadata summaries, tensor directory walking, retained descriptor lookups,
   and bounded tensor payload reads only inside guarded smoke paths.
-- Token-0 layer-3 smoke coverage now publishes guarded slices through the FFN
-  down projection and derives a status-only post-FFN residual. Current public
-  layer-3 FFN slices are:
+- Token-0 layer-3 smoke coverage now publishes guarded slices through the
+  complete post-FFN residual step. Current public layer-3 slices are:
+  - post-attention residual: `0x440c1f18`, `0xc20054b6`, `0xc2a825d4`,
+    `0xc15e3502`
   - FFN RMSNorm: `0x422e5251`, `0xc01a339f`, `0xbffb06aa`, `0xbf19ba93`
   - FFN gate: `0xbfb2e5c3`, `0xbec7c2ba`, `0xbe4be710`, `0x3d08c33e`
   - FFN up: `0x3fd71f53`, `0xbd86d8f4`, `0xbef486a9`, `0xc026c494`
   - FFN SwiGLU: `0xbeee5aef`, `0x3c29e800`, `0x3d2f6fb9`,
     `0xbd3528b3`
   - FFN down: `0x3def4ab2`, `0x3e0b094a`, `0xbf222273`, `0xbc2b9ed5`
+  - post-FFN residual: `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`,
+    `0xc15e5fea`
 - Layer-3 retained descriptors currently cover attention norm/query/key/value/
   output and FFN norm/gate/up/down. On the real target,
   `blk.3.ffn_down.weight` is Q8_0 `[9216 x 3072]`, relative offset
   `832339968`, complete payload span `30081024` bytes.
 - `src/infer/token0_layer3_ffn.s` owns the layer-3 FFN norm/gate/up/SwiGLU
   chain and the shared 9216-f32 SwiGLU buffer.
-- `src/infer/token0_layer3_ffn_down.s` requires the guarded layer-3 FFN SwiGLU
-  activation before the down matvec, bounds the complete Q8_0 down payload,
-  fills private 3072-f32 down output storage, and prints the first four
-  exact-hex down words only when `token0_layer3_ffn_down_matvec: 1`. It also
-  requires `token0_layer3_post_attn_residual_status` and the down matvec
-  status, rechecks `layer3_ffn_down_tensor_dim1 == 3072`, fills retained
-  3072-f32 `token0_layer3_post_ffn_residual` storage, and prints only
-  `token0_layer3_post_ffn_residual` for that status-only residual step.
-- `work/oracle/token0_layer3_ffn_down_oracle.py` independently recomputes the
-  full layer-3 FFN RMSNorm, gate/up projections, full 9216-word SwiGLU
-  activation, and first four rows of `blk.3.ffn_down.weight`.
+- `src/infer/token0_layer3_ffn_down.s` owns the guarded layer-3 FFN down
+  matvec output and post-FFN residual storage. It now prints the first four
+  exact-hex down words only when `token0_layer3_ffn_down_matvec: 1` and the
+  first four exact-hex post-FFN residual words only when
+  `token0_layer3_post_ffn_residual: 1`.
+- `work/oracle/token0_layer3_post_ffn_residual_oracle.py` independently checks
+  the layer-3 post-FFN residual slice by reusing the full layer-3 FFN down
+  oracle path and adding the layer-3 post-attention residual with scalar f32
+  rounding.
 
 ## Known Blockers
 
-- Layer-3 post-FFN residual output is derived but not published as exact-hex
-  words yet; add an oracle-backed slice before moving to the next layer.
+- Review gate required before extending the token-0 forward chain beyond the
+  completed layer-3 post-FFN residual slice.
 - `src/infer/token0_layer3_ffn.s` is 942 lines. Do not add substantial down or
   residual code there; keep layer-3 down/residual work in the focused module.
 - `src/infer/token0_layer2_attn.s` is 997 lines and
@@ -70,16 +69,16 @@ only when `token0_layer3_post_ffn_residual: 1`.
 - `src/infer/token0_layer3_post_attn_residual.s`
 - `src/infer/token0_layer3_ffn.s`
 - `src/infer/token0_layer3_ffn_down.s`
-- `work/oracle/token0_layer3_ffn_swiglu_oracle.py`
 - `work/oracle/token0_layer3_ffn_down_oracle.py`
-- `work/oracle/token0-layer3-ffn-swiglu.md`
+- `work/oracle/token0_layer3_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer3-ffn-down.md`
+- `work/oracle/token0-layer3-post-ffn-residual.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 post-FFN residual status verification passed:
+Layer-3 post-FFN residual slice verification passed:
 
 - `make all check`
 - `./mistral-asm --help`
@@ -88,17 +87,14 @@ Layer-3 post-FFN residual status verification passed:
   `token0_layer3_post_attn_residual: 1`,
   `token0_layer3_ffn_down_matvec: 1`, and
   `token0_layer3_post_ffn_residual: 1`
-- real-target layer-3 FFN down public words remained `0x3def4ab2`,
-  `0x3e0b094a`, `0xbf222273`, and `0xbc2b9ed5`; no
-  `token0_layer3_post_ffn_residual*_f32_hex` labels are emitted yet
-- focused runtime/oracle diff was empty for layer-3 FFN RMSNorm, FFN gate, FFN
-  up, FFN SwiGLU, and FFN down public exact-hex labels
+- focused runtime/oracle diff was empty for layer-3 post-attention residual,
+  FFN RMSNorm, FFN gate, FFN up, FFN SwiGLU, FFN down, and new post-FFN
+  residual public exact-hex labels
 - 24-byte header-only GGUF kept the layer-3 FFN down descriptor fields at `0`,
   kept `token0_layer3_ffn_norm`, `token0_layer3_ffn_gate_matvec`,
-  `token0_layer3_ffn_up_matvec`, `token0_layer3_ffn_swiglu`, and
-  `token0_layer3_ffn_down_matvec` at `0`, reported
-  `token0_layer3_post_ffn_residual: 0`, and emitted no guarded layer-3 FFN
-  output or post-FFN residual exact-hex labels
+  `token0_layer3_ffn_up_matvec`, `token0_layer3_ffn_swiglu`,
+  `token0_layer3_ffn_down_matvec`, and `token0_layer3_post_ffn_residual` at
+  `0`, and emitted no guarded layer-3 FFN or post-FFN residual exact-hex labels
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
@@ -106,13 +102,11 @@ Layer-3 post-FFN residual status verification passed:
 - include dependency scan covering `.include` fragments in `Makefile`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- layer-3 FFN down symbol inspection
+- layer-3 FFN down/post-residual symbol inspection
 - inference source line-count check
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish the first token-0 layer-3 post-FFN residual exact-hex slice from the
-focused down module. Add external oracle coverage for
-`token0_layer3_post_ffn_residual*_f32_hex`, then print the first four words
-only when `token0_layer3_post_ffn_residual: 1`.
+Run review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual
+chain before extending feature work to the next layer.
