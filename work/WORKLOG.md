@@ -3237,3 +3237,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   post-attention residual slice still matching its oracle exactly. A 24-byte
   zero-count GGUF reports all new descriptor fields as `0`, keeps dependent
   layer-4 statuses at `0`, and emits no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T00:03:34+02:00
+
+- Added focused status-only layer-4 FFN RMSNorm execution in a new module. The
+  smoke reads the `blk.4.ffn_norm.weight` payload only after the layer-4
+  post-attention residual status, epsilon metadata, descriptor shape/type, and
+  mmap span guards all pass, then retains the 3072-word activation for the next
+  FFN step without publishing exact-hex labels yet.
+- Verification evidence: the real target reported `token0_layer4_ffn_norm: 1`,
+  preserved the existing layer-4 attention output and post-attention residual
+  slices against the oracle, and emitted no `token0_layer4_ffn_norm*_f32_hex`
+  labels. A 24-byte zero-count GGUF kept the new status at `0` together with
+  dependent layer-4 statuses and emitted no guarded layer-4 exact-hex labels.
