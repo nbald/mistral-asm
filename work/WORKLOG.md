@@ -2817,3 +2817,23 @@ redundant entries. Do not treat it as the primary continuation source; use
   Build, harnesses, help, oracle py-compile, whitespace, runtime source
   extension, include dependency, static-link, undefined-symbol, symbol,
   line-count, tracked-artifact, and tracked large-file scans passed.
+
+## 2026-05-11T20:29:25+02:00
+
+- Published the first guarded layer-3 FFN SwiGLU activation slice. The runtime
+  still requires both layer-3 FFN gate/up projection statuses before calling
+  the shared scalar activation helper, and it now prints only the first four
+  activation words after `token0_layer3_ffn_swiglu: 1`.
+- Added an external layer-3 FFN SwiGLU oracle and note. The oracle reuses the
+  full layer-3 FFN RMSNorm chain plus focused gate/up projection loaders, then
+  applies the same scalar `silu(gate) * up` formula to the first four public
+  gate/up pairs.
+- Verification evidence: the real-target runtime/oracle diff was empty for
+  layer-3 attention output, post-attention residual, FFN RMSNorm, FFN gate,
+  FFN up, and new FFN SwiGLU public labels. The new SwiGLU words are
+  `0xbeee5aef`, `0x3c29e800`, `0x3d2f6fb9`, and `0xbd3528b3`; the 24-byte
+  header-only GGUF kept the layer-3 FFN statuses at `0` and emitted no guarded
+  gate/up/SwiGLU output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, symbol, line-count, tracked-artifact, and tracked
+  large-file scans passed.
