@@ -41,7 +41,8 @@ help_text:
 	.ascii "output-projection slice, post-attention residual output slice, "
 	.ascii "FFN RMSNorm descriptor lookup/output slice, and FFN gate "
 	.ascii "matvec output slice plus FFN up matvec output slice and "
-	.ascii "FFN SwiGLU activation slice plus FFN down matvec output slice.\n"
+	.ascii "FFN SwiGLU activation slice plus FFN down matvec output slice "
+	.ascii "and post-FFN residual status smoke.\n"
 help_text_end:
 
 lookup_tensor_request:

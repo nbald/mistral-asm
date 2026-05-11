@@ -3405,3 +3405,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   public layer-4 FFN chain labels through down output. The 24-byte zero-count
   GGUF kept the layer-4 FFN dependent statuses at `0` and emitted no guarded
   layer-4 down exact-hex labels.
+
+## 2026-05-12T01:29:46+02:00
+
+- Added status-only layer-4 post-FFN residual coverage in the focused layer-4
+  FFN down/residual module. The smoke requires the retained layer-4
+  post-attention residual and FFN down statuses, repeats the 3072-wide down
+  output guard, writes a private residual buffer, and intentionally publishes no
+  residual exact-hex labels yet.
+- Verification evidence: the real target reported
+  `token0_layer4_post_ffn_residual: 1` and emitted no
+  `token0_layer4_post_ffn_residual*_f32_hex` labels. The existing 32 public
+  exact-hex labels through layer-4 FFN down still matched the down oracle, and
+  the 24-byte zero-count GGUF kept the new residual status at `0` with no
+  residual exact-hex labels.

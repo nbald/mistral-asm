@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded token-0 layer-4 post-FFN residual status smoke using the retained
-layer-4 post-attention residual and the retained layer-4 FFN down output.
+Publish a guarded token-0 layer-4 post-FFN residual exact-hex slice and add a
+focused oracle for it.
 
 ## Completed Work
 
@@ -54,6 +54,12 @@ layer-4 post-attention residual and the retained layer-4 FFN down output.
   proves the mapped payload span, writes a private 3072-f32 down output buffer,
   and publishes the first four output words: `0x3e13ea6f`, `0xbac8ccef`,
   `0x3ce99bed`, and `0xbcc152bc`.
+- Status-only layer-4 post-FFN residual coverage is complete in the focused
+  layer-4 FFN down/residual module. It requires
+  `token0_layer4_post_attn_residual` and
+  `token0_layer4_ffn_down_matvec` statuses, repeats the 3072-wide
+  `blk.4.ffn_down.weight` output guard, writes a private 3072-f32 residual
+  buffer, and publishes only `token0_layer4_post_ffn_residual` status.
 
 ## Known Blockers
 
@@ -99,30 +105,35 @@ layer-4 post-attention residual and the retained layer-4 FFN down output.
 
 ## Last Verification
 
-Layer-4 FFN down output-slice verification passed:
+Layer-4 post-FFN residual status verification passed:
 
 - `make clean all check`; after the help text update, `make all check`
-- `./mistral-asm --help`
-- real-target output reported `token0_layer4_ffn_down_matvec: 1` and emitted
-  `token0_layer4_ffn_down_output{0..3}_f32_hex` as `0x3e13ea6f`,
-  `0xbac8ccef`, `0x3ce99bed`, and `0xbcc152bc`
+- `./mistral-asm --help` mentions the layer-4 post-FFN residual status smoke
+- real-target output reported `token0_layer4_post_attn_residual: 1`,
+  `token0_layer4_ffn_down_matvec: 1`, and
+  `token0_layer4_post_ffn_residual: 1`
+- real-target output emitted no
+  `token0_layer4_post_ffn_residual{0..3}_f32_hex` labels
 - the real-target runtime/oracle diff was empty for 32 public exact-hex labels
   through layer-4 FFN down against
   `work/oracle/token0_layer4_ffn_down_oracle.py`
-- 24-byte zero-count GGUF kept layer-4 FFN norm/gate/up/SwiGLU/down statuses at
-  `0` and emitted no guarded layer-4 down exact-hex labels
+- 24-byte zero-count GGUF kept `token0_layer4_post_attn_residual`,
+  `token0_layer4_ffn_down_matvec`, and
+  `token0_layer4_post_ffn_residual` statuses at `0` and emitted no
+  `token0_layer4_post_ffn_residual{0..3}_f32_hex` labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- symbol check for `run_token0_layer4_ffn_down_matvec_status`,
-  `token0_layer4_ffn_down_matvec_status`,
-  `print_token0_layer4_ffn_down_output_slice`, and private
+- symbol check for `run_token0_layer4_post_ffn_residual_status`,
+  `token0_layer4_post_ffn_residual_status`, private
+  `token0_layer4_post_ffn_residual`, and private
   `token0_layer4_ffn_down_output`
 - tracked artifact and tracked large-file scans
-- line-count check; `src/infer/token0_layer4_ffn_down.s` is 263 lines,
-  `src/entry/start/lookup_summary/layer4.inc` is 898 lines,
+- line-count check; `src/infer/token0_layer4_ffn_down.s` is 375 lines,
+  `src/entry/start/main/smoke_orchestration.inc` is 452 lines,
+  `src/entry/start/rodata/cli_requests.inc` is 122 lines,
   `src/infer/token0_layer4_ffn.s` is 945 lines,
   `src/infer/token0_layer4_attn.s` is 945 lines,
   `src/infer/token0_layer3_ffn.s` is 942 lines,
@@ -133,9 +144,9 @@ Layer-4 FFN down output-slice verification passed:
 
 ## Next Exact Step
 
-Add a status-only `token0_layer4_post_ffn_residual` smoke in the focused
-layer-4 FFN down/residual module: require `token0_layer4_post_attn_residual`
-and `token0_layer4_ffn_down_matvec` statuses, guard the retained down output
-width at 3072, write a private 3072-f32 residual buffer, print only the status,
-and verify real-target status `1` plus zero-count GGUF status `0` with no new
-residual exact-hex labels yet.
+Publish the first four guarded
+`token0_layer4_post_ffn_residual{0..3}_f32_hex` labels from the retained
+private residual buffer, add a focused
+`work/oracle/token0_layer4_post_ffn_residual_oracle.py`, and verify the
+real-target runtime/oracle diff through the new layer-4 post-FFN residual slice
+plus zero-count GGUF suppression.
