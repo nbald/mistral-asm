@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded exact-hex output slice for the layer-4 FFN up matvec,
-with a focused external oracle.
+Add a guarded status-only token-0 layer-4 FFN SwiGLU activation smoke using the
+retained gate and up outputs, with no public exact-hex slice yet.
 
 ## Completed Work
 
@@ -36,18 +36,16 @@ with a focused external oracle.
   `blk.4.ffn_gate.weight`. The real-target descriptor is Q8_0
   `[3072 x 9216]` at relative offset `986112000`; the first four output words
   are `0x3ee0150a`, `0xbdd9edb2`, `0xbfbf1ff1`, and `0x3f5b31a5`.
-- Layer-4 FFN up descriptor and status-only matvec coverage is complete for
+- Layer-4 FFN up descriptor, status, and output-slice coverage is complete for
   `blk.4.ffn_up.weight`. The retained real-target descriptor is Q8_0
-  `[3072 x 9216]` at relative offset `1016205312`. The guarded real-target
-  up matvec reports `token0_layer4_ffn_up_matvec: 1`, fills private
-  module-owned output storage, and intentionally publishes no exact-hex up
-  output labels yet.
+  `[3072 x 9216]` at relative offset `1016205312`; the first four output words
+  are `0x3f630ab2`, `0x3e49f608`, `0x3ee1a851`, and `0x3dfb29a1`.
 
 ## Known Blockers
 
 - No functional blocker is known.
 - Keep new layer-4 FFN work in focused modules. `src/infer/token0_layer4_ffn.s`
-  is 651 lines and still has room for the next focused layer-4 FFN branch work.
+  is 748 lines and still has room for the next focused layer-4 FFN branch work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
@@ -77,12 +75,13 @@ with a focused external oracle.
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
 - `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/oracle/token0_layer4_ffn_gate_oracle.py`
+- `work/oracle/token0_layer4_ffn_up_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 FFN up status-only matvec verification passed:
+Layer-4 FFN up output-slice verification passed:
 
 - `make clean all check`
 - `./mistral-asm --help`
@@ -90,12 +89,13 @@ Layer-4 FFN up status-only matvec verification passed:
   `layer4_ffn_up_tensor_n_dimensions: 2`, dim0 `3072`, dim1 `9216`,
   ggml_type `8`, relative offset `1016205312`, and
   `token0_layer4_ffn_up_matvec: 1`
-- real-target output kept layer-4 post-attention residual, FFN RMSNorm, and FFN
-  gate matvec statuses at `1`, with the existing layer-4 public exact-hex slices
-  unchanged and no `token0_layer4_ffn_up_output*_f32_hex` labels emitted
+- real-target output kept layer-4 FFN RMSNorm and FFN gate matvec statuses at
+  `1`, and emitted `token0_layer4_ffn_up_output*_f32_hex` as `0x3f630ab2`,
+  `0x3e49f608`, `0x3ee1a851`, and `0x3dfb29a1`
 - the public layer-3 post-FFN residual, layer-4 attention output, layer-4
   post-attention residual, layer-4 FFN RMSNorm, and layer-4 FFN gate output
-  slices diffed cleanly against `work/oracle/token0_layer4_ffn_gate_oracle.py`
+  slices plus the new layer-4 FFN up output slice diffed cleanly against
+  `work/oracle/token0_layer4_ffn_up_oracle.py`
 - 24-byte zero-count GGUF reported all `layer4_ffn_norm_tensor_*`,
   `layer4_ffn_gate_tensor_*`, and `layer4_ffn_up_tensor_*` summary fields as
   `0`, kept layer-4 output/residual/FFN-norm/gate-matvec/up-matvec statuses at
@@ -110,12 +110,14 @@ Layer-4 FFN up status-only matvec verification passed:
   `run_token0_layer4_ffn_up_matvec_status`
 - tracked artifact and tracked large-file scans
 - line-count check; `src/entry/start/lookup_summary/layer4.inc` is 795 lines,
-  `src/infer/token0_layer4_ffn.s` is 651 lines,
+  `src/infer/token0_layer4_ffn.s` is 748 lines,
   `src/infer/token0_layer4_attn.s` remains 945 lines, and
   `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
   tensor-directory walker
 
 ## Next Exact Step
 
-Publish the first guarded exact-hex output slice for the layer-4 FFN up matvec,
-with a focused external oracle.
+Add a guarded status-only token-0 layer-4 FFN SwiGLU activation smoke requiring
+both layer-4 FFN gate and up matvec statuses, compute `silu(gate) * up` into
+private 9216-f32 storage, publish status only, and keep the 24-byte zero-count
+GGUF silent.
