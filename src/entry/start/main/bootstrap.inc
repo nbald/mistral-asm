@@ -46,7 +46,7 @@
 # `blk.3.attn_output.weight`, plus `blk.3.ffn_norm.weight`,
 # `blk.3.ffn_gate.weight`, `blk.3.ffn_up.weight`, and
 # `blk.3.ffn_down.weight`, and layer-4 attention RMSNorm/query setup and
-# status-only query matvec for `blk.4.attn_norm.weight` and
+# query matvec output slice for `blk.4.attn_norm.weight` and
 # `blk.4.attn_q.weight`, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention/FFN descriptors and retained

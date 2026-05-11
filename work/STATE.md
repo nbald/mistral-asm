@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded first-four token-0 layer-4 attention query output slice and
-focused external oracle for `blk.4.attn_q.weight`.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_k.weight`.
 
 ## Completed Work
 
@@ -40,15 +40,19 @@ focused external oracle for `blk.4.attn_q.weight`.
 - Layer-4 attention scope now also has descriptor-only retained lookup and
   summary coverage for `blk.4.attn_q.weight`. On the real target it is Q8_0
   `[3072,4096]`, relative offset `939319296`.
-- `src/infer/token0_layer4_attn.s` now also owns guarded status-only token-0
-  layer-4 attention query matvec coverage. It requires the retained layer-4
-  attention RMSNorm activation, exact Q8_0 `[3072,4096]`
-  `blk.4.attn_q.weight` descriptor, and a bounded payload span before filling
-  private query output storage and reporting `token0_layer4_attn_q_matvec`.
+- `src/infer/token0_layer4_attn.s` now also owns guarded token-0 layer-4
+  attention query matvec coverage. It requires the retained layer-4 attention
+  RMSNorm activation, exact Q8_0 `[3072,4096]` `blk.4.attn_q.weight`
+  descriptor, and a bounded payload span before filling private query output
+  storage and reporting `token0_layer4_attn_q_matvec`.
+- The first guarded layer-4 attention query exact-hex slice is published and
+  covered by `work/oracle/token0_layer4_attn_q_oracle.py`. The first four
+  layer-4 attention query words are `0xbe996fc1`, `0xbefb10d3`,
+  `0x3f524ef6`, and `0x3ea056cc`.
 
 ## Known Blockers
 
-- No functional blocker to the layer-4 attention query output slice step.
+- No functional blocker to the layer-4 attention key descriptor step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -77,15 +81,16 @@ focused external oracle for `blk.4.attn_q.weight`.
 - `src/infer/token0_layer4_attn.s`
 - `work/oracle/token0-layer4-attn-norm.md`
 - `work/oracle/token0_layer4_attn_norm_oracle.py`
+- `work/oracle/token0-layer4-attn-q-output.md`
+- `work/oracle/token0_layer4_attn_q_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention query matvec status verification passed:
+Layer-4 attention query output slice verification passed:
 
 - `make clean all check`
-- post-documentation `make all check`
 - `./mistral-asm --help`
 - real-target run reported `layer4_attn_norm_tensor_found: 1`,
   `layer4_attn_norm_tensor_n_dimensions: 1`,
@@ -101,13 +106,15 @@ Layer-4 attention query matvec status verification passed:
 - real-target run kept the published layer-3 post-FFN residual words unchanged
   and reported `token0_layer4_attn_norm: 1` and
   `token0_layer4_attn_q_matvec: 1`
-- real-target run emitted no `token0_layer4_attn_q_output*_f32_hex` labels
 - real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
-  residual prerequisite slice and layer-4 attention RMSNorm slice
+  residual prerequisite slice, layer-4 attention RMSNorm slice, and layer-4
+  attention query output slice
+- real-target run reported layer-4 attention query output words
+  `0xbe996fc1`, `0xbefb10d3`, `0x3f524ef6`, and `0x3ea056cc`
 - 24-byte header-only GGUF kept all layer-4 attention norm and query descriptor
   fields at `0`, and reported `token0_layer4_attn_norm: 0`
 - 24-byte header-only GGUF reported `token0_layer4_attn_q_matvec: 0` and
-  emitted no guarded layer-4 exact-hex labels
+  emitted no guarded layer-4 query output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
@@ -117,8 +124,9 @@ Layer-4 attention query matvec status verification passed:
 - layer-4 descriptor symbol inspection
 - inference source line-count check
 - tracked artifact and tracked large-file scans
+- post-documentation `make all check`
 
 ## Next Exact Step
 
-Publish a guarded first-four token-0 layer-4 attention query output slice from
-private `token0_layer4_attn_q_output`, backed by a focused external oracle.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_k.weight`.

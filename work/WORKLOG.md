@@ -2990,3 +2990,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   exact-hex oracle slices unchanged; no layer-4 query output labels are
   published yet. A 24-byte header-only GGUF kept the layer-4 descriptors and
   statuses at `0` and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T22:03:18+02:00
+
+- Published the first guarded layer-4 attention query output slice from the
+  focused layer-4 module. The slice is printed only after the layer-4 attention
+  RMSNorm activation and full `blk.4.attn_q.weight` Q8_0 matvec complete.
+- Added a focused external layer-4 attention query oracle. It reuses the full
+  layer-4 attention RMSNorm oracle path and dots that activation with the first
+  four query rows using ordered f32 Q8_0 accumulation.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-3 post-FFN residual prerequisite, layer-4 attention RMSNorm, and new
+  layer-4 query public labels. The new query words are `0xbe996fc1`,
+  `0xbefb10d3`, `0x3f524ef6`, and `0x3ea056cc`; the 24-byte header-only GGUF
+  kept the layer-4 norm/query statuses at `0` and emitted no layer-4 query
+  output labels.
