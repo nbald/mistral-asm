@@ -1803,3 +1803,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer2_attn_norm: 0`. Build, harnesses, help, oracle py-compile,
   whitespace, runtime source extension, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T12:10:11+02:00
+
+- Published the first guarded layer-2 attention RMSNorm activation slice from
+  the focused layer-2 inference module. The new labels are emitted only after
+  `token0_layer2_attn_norm: 1`, and the empty-GGUF guard path still prints only
+  the zero status without any guarded layer-2 word labels.
+- Verification evidence: the real target printed layer-2 norm words
+  `0xbf898056`, `0xc152dc8b`, `0x4248afc4`, and `0xc0556342`. The external
+  oracle recomputed the full layer-1 post-FFN residual and then applied
+  `blk.2.attn_norm.weight`; its words matched the runtime exactly. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  tracked include dependencies, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.

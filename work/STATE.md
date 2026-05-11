@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded first-four exact-hex slice for the token-0 layer-2 attention
-RMSNorm activation, and verify it against an external oracle.
+Add descriptor-only reusable lookup coverage for `blk.2.attn_q.weight`, using a
+dedicated layer-2 scratch slot and printing only found/dimension/type/offset
+summary lines without reading payload bytes.
 
 ## Completed Work
 
@@ -147,11 +148,18 @@ RMSNorm activation, and verify it against an external oracle.
   prerequisite status, epsilon, descriptor/type/shape, mapping-base, and full
   f32 payload bounds checks, writes a private activation buffer plus status
   word, and prints only `token0_layer2_attn_norm`.
+- The layer-2 attention RMSNorm wrapper now also prints a guarded first-four
+  exact-hex slice from the private `token0_layer2_attn_norm_activation` buffer
+  when its status is 1. Durable external oracle coverage lives in
+  `work/oracle/token0_layer2_attn_norm_oracle.py` and
+  `work/oracle/token0-layer2-attn-norm.md`; the oracle recomputes the full
+  layer-1 post-FFN residual before applying `blk.2.attn_norm.weight`, and its
+  public words match the runtime output exactly.
 
 ## Known Blockers
 
-- No current blocker to publishing the first layer-2 attention RMSNorm
-  activation slice and adding oracle evidence for it.
+- No current blocker to adding descriptor-only `blk.2.attn_q.weight` lookup
+  coverage as the next layer-2 attention setup step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -179,6 +187,8 @@ RMSNorm activation, and verify it against an external oracle.
 - `tests/*.s`
 - `Makefile`
 - `work/oracle/`
+- `work/oracle/token0_layer2_attn_norm_oracle.py`
+- `work/oracle/token0-layer2-attn-norm.md`
 - `work/oracle/token0_layer1_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer1-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer1-ffn-branch-review-1.md`
@@ -192,18 +202,20 @@ RMSNorm activation, and verify it against an external oracle.
 
 ## Last Verification
 
-Layer-2 attention RMSNorm status verification passed: `make`; `make check`;
+Layer-2 attention RMSNorm slice verification passed: `make`; `make check`;
 `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
-runtime smoke reporting the existing layer-2 descriptor summary, retained
-`token0_layer1_post_ffn_residual: 1`, and `token0_layer2_attn_norm: 1`;
+runtime smoke reporting `token0_layer2_attn_norm: 1` and words `0xbf898056`,
+`0xc152dc8b`, `0x4248afc4`, `0xc0556342`; full external oracle
+`work/oracle/token0_layer2_attn_norm_oracle.py` matching those words exactly;
 temporary 24-byte empty valid GGUF reporting zeroed layer-2 descriptor fields,
-`token0_layer1_post_ffn_residual: 0`, and `token0_layer2_attn_norm: 0`;
-`git diff --check`; runtime source extension scan allowing `.s` drivers and
-tracked `.inc` fragments; static-link/no-dynamic-section check;
-undefined-symbol check; exported-symbol inspection; tracked-artifact and
-tracked large-file checks.
+`token0_layer1_post_ffn_residual: 0`, and `token0_layer2_attn_norm: 0` with no
+guarded layer-2 norm word labels; `git diff --check`; runtime source extension
+scan allowing `.s` drivers and tracked `.inc` fragments; tracked include
+dependency scan; static-link/no-dynamic-section check; undefined-symbol check;
+exported-symbol inspection; tracked-artifact and tracked large-file checks.
 
 ## Next Exact Step
 
-Add a guarded first-four exact-hex slice for the token-0 layer-2 attention
-RMSNorm activation, and verify it against an external oracle.
+Add descriptor-only reusable lookup coverage for `blk.2.attn_q.weight`, using a
+dedicated layer-2 scratch slot and printing only found/dimension/type/offset
+summary lines without reading payload bytes.
