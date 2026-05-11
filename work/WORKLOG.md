@@ -2616,3 +2616,21 @@ redundant entries. Do not treat it as the primary continuation source; use
   labels. Build, harnesses, help, oracle py-compile, whitespace, runtime source
   extension, include dependency, no-output-payload, no-context-label,
   static-link, undefined-symbol, and symbol checks passed.
+
+## 2026-05-11T18:51:04+02:00
+
+- Published the first guarded layer-3 attention context exact-hex slice from
+  the focused context module. The context printer is gated only on
+  `token0_layer3_attn_context: 1`; the context builder still uses
+  `blk.3.attn_output.weight` only as a descriptor shape guard and has no
+  output-projection payload-read path.
+- Verification evidence: the focused runtime/oracle diff was empty for the
+  layer-2 post-FFN residual, layer-3 attention RMSNorm, layer-3 value, and new
+  layer-3 context public labels. The new context words are `0x3a75acca`,
+  `0x3baaa296`, `0xbbde3580`, and `0x3bcdaf05`; the 24-byte empty valid GGUF
+  kept all layer-3 descriptor fields and dependent statuses at `0`, including
+  `token0_layer3_attn_context: 0`, and emitted no guarded layer-3 context
+  words. Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, no-output-payload, static-link,
+  undefined-symbol, symbol, line-count, tracked-artifact, and tracked
+  large-file scans passed.

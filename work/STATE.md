@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded token-0 layer-3 attention context exact-hex slice from the
-focused context module, without reading `blk.3.attn_output.weight` payload
-bytes.
+Add a focused status-only token-0 layer-3 attention output projection matvec
+smoke that consumes the guarded layer-3 context and retained
+`blk.3.attn_output.weight` descriptor, without publishing output exact-hex words
+yet.
 
 ## Completed Work
 
@@ -38,9 +39,12 @@ bytes.
   requires the existing layer-3 Q/K/V matvec statuses, checks retained Q/K/V
   descriptor shapes, uses the retained output projection descriptor as a shape
   guard, fills private 4096-f32 context storage from the layer-3 value output,
-  and prints only `token0_layer3_attn_context: 1` on the real target. It does
-  not read `blk.3.attn_output.weight` payload bytes and publishes no context
-  exact-hex words yet.
+  prints `token0_layer3_attn_context: 1` on the real target, and now publishes
+  a guarded first-four-word context exact-hex slice. It does not read
+  `blk.3.attn_output.weight` payload bytes.
+- The current layer-3 context words are `0x3a75acca`, `0x3baaa296`,
+  `0xbbde3580`, and `0x3bcdaf05`; for the first query head of a single-token
+  sequence they match the first four layer-3 value output words.
 - The layer-3 attention exact-hex rodata labels and printer helpers for public
   RMSNorm/query/key/value slices live in the Makefile-tracked
   `src/infer/token0_layer3_attn_slices.inc` include.
@@ -50,7 +54,12 @@ bytes.
 
 ## Known Blockers
 
-- No functional blocker to publishing the guarded layer-3 context slice.
+- No functional blocker to adding status-only layer-3 output-projection matvec
+  coverage.
+- Prefer a new focused module such as
+  `src/infer/token0_layer3_attn_output.s` for layer-3 output-projection work,
+  mirroring the layer-2 split, instead of growing unrelated entry or attention
+  source files.
 - Keep layer-3 attention slice labels and printer code in
   `src/infer/token0_layer3_attn_slices.inc`; it is tracked in `Makefile` so
   edits rebuild `build/infer/token0_layer3_attn.o`.
@@ -80,13 +89,15 @@ bytes.
 - `src/infer/token0_layer3_attn.s`
 - `src/infer/token0_layer3_attn_context.s`
 - `src/infer/token0_layer3_attn_slices.inc`
+- `work/oracle/token0_layer3_attn_context_oracle.py`
+- `work/oracle/token0-layer3-attn-context.md`
 - `work/oracle/token0_layer3_attn_v_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention context status verification passed:
+Layer-3 attention context exact-hex slice verification passed:
 
 - `make`
 - `make check`
@@ -95,27 +106,27 @@ Layer-3 attention context status verification passed:
   Q/K/V/output descriptors still reported the expected shapes, and
   `token0_layer3_attn_q_matvec: 1`, `token0_layer3_attn_k_matvec: 1`, and
   `token0_layer3_attn_v_matvec: 1`
-- real-target run preserved `token0_layer3_attn_norm: 1`,
-  `token0_layer3_attn_q_matvec: 1`, `token0_layer3_attn_k_matvec: 1`, and
-  `token0_layer3_attn_v_matvec: 1`
 - focused runtime/oracle diff was empty for the layer-2 post-FFN residual,
-  layer-3 attention RMSNorm, and layer-3 value public labels
+  layer-3 attention RMSNorm, layer-3 value, and new layer-3 context public
+  labels
 - temporary 24-byte empty valid GGUF kept all layer-3 descriptor fields and
   dependent statuses at `0`, including `token0_layer3_attn_context: 0`, and
-  emitted no guarded layer-3 exact-hex labels
+  emitted no guarded layer-3 context exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- layer-3 context static scan found no output-projection payload path and no
-  public context exact-hex labels
+- layer-3 context static scan found no output-projection payload path
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
 - layer-3 context symbol inspection
+- source line-count check confirmed the changed focused module remains far
+  below the project threshold
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish a guarded token-0 layer-3 attention context exact-hex slice from the
-focused context module, without reading `blk.3.attn_output.weight` payload
-bytes.
+Add a focused status-only token-0 layer-3 attention output projection matvec
+smoke that consumes the guarded layer-3 context and retained
+`blk.3.attn_output.weight` descriptor, without publishing output exact-hex words
+yet.

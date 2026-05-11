@@ -17,6 +17,22 @@ token0_layer3_attn_context_text:
 	.ascii "token0_layer3_attn_context: "
 token0_layer3_attn_context_text_end:
 
+token0_layer3_attn_context0_f32_text:
+	.ascii "token0_layer3_attn_context0_f32_hex: "
+token0_layer3_attn_context0_f32_text_end:
+
+token0_layer3_attn_context1_f32_text:
+	.ascii "token0_layer3_attn_context1_f32_hex: "
+token0_layer3_attn_context1_f32_text_end:
+
+token0_layer3_attn_context2_f32_text:
+	.ascii "token0_layer3_attn_context2_f32_hex: "
+token0_layer3_attn_context2_f32_text_end:
+
+token0_layer3_attn_context3_f32_text:
+	.ascii "token0_layer3_attn_context3_f32_hex: "
+token0_layer3_attn_context3_f32_text_end:
+
 newline_text:
 	.ascii "\n"
 newline_text_end:
@@ -39,7 +55,7 @@ token0_layer3_attn_context:
 .type run_token0_layer3_attn_context_status, @function
 
 # Contract: run the token-0 layer-3 single-token attention context smoke and
-# publish its status line only.
+# publish its status line and guarded public slice.
 # Inputs: no register inputs. Reads token0_layer3_attn_q_matvec_status,
 # token0_layer3_attn_k_matvec_status, token0_layer3_attn_v_matvec_status,
 # token0_layer3_attn_v_output, and the retained blk.3.attn_q.weight,
@@ -47,8 +63,8 @@ token0_layer3_attn_context:
 # descriptors.
 # Outputs: writes token0_layer3_attn_context_status and, on success, fills the
 # private token0_layer3_attn_context buffer. Always prints exactly one status
-# label/value/newline sequence to stdout and prints no context exact-hex words.
-# The return register is unspecified.
+# label/value/newline sequence to stdout and prints the first four exact-hex
+# context words only when the status is 1. The return register is unspecified.
 # Clobbers: caller-saved registers and flags through the smoke helper and
 # summary writers.
 # Ownership/lifetime: borrows the layer-3 value projection output owned by the
@@ -56,8 +72,9 @@ token0_layer3_attn_context:
 # later layer-3 output-projection work. Descriptor slots remain process-owned
 # static parser summaries. This function does not read model payload bytes.
 # Error behavior: status is 1 only after all prerequisite statuses and tensor
-# shapes match the narrow target GGUF. Otherwise status is 0. Output write
-# failures are diagnostic-only in the current milestone.
+# shapes match the narrow target GGUF. Otherwise status is 0 and no context
+# exact-hex words are printed. Output write failures are diagnostic-only in the
+# current milestone.
 run_token0_layer3_attn_context_status:
 	call token0_layer3_attn_context_smoke
 	mov qword ptr [rip + token0_layer3_attn_context_status], rax
@@ -75,6 +92,8 @@ run_token0_layer3_attn_context_status:
 	lea rsi, [rip + newline_text]
 	mov rdx, newline_text_end - newline_text
 	call sys_write
+
+	call print_token0_layer3_attn_context_slice
 	ret
 
 .size run_token0_layer3_attn_context_status, . - run_token0_layer3_attn_context_status
@@ -185,5 +204,84 @@ token0_layer3_attn_context_smoke:
 	ret
 
 .size token0_layer3_attn_context_smoke, . - token0_layer3_attn_context_smoke
+
+.type print_token0_layer3_attn_context_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-3 attention
+# context when the context smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer3_attn_context_status and the
+# first four f32 words of token0_layer3_attn_context.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer3_attn_context_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads private module-owned layer-3 context storage only
+# during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer3_attn_context_slice:
+	cmp qword ptr [rip + token0_layer3_attn_context_status], 1
+	jne .Lprint_layer3_attn_context_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer3_attn_context0_f32_text]
+	mov rdx, token0_layer3_attn_context0_f32_text_end - token0_layer3_attn_context0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer3_attn_context]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer3_attn_context1_f32_text]
+	mov rdx, token0_layer3_attn_context1_f32_text_end - token0_layer3_attn_context1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer3_attn_context + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer3_attn_context2_f32_text]
+	mov rdx, token0_layer3_attn_context2_f32_text_end - token0_layer3_attn_context2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer3_attn_context + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer3_attn_context3_f32_text]
+	mov rdx, token0_layer3_attn_context3_f32_text_end - token0_layer3_attn_context3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer3_attn_context + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer3_attn_context_slice_done:
+	ret
+
+.size print_token0_layer3_attn_context_slice, . - print_token0_layer3_attn_context_slice
 
 .section .note.GNU-stack,"",@progbits
