@@ -25,17 +25,18 @@
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
-# residual smokes plus the layer-2 attention RMSNorm and query/key matvec
-# smokes to focused inference code, and publishing status-gated exact-hex slices
-# from the audited output buffers. It also performs non-math
+# residual smokes plus the layer-2 attention RMSNorm and query/key/value matvec
+# smokes to focused inference code, and publishing status-gated exact-hex
+# slices from the audited output buffers. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
 # `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, `blk.1.ffn_up.weight`, and
 # `blk.1.ffn_down.weight`, plus layer-2 attention
-# RMSNorm/query/key/value setup for `blk.2.attn_norm.weight`,
+# RMSNorm/query/key/value/output setup for `blk.2.attn_norm.weight`,
 # `blk.2.attn_q.weight`,
-# `blk.2.attn_k.weight`, and `blk.2.attn_v.weight`, into separate
+# `blk.2.attn_k.weight`, `blk.2.attn_v.weight`, and
+# `blk.2.attn_output.weight`, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN and
 # layer-2 attention descriptors and retained activation outputs are consumed
 # only by guarded focused smokes after their prerequisite activations exist.
@@ -445,6 +446,27 @@ _start:
 	lea r8, [rip + layer2_attn_v_tensor_request]
 	mov r9, layer2_attn_v_tensor_request_end - layer2_attn_v_tensor_request
 	lea r10, [rip + layer2_attn_v_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
+	jz .Llookup_layer2_attn_output_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer2_attn_output_tensor:
+	# Capture the layer-2 output projection descriptor in its own scratch slot
+	# for shape-gating future output-context work. This step intentionally
+	# publishes only descriptor fields and does not read matrix payload bytes.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer2_attn_output_tensor_request]
+	mov r9, layer2_attn_output_tensor_request_end - layer2_attn_output_tensor_request
+	lea r10, [rip + layer2_attn_output_tensor_slot]
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax

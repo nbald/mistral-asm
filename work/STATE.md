@@ -6,8 +6,11 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only runtime coverage for `blk.2.attn_output.weight` so the
-next layer-2 single-token attention context/output steps can be shape-gated.
+Add the token-0 layer-2 single-token attention context smoke in a new focused
+runtime module so `src/infer/token0_layer2_attn.s` stays at 997 lines. Shape-gate
+it with the retained layer-2 value and output-projection descriptors, publish a
+status line and guarded first-four context slice, and do not read
+`blk.2.attn_output.weight` payload bytes.
 
 ## Completed Work
 
@@ -24,6 +27,10 @@ next layer-2 single-token attention context/output steps can be shape-gated.
   slices only after successful statuses.
 - The first four `token0_layer2_attn_v_output*_f32_hex` words are now printed
   behind `token0_layer2_attn_v_matvec_status == 1`.
+- Descriptor-only coverage for `blk.2.attn_output.weight` is complete. The
+  descriptor is retained in its own layer-2 scratch slot, printed immediately
+  after the layer-2 value descriptor, and no output-projection payload bytes are
+  read by this step.
 - Durable external oracle coverage for the layer-2 value projection lives in
   `work/oracle/token0_layer2_attn_v_oracle.py` and
   `work/oracle/token0-layer2-attn-v-output.md`. It recomputes the full upstream
@@ -38,8 +45,7 @@ next layer-2 single-token attention context/output steps can be shape-gated.
 
 ## Known Blockers
 
-- No current blocker to adding descriptor-only `blk.2.attn_output.weight`
-  coverage.
+- No current blocker to adding the layer-2 single-token context smoke.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -71,31 +77,32 @@ next layer-2 single-token attention context/output steps can be shape-gated.
 
 ## Last Verification
 
-Layer-2 attention value output slice verification passed:
+Layer-2 attention output descriptor verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke printed `token0_layer2_attn_v_matvec: 1` and value
-  words `0x3d38e19b`, `0x3ae7765b`, `0xbd4bbba8`, `0xbf48b85f`
-- `python3 work/oracle/token0_layer2_attn_v_oracle.py <target.gguf>` printed
-  the same four layer-2 value words
-- temporary 24-byte empty valid GGUF kept layer-2 norm/query/key/value statuses
-  at `0` and emitted no guarded layer-2 norm/Q/K/V output labels
+- real target runtime smoke printed `layer2_attn_output_tensor_found: 1`,
+  dimensions `4096` and `3072`, Q8_0 type `8`, and relative offset `678567936`;
+  the existing layer-2 norm/query/key/value statuses and published slices stayed
+  unchanged
+- temporary 24-byte empty valid GGUF kept layer-2 norm/query/key/value/output
+  descriptor slots zeroed, kept layer-2 norm/query/key/value statuses at `0`,
+  and emitted no guarded layer-2 norm/Q/K/V output labels
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the layer-2 value wrapper/status/output symbols
+- exported-symbol inspection for the layer-2 output descriptor symbols
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_output.weight` in
-a focused place that does not grow `src/infer/token0_layer2_attn.s` past the
-1000-line threshold. Store the descriptor in its own layer-2 scratch slot,
-publish found/dimension/type/offset summary lines after the layer-2 value
-descriptor, avoid reading output-projection payload bytes, update help/state
-docs, and verify on the real target plus an empty valid GGUF.
+Add a focused `src/infer/token0_layer2_attn_context.s` module for the layer-2
+single-token context smoke, wire it into the Makefile and start orchestration,
+guard it with `token0_layer2_attn_v_matvec_status`, `layer2_attn_v_tensor_*`,
+and `layer2_attn_output_tensor_*`, publish `token0_layer2_attn_context: 1` plus
+guarded first-four context words on the real target, and verify that the empty
+valid GGUF prints only zero layer-2 context/output prerequisites.

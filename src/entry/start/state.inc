@@ -51,6 +51,12 @@
 .global layer2_attn_v_tensor_dim1
 .global layer2_attn_v_tensor_ggml_type
 .global layer2_attn_v_tensor_offset
+.global layer2_attn_output_tensor_found
+.global layer2_attn_output_tensor_n_dimensions
+.global layer2_attn_output_tensor_dim0
+.global layer2_attn_output_tensor_dim1
+.global layer2_attn_output_tensor_ggml_type
+.global layer2_attn_output_tensor_offset
 .global token0_layer1_post_attn_residual_status
 .global token0_layer1_post_attn_residual
 .global token0_layer1_ffn_norm_status
@@ -556,6 +562,27 @@ layer2_attn_v_tensor_dim3:
 layer2_attn_v_tensor_ggml_type:
 	.skip 8
 layer2_attn_v_tensor_offset:
+	.skip 8
+
+.balign 8
+layer2_attn_output_tensor_slot:
+layer2_attn_output_tensor_found:
+	.skip 8
+layer2_attn_output_tensor_name:
+	.skip LAYER2_ATTN_OUTPUT_TENSOR_NAME_CAP
+layer2_attn_output_tensor_n_dimensions:
+	.skip 8
+layer2_attn_output_tensor_dim0:
+	.skip 8
+layer2_attn_output_tensor_dim1:
+	.skip 8
+layer2_attn_output_tensor_dim2:
+	.skip 8
+layer2_attn_output_tensor_dim3:
+	.skip 8
+layer2_attn_output_tensor_ggml_type:
+	.skip 8
+layer2_attn_output_tensor_offset:
 	.skip 8
 
 .balign 8

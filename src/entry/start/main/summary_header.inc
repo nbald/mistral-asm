@@ -163,3 +163,4 @@
 	call print_layer2_attn_q_lookup_summary
 	call print_layer2_attn_k_lookup_summary
 	call print_layer2_attn_v_lookup_summary
+	call print_layer2_attn_output_lookup_summary
