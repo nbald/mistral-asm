@@ -2978,3 +2978,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   existing layer-4 RMSNorm runtime/oracle diff stayed empty, and a temporary
   24-byte header-only GGUF kept all layer-4 norm/query descriptor fields at `0`
   with no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T21:53:31+02:00
+
+- Added guarded status-only layer-4 attention query matvec coverage in the
+  focused layer-4 module. The smoke requires the retained layer-4 attention
+  RMSNorm activation, exact Q8_0 `[3072,4096]` `blk.4.attn_q.weight`, and a
+  bounded payload span before filling private query output storage.
+- Verification evidence: the real target reported `token0_layer4_attn_q_matvec:
+  1` while keeping the existing layer-3 post-FFN residual and layer-4 RMSNorm
+  exact-hex oracle slices unchanged; no layer-4 query output labels are
+  published yet. A 24-byte header-only GGUF kept the layer-4 descriptors and
+  statuses at `0` and emitted no guarded layer-4 exact-hex labels.

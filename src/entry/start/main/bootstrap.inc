@@ -45,8 +45,9 @@
 # `blk.3.attn_k.weight`, `blk.3.attn_v.weight`, and
 # `blk.3.attn_output.weight`, plus `blk.3.ffn_norm.weight`,
 # `blk.3.ffn_gate.weight`, `blk.3.ffn_up.weight`, and
-# `blk.3.ffn_down.weight`, and layer-4 attention RMSNorm/query setup
-# for `blk.4.attn_norm.weight` and `blk.4.attn_q.weight`, into separate
+# `blk.3.ffn_down.weight`, and layer-4 attention RMSNorm/query setup and
+# status-only query matvec for `blk.4.attn_norm.weight` and
+# `blk.4.attn_q.weight`, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention/FFN descriptors and retained
 # activation outputs are consumed only by guarded focused smokes after their
@@ -67,7 +68,8 @@
 # attention/FFN, layer-3 attention/FFN, and layer-4 attention RMSNorm/query
 # setup descriptors. The layer-4 attention RMSNorm descriptor is consumed by a
 # guarded status smoke after the layer-3 post-FFN residual exists; the query
-# descriptor remains metadata-only until the layer-4 query matvec smoke exists.
+# descriptor is consumed only after that RMSNorm smoke succeeds and the full
+# Q8_0 query matrix span is proven inside the live mapping.
 # The layer-2 FFN RMSNorm smoke consumes the retained layer-2 post-attention
 # residual and publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
 # descriptors and layer-3 FFN gate/up/down descriptors feed shape-gated Q8_0

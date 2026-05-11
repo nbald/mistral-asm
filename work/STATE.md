@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add guarded status-only token-0 layer-4 attention query matvec coverage for
-`blk.4.attn_q.weight`.
+Publish a guarded first-four token-0 layer-4 attention query output slice and
+focused external oracle for `blk.4.attn_q.weight`.
 
 ## Completed Work
 
@@ -40,10 +40,15 @@ Add guarded status-only token-0 layer-4 attention query matvec coverage for
 - Layer-4 attention scope now also has descriptor-only retained lookup and
   summary coverage for `blk.4.attn_q.weight`. On the real target it is Q8_0
   `[3072,4096]`, relative offset `939319296`.
+- `src/infer/token0_layer4_attn.s` now also owns guarded status-only token-0
+  layer-4 attention query matvec coverage. It requires the retained layer-4
+  attention RMSNorm activation, exact Q8_0 `[3072,4096]`
+  `blk.4.attn_q.weight` descriptor, and a bounded payload span before filling
+  private query output storage and reporting `token0_layer4_attn_q_matvec`.
 
 ## Known Blockers
 
-- No functional blocker to the layer-4 attention query matvec status step.
+- No functional blocker to the layer-4 attention query output slice step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -77,7 +82,7 @@ Add guarded status-only token-0 layer-4 attention query matvec coverage for
 
 ## Last Verification
 
-Layer-4 attention query descriptor verification passed:
+Layer-4 attention query matvec status verification passed:
 
 - `make clean all check`
 - post-documentation `make all check`
@@ -94,13 +99,15 @@ Layer-4 attention query descriptor verification passed:
   `layer4_attn_q_tensor_ggml_type: 8`, and
   `layer4_attn_q_tensor_offset: 939319296`
 - real-target run kept the published layer-3 post-FFN residual words unchanged
-  and reported `token0_layer4_attn_norm: 1`
+  and reported `token0_layer4_attn_norm: 1` and
+  `token0_layer4_attn_q_matvec: 1`
+- real-target run emitted no `token0_layer4_attn_q_output*_f32_hex` labels
 - real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
   residual prerequisite slice and layer-4 attention RMSNorm slice
 - 24-byte header-only GGUF kept all layer-4 attention norm and query descriptor
   fields at `0`, and reported `token0_layer4_attn_norm: 0`
-- 24-byte header-only GGUF emitted no `token0_layer4_attn_norm*_f32_hex`
-  labels
+- 24-byte header-only GGUF reported `token0_layer4_attn_q_matvec: 0` and
+  emitted no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
@@ -113,5 +120,5 @@ Layer-4 attention query descriptor verification passed:
 
 ## Next Exact Step
 
-Add guarded status-only token-0 layer-4 attention query matvec coverage for
-`blk.4.attn_q.weight`.
+Publish a guarded first-four token-0 layer-4 attention query output slice from
+private `token0_layer4_attn_q_output`, backed by a focused external oracle.
