@@ -2330,3 +2330,18 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Decision: this completes the layer-2 FFN branch slice sequence, so the next
   iteration should enter the two-pass review gate before adding new feature
   scope.
+
+## 2026-05-11T16:49:28+02:00
+
+- Ran layer-2 FFN branch review gate pass 1. No blocking findings: ordering
+  keeps mapped tensor reads before `gguf_release_mapping`, mapped payload reads
+  remain descriptor/bounds-gated, retained-buffer steps are status-gated, and
+  the external oracle boundary matches the public exact-hex slice chain through
+  the post-FFN residual.
+- Verification evidence: build/check/help/oracle py-compile passed; the
+  real-target runtime/oracle comparison was empty for layer-2 post-attention
+  residual plus FFN norm/gate/up/SwiGLU/down/post-residual labels; the empty
+  valid GGUF guard path kept reviewed layer-2 statuses at `0` and emitted no
+  guarded exact-hex labels; whitespace, source-extension, include-dependency,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and
+  large-file scans passed.

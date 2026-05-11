@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run layer-2 FFN branch review gate pass 1 before starting new feature scope.
+Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
 
 ## Completed Work
 
@@ -35,13 +35,17 @@ Run layer-2 FFN branch review gate pass 1 before starting new feature scope.
   slice in `work/oracle/`.
 - Repository-wide, layer-1 FFN branch, and layer-2 attention branch review
   gates are complete with no blocking findings.
+- Layer-2 FFN branch review gate pass 1 is complete with no blocking findings.
+  The pass checked live-mmap ordering, descriptor and bounds gates, retained
+  buffer dependencies, status-gated slice printing, oracle coverage, and module
+  sizes.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-2 FFN branch review pass.
+- No current blocker to layer-2 FFN branch review gate pass 2.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -73,12 +77,13 @@ Run layer-2 FFN branch review gate pass 1 before starting new feature scope.
 - `work/oracle/token0-layer2-ffn-down.md`
 - `work/oracle/token0_layer2_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer2-post-ffn-residual.md`
+- `work/reviews/2026-05-11-layer2-ffn-branch-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-2 post-FFN residual slice verification passed:
+Layer-2 FFN branch review gate pass 1 verification passed:
 
 - `make`
 - `make check`
@@ -86,8 +91,9 @@ Layer-2 post-FFN residual slice verification passed:
 - `python3 -m py_compile work/oracle/*.py`
 - focused real-target runtime/oracle diff for layer-2 post-attention residual,
   FFN norm/gate/up/SwiGLU/down, and post-FFN residual exact-hex labels was empty
-- real target printed `token0_layer2_post_ffn_residual: 1` and residual words
-  `0x440c1d48`, `0xc200a8d7`, `0xc2a8120a`, and `0xc15da38d`
+- real target printed all reviewed layer-2 FFN/post-residual statuses at `1`;
+  post-FFN residual words remained `0x440c1d48`, `0xc200a8d7`, `0xc2a8120a`,
+  and `0xc15da38d`
 - temporary 24-byte empty valid GGUF kept layer-2 FFN descriptors and
   `token0_layer2_post_attn_residual`, `token0_layer2_ffn_norm`,
   `token0_layer2_ffn_gate_matvec`, `token0_layer2_ffn_up_matvec`,
@@ -108,4 +114,4 @@ Layer-2 post-FFN residual slice verification passed:
 
 ## Next Exact Step
 
-Run layer-2 FFN branch review gate pass 1 before starting new feature scope.
+Run layer-2 FFN branch review gate pass 2 before starting new feature scope.
