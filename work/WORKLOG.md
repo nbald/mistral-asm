@@ -1994,3 +1994,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, tracked include dependencies,
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks passed.
+
+## 2026-05-11T13:54:02+02:00
+
+- Added focused layer-2 attention output-projection matvec status coverage in
+  `src/infer/token0_layer2_attn_output.s`. The new path waits for the retained
+  layer-2 context, requires `blk.2.attn_output.weight` to be a bounded Q8_0
+  `[4096 x 3072]` matrix, and fills private 3072-f32 output storage without
+  publishing exact-hex output words yet.
+- Verification evidence: the real target preserved the layer-2 value/context
+  status path and reported `token0_layer2_attn_output_matvec: 1` with no
+  `token0_layer2_attn_output*_f32_hex` labels. A temporary empty valid GGUF
+  kept layer-2 output descriptor slots zeroed and kept layer-2
+  norm/query/key/value/context/output statuses at `0`, again with no guarded
+  layer-2 output-projection words. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, tracked include dependencies,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.

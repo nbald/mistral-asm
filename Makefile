@@ -12,6 +12,7 @@ ASM_SOURCES := \
 	src/gguf/load_header.s \
 	src/infer/token0_layer2_attn.s \
 	src/infer/token0_layer2_attn_context.s \
+	src/infer/token0_layer2_attn_output.s \
 	src/infer/token0_layer1_ffn_down.s \
 	src/infer/token0_layer1_ffn.s \
 	src/math/q8_0_dot.s \
