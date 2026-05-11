@@ -67,3 +67,7 @@ layer1_ffn_down_tensor_request_end:
 layer2_attn_norm_tensor_request:
 	.ascii "blk.2.attn_norm.weight"
 layer2_attn_norm_tensor_request_end:
+
+layer2_attn_q_tensor_request:
+	.ascii "blk.2.attn_q.weight"
+layer2_attn_q_tensor_request_end:

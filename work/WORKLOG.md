@@ -1817,3 +1817,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   tracked include dependencies, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T12:15:23+02:00
+
+- Added descriptor-only layer-2 attention query setup. The new
+  `blk.2.attn_q.weight` descriptor is retained in its own layer-2 scratch slot
+  and published only as summary fields, leaving tensor payload bytes untouched
+  for this step.
+- Verification evidence: the real target reported found `1`, dimensions
+  `3072` and `4096`, Q8_0 type `8`, and relative offset `691937280`; the
+  previously published layer-2 RMSNorm status and words stayed unchanged. A
+  temporary empty valid GGUF kept both layer-2 descriptor slots zeroed and kept
+  `token0_layer2_attn_norm: 0`. The exact layer-2 norm oracle was not part of
+  this descriptor-only verification; its durable coverage remains from the
+  prior layer-2 norm slice step. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, tracked include dependencies,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.

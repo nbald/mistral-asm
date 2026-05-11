@@ -160,3 +160,4 @@
 	call print_layer1_ffn_up_lookup_summary
 	call print_layer1_ffn_down_lookup_summary
 	call print_layer2_attn_norm_lookup_summary
+	call print_layer2_attn_q_lookup_summary

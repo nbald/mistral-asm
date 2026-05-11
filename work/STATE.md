@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_q.weight`, using a
-dedicated layer-2 scratch slot and printing only found/dimension/type/offset
-summary lines without reading payload bytes.
+Add status-only token-0 layer-2 attention query matvec coverage in the focused
+layer-2 attention module, consuming `token0_layer2_attn_norm_activation` and
+the `blk.2.attn_q.weight` descriptor only after descriptor/type/shape/bounds
+checks, and printing only `token0_layer2_attn_q_matvec`.
 
 ## Completed Work
 
@@ -155,11 +156,17 @@ summary lines without reading payload bytes.
   `work/oracle/token0-layer2-attn-norm.md`; the oracle recomputes the full
   layer-1 post-FFN residual before applying `blk.2.attn_norm.weight`, and its
   public words match the runtime output exactly.
+- Descriptor-only reusable lookup coverage now includes `blk.2.attn_q.weight`.
+  The descriptor is stored in a separate exported layer-2 scratch slot and
+  printed as found/dimension/type/offset summary lines after the layer-2
+  attention RMSNorm descriptor without reading payload bytes. On the local
+  target GGUF it reports found `1`, two dimensions `3072` and `4096`, Q8_0 type
+  `8`, and relative offset `691937280`.
 
 ## Known Blockers
 
-- No current blocker to adding descriptor-only `blk.2.attn_q.weight` lookup
-  coverage as the next layer-2 attention setup step.
+- No current blocker to adding status-only layer-2 attention query matvec
+  coverage as the next layer-2 attention step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -202,12 +209,13 @@ summary lines without reading payload bytes.
 
 ## Last Verification
 
-Layer-2 attention RMSNorm slice verification passed: `make`; `make check`;
+Layer-2 attention query descriptor verification passed: `make`; `make check`;
 `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
 runtime smoke reporting `token0_layer2_attn_norm: 1` and words `0xbf898056`,
-`0xc152dc8b`, `0x4248afc4`, `0xc0556342`; full external oracle
-`work/oracle/token0_layer2_attn_norm_oracle.py` matching those words exactly;
-temporary 24-byte empty valid GGUF reporting zeroed layer-2 descriptor fields,
+`0xc152dc8b`, `0x4248afc4`, `0xc0556342`; real target descriptor smoke
+reporting `layer2_attn_q_tensor_found: 1`, dimensions `3072` and `4096`, type
+`8`, and offset `691937280`; temporary 24-byte empty valid GGUF reporting
+zeroed layer-2 descriptor fields,
 `token0_layer1_post_ffn_residual: 0`, and `token0_layer2_attn_norm: 0` with no
 guarded layer-2 norm word labels; `git diff --check`; runtime source extension
 scan allowing `.s` drivers and tracked `.inc` fragments; tracked include
@@ -216,6 +224,8 @@ exported-symbol inspection; tracked-artifact and tracked large-file checks.
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_q.weight`, using a
-dedicated layer-2 scratch slot and printing only found/dimension/type/offset
-summary lines without reading payload bytes.
+Add status-only token-0 layer-2 attention query matvec coverage in
+`src/infer/token0_layer2_attn.s`, consuming
+`token0_layer2_attn_norm_activation` and the `blk.2.attn_q.weight` descriptor
+only after descriptor/type/shape/bounds checks, and printing only
+`token0_layer2_attn_q_matvec`.
