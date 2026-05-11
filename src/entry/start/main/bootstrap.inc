@@ -24,19 +24,19 @@
 # residual from process-owned static buffers, then applying guarded layer-1
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
-# the layer-1 FFN RMSNorm and gate matvec smokes to focused inference code, and
-# publishing
-# status-gated exact-hex slices from the audited output buffers. It also
+# the layer-1 FFN RMSNorm, gate/up matvec, and SwiGLU smokes to focused
+# inference code, and publishing status-gated exact-hex slices from the audited
+# output buffers. It also
 # performs non-math reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
-# `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, and
-# `blk.1.ffn_up.weight` into separate process-owned scratch slots before the
-# token-0 math path. The up descriptor is still descriptor-only in this step;
-# the gate descriptor is consumed only by the layer-1 FFN gate status smoke
-# after the FFN-normalized activation exists. The mapping is released explicitly
-# with
-# gguf_release_mapping before exit. The GGUF summary buffer is process-owned
+# `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, `blk.1.ffn_up.weight`, and
+# `blk.1.ffn_down.weight` into separate process-owned scratch slots before the
+# token-0 math path. The down descriptor is descriptor-only in this step, while
+# the norm/gate/up descriptors and retained gate/up outputs are consumed only by
+# the guarded layer-1 FFN smokes after their prerequisite activations exist.
+# The mapping is released explicitly with gguf_release_mapping before exit. The
+# GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
 # string copies, and selected scalar and array-length
 # metadata values, plus a bounded snapshot of the first tensor descriptor and
@@ -329,9 +329,8 @@ _start:
 	jmp .Llookup_unknown_error
 
 .Llookup_layer1_ffn_up_tensor:
-	# Capture the next-layer FFN up descriptor for descriptor-only coverage.
-	# The consumer matvec will be added in a later atomic step after this
-	# directory lookup is independently visible.
+	# Capture the next-layer FFN up descriptor in its own handoff slot for the
+	# focused FFN inference module.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
@@ -339,6 +338,27 @@ _start:
 	lea r8, [rip + layer1_ffn_up_tensor_request]
 	mov r9, layer1_ffn_up_tensor_request_end - layer1_ffn_up_tensor_request
 	lea r10, [rip + layer1_ffn_up_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
+	jz .Llookup_layer1_ffn_down_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer1_ffn_down_tensor:
+	# Capture the next-layer FFN down descriptor for descriptor-only coverage.
+	# Its payload remains unread until the layer-1 SwiGLU activation can be
+	# projected by a later atomic step.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer1_ffn_down_tensor_request]
+	mov r9, layer1_ffn_down_tensor_request_end - layer1_ffn_down_tensor_request
+	lea r10, [rip + layer1_ffn_down_tensor_slot]
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax

@@ -6,8 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only reusable lookup coverage for `blk.1.ffn_down.weight`, with
-focused layer-1 FFN down descriptor handoff state and summary output.
+Add status-only layer-1 FFN down matvec coverage in
+`src/infer/token0_layer1_ffn.s`, consuming the private SwiGLU activation and
+the focused `blk.1.ffn_down.weight` descriptor only after descriptor, type,
+shape, and bounds checks.
 
 ## Completed Work
 
@@ -86,10 +88,15 @@ focused layer-1 FFN down descriptor handoff state and summary output.
   status is 1. The new words appear immediately after
   `token0_layer1_ffn_swiglu: 1`, and the help milestone line now describes the
   layer-1 FFN SwiGLU output slice.
+- Descriptor-only reusable lookup coverage now includes
+  `blk.1.ffn_down.weight`. The descriptor is stored in a separate layer-1
+  scratch slot and printed as found/dimension/type/offset summary lines after
+  the existing layer-1 FFN gate/up descriptor summaries without reading payload
+  bytes.
 
 ## Known Blockers
 
-- No current blocker for the next descriptor-only layer-1 FFN down lookup step.
+- No current blocker for the next status-only layer-1 FFN down matvec step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -122,18 +129,20 @@ focused layer-1 FFN down descriptor handoff state and summary output.
 
 ## Last Verification
 
-- Layer-1 FFN SwiGLU output-slice verification passed: `make`; `make check`;
-  `./mistral-asm --help`; real target smoke printed the unchanged layer-1 FFN
-  norm/gate/up diagnostics followed by `token0_layer1_ffn_swiglu: 1` and four
-  SwiGLU output words `0xbd436233`, `0xbe8aab8b`, `0x3d3f2f78`, and
-  `0xbe38ceee`; a temporary 24-byte empty valid GGUF kept layer-1 FFN
-  norm/gate/up/SwiGLU statuses at 0 and emitted no layer-1 FFN output word
-  labels; the existing Python oracle scalar SwiGLU routine reproduced the four
-  new words from the published gate/up words; `git diff --check`; runtime
-  source purity scan; static-link, undefined-symbol, exported-symbol,
-  tracked-artifact, and tracked large-file checks.
+- Layer-1 FFN down descriptor lookup verification passed: `make`;
+  `make check`; `./mistral-asm --help`; real target smoke printed
+  `layer1_ffn_down_tensor_found: 1`, dimensions `9216x3072`, type `8`, offset
+  `584957952`, and the unchanged layer-1 FFN norm/gate/up/SwiGLU diagnostics;
+  a temporary 24-byte empty valid GGUF kept the gate/up/down descriptor slots
+  zeroed and layer-1 FFN norm/gate/up/SwiGLU statuses at 0; oracle py-compile;
+  `git diff --check`; runtime source purity scan;
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks.
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.1.ffn_down.weight`, with
-focused layer-1 FFN down descriptor handoff state and summary output.
+Add status-only layer-1 FFN down matvec coverage in
+`src/infer/token0_layer1_ffn.s`, consuming `token0_layer1_ffn_swiglu_output` and
+the `blk.1.ffn_down.weight` descriptor only after descriptor, type, shape, and
+bounds checks, then storing a private down output/status and printing exactly
+one status line.

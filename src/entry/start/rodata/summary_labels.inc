@@ -298,3 +298,27 @@ layer1_ffn_up_tensor_ggml_type_text_end:
 layer1_ffn_up_tensor_offset_text:
 	.ascii "layer1_ffn_up_tensor_offset: "
 layer1_ffn_up_tensor_offset_text_end:
+
+layer1_ffn_down_tensor_found_text:
+	.ascii "layer1_ffn_down_tensor_found: "
+layer1_ffn_down_tensor_found_text_end:
+
+layer1_ffn_down_tensor_n_dimensions_text:
+	.ascii "layer1_ffn_down_tensor_n_dimensions: "
+layer1_ffn_down_tensor_n_dimensions_text_end:
+
+layer1_ffn_down_tensor_dim0_text:
+	.ascii "layer1_ffn_down_tensor_dim0: "
+layer1_ffn_down_tensor_dim0_text_end:
+
+layer1_ffn_down_tensor_dim1_text:
+	.ascii "layer1_ffn_down_tensor_dim1: "
+layer1_ffn_down_tensor_dim1_text_end:
+
+layer1_ffn_down_tensor_ggml_type_text:
+	.ascii "layer1_ffn_down_tensor_ggml_type: "
+layer1_ffn_down_tensor_ggml_type_text_end:
+
+layer1_ffn_down_tensor_offset_text:
+	.ascii "layer1_ffn_down_tensor_offset: "
+layer1_ffn_down_tensor_offset_text_end:

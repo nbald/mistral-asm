@@ -1651,3 +1651,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   labels. Build, no-libc harnesses, help, oracle py-compile, whitespace,
   runtime purity, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T10:12:18+02:00
+
+- Added descriptor-only coverage for the layer-1 FFN down tensor. The new
+  descriptor is intentionally only a handoff and summary proof in this step; no
+  `blk.1.ffn_down.weight` payload bytes are read before the next guarded matvec
+  step.
+- Verification evidence: the real target reported the layer-1 down descriptor
+  as found with dimensions `9216x3072`, type `8`, and offset `584957952`, while
+  the existing layer-1 FFN norm/gate/up/SwiGLU diagnostics remained unchanged.
+  A temporary empty valid GGUF kept gate/up/down descriptor slots zeroed and all
+  layer-1 FFN statuses at `0`. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime purity, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
