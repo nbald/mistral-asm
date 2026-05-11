@@ -2802,3 +2802,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, symbol, line-count, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T20:22:03+02:00
+
+- Added the guarded layer-3 FFN SwiGLU activation as a status-only smoke. The
+  runtime requires both retained gate/up projection statuses, combines only
+  private 9216-f32 buffers through the shared scalar SwiGLU helper, and emits
+  no activation exact-hex labels yet.
+- Verification evidence: the real target reported
+  `token0_layer3_ffn_swiglu: 1`; the focused `^token0_layer3_ffn_swiglu`
+  output filter showed only that status line. Existing layer-3 FFN gate and up
+  runtime/oracle diffs stayed empty, and the 24-byte header-only GGUF kept the
+  new status at `0` with no guarded layer-3 FFN activation output labels.
+  Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, static-link, undefined-symbol, symbol,
+  line-count, tracked-artifact, and tracked large-file scans passed.
