@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 over the completed token-0 layer-1 FFN branch before
-adding layer-2 or broader feature work.
+Add descriptor-only lookup coverage for `blk.2.attn_norm.weight` as the first
+layer-2 setup step, without reading tensor payload bytes.
 
 ## Completed Work
 
@@ -131,11 +131,14 @@ adding layer-2 or broader feature work.
   the durable oracle script/note and runtime slice comparison evidence, is
   recorded in `work/reviews/2026-05-11-layer1-ffn-branch-review-1.md`. It found
   no blocking runtime, oracle, status-gating, or branch-ordering issue.
+- Review gate pass 2 over the completed token-0 layer-1 FFN branch is recorded
+  in `work/reviews/2026-05-11-layer1-ffn-branch-review-2.md`. It found no
+  blocking runtime/oracle ordering, guard, or maintainability issue. The required
+  two-pass review gate is complete.
 
 ## Known Blockers
 
-- No current blocker to completing review gate pass 2 for the completed layer-1
-  FFN branch.
+- No current blocker to starting layer-2 descriptor-only setup work.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -164,6 +167,7 @@ adding layer-2 or broader feature work.
 - `work/oracle/token0_layer1_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer1-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer1-ffn-branch-review-1.md`
+- `work/reviews/2026-05-11-layer1-ffn-branch-review-2.md`
 - `work/reviews/2026-05-11-layer1-ffn-down-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-1.md`
 - `work/reviews/2026-05-11-repository-wide-review-2.md`
@@ -173,7 +177,7 @@ adding layer-2 or broader feature work.
 
 ## Last Verification
 
-- Review pass 1 verification passed: `make`; `make check`;
+- Review pass 2 verification passed: `make`; `make check`;
   `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
   runtime smoke for the layer-1 FFN branch; exact scalar oracle run for
   `work/oracle/token0_layer1_post_ffn_residual_oracle.py` against the local
@@ -187,6 +191,6 @@ adding layer-2 or broader feature work.
 
 ## Next Exact Step
 
-Run review gate pass 2 over the completed token-0 layer-1 FFN branch, including
-the runtime/oracle ordering and maintainability surface, then update state with
-any findings before continuing toward layer-2 work.
+Add descriptor-only reusable lookup coverage for `blk.2.attn_norm.weight`,
+store it in a separate layer-2 scratch slot, and print found/dimension/type/offset
+summary lines without reading payload bytes.

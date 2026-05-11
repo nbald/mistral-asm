@@ -1767,3 +1767,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   reviewed branch statuses at `0` with no guarded layer-1 FFN output labels.
   Final whitespace, runtime source extension, static-link, undefined-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T11:41:06+02:00
+
+- Review pass 2 over the completed layer-1 FFN branch found no blocking issue in
+  the branch ordering, status gates, mmap payload bounds, oracle coverage, or the
+  current module-size surface. The two-pass review gate is complete.
+- Verification evidence for the review: build, harnesses, help, oracle
+  py-compile, real target smoke, exact scalar branch oracle, and the empty-GGUF
+  negative guard check passed. The runtime's layer-1 FFN gate/up/SwiGLU/down and
+  post-FFN residual public words matched the oracle exactly.
