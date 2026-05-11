@@ -3379,3 +3379,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   cleanly against the SwiGLU oracle, and the 24-byte header-only GGUF kept the
   new down descriptor fields plus dependent layer-4 statuses at `0` with no
   guarded layer-4 exact-hex labels.
+
+## 2026-05-12T01:13:30+02:00
+
+- Added status-only layer-4 FFN down matvec coverage in a focused module. The
+  smoke requires the retained layer-4 FFN SwiGLU activation, proves the
+  `blk.4.ffn_down.weight` Q8_0 `[9216 x 3072]` payload span, writes a private
+  3072-f32 output buffer, and publishes only `token0_layer4_ffn_down_matvec`.
+- Verification evidence: the real target reported
+  `token0_layer4_ffn_down_matvec: 1`, all existing oracle-backed public
+  exact-hex labels through layer-4 FFN SwiGLU still matched, and no down
+  exact-hex labels were emitted. The 24-byte zero-count GGUF kept the layer-4
+  FFN down status at `0` and emitted no guarded down exact-hex labels.
