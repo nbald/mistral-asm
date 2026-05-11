@@ -2695,3 +2695,22 @@ redundant entries. Do not treat it as the primary continuation source; use
   labels; static-link, undefined-symbol, source-extension, include-dependency,
   line-count, exported-symbol, tracked-artifact, and tracked large-file scans
   passed.
+
+## 2026-05-11T19:30:29+02:00
+
+- Added a focused layer-3 post-attention residual smoke. The runtime status is
+  gated by the layer-2 post-FFN residual, the layer-3 attention output matvec,
+  and the retained 3072-wide layer-3 output descriptor; the residual add reads
+  only static handoff buffers and does not touch mapped tensor payload bytes.
+- Verification evidence: the real target reported
+  `token0_layer3_post_attn_residual: 1`; the focused runtime/oracle diff was
+  empty for the layer-2 post-FFN residual, layer-3 attention output, and new
+  layer-3 post-attention residual public labels. The new residual words are
+  `0x440c1f18`, `0xc20054b6`, `0xc2a825d4`, and `0xc15e3502`.
+- Guard-path evidence: after two malformed fixture attempts created 20-byte
+  and 28-byte files, the corrected 24-byte header-only GGUF kept the layer-3
+  output descriptor, output matvec status, and post-attention residual status
+  at `0`, with no guarded layer-3 output or residual exact-hex labels.
+- Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, static-link, undefined-symbol, symbol,
+  line-count, tracked-artifact, and tracked large-file scans passed.

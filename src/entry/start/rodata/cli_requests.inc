@@ -31,7 +31,7 @@ help_text:
 	.ascii "and key descriptor lookup/matvec output slice plus "
 	.ascii "value descriptor lookup/matvec output slice plus "
 	.ascii "output descriptor lookup/context output slice and "
-	.ascii "output matvec slice.\n"
+	.ascii "output matvec slice and post-attention residual slice.\n"
 help_text_end:
 
 lookup_tensor_request:
