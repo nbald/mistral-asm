@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded layer-2 FFN-down output slice from the focused down
-module and add durable external oracle coverage for the exact four f32 words.
+Add status-only token-0 layer-2 post-FFN residual smoke in the focused
+layer-2 FFN-down module, summing the retained layer-2 post-attention residual
+and FFN-down output without exposing a residual output slice yet.
 
 ## Completed Work
 
@@ -17,9 +18,9 @@ module and add durable external oracle coverage for the exact four f32 words.
   metadata summaries, tensor directory walking, retained descriptor lookups, and
   bounded tensor payload reads.
 - Token-0 smoke coverage now reaches layer-2 post-attention residual, layer-2
-  FFN RMSNorm activation, layer-2 FFN gate/up matvec output slices, the first
-  guarded layer-2 FFN SwiGLU activation output slice, and status-only layer-2
-  FFN-down matvec coverage.
+  FFN RMSNorm activation, layer-2 FFN gate/up matvec output slices, guarded
+  layer-2 FFN SwiGLU activation output slice, and guarded layer-2 FFN-down
+  matvec output slice.
 - Descriptor-only retained lookup and summary coverage now includes
   `blk.2.ffn_down.weight`. The real target reports found `1`, dimensions `2`,
   dim0 `9216`, dim1 `3072`, type `8`, and relative offset `708648960`.
@@ -31,14 +32,14 @@ module and add durable external oracle coverage for the exact four f32 words.
   and private down output storage. It consumes the layer-2 SwiGLU status/buffer,
   rechecks the retained `blk.2.ffn_down.weight` Q8_0 `[9216 x 3072]`
   descriptor, proves the full mapped payload span, runs `q8_0_matvec_f32`, and
-  publishes only `token0_layer2_ffn_down_matvec`.
+  publishes `token0_layer2_ffn_down_matvec` plus the first four guarded
+  exact-hex output words.
 - The layer-2 FFN SwiGLU status now prints four guarded exact-hex output words:
   `0x450e084e`, `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`.
-- The layer-2 FFN-down output buffer is filled on the real target when the
-  status is `1`, but no layer-2 FFN-down exact-hex output labels or slice
-  printer exist yet.
+- The layer-2 FFN-down status now prints four guarded exact-hex output words:
+  `0x440c0a37`, `0xc2008554`, `0xc2a866d8`, and `0xc15e77da`.
 - Durable external oracle coverage exists through the layer-2 FFN RMSNorm,
-  gate, up, and SwiGLU slices in `work/oracle/`.
+  gate, up, SwiGLU, and down slices in `work/oracle/`.
 - Repository-wide, layer-1 FFN branch, and layer-2 attention branch review gates
   are complete with no blocking findings.
 - Operator guidance to keep new feature work out of catch-all entry files is
@@ -47,7 +48,7 @@ module and add durable external oracle coverage for the exact four f32 words.
 
 ## Known Blockers
 
-- No current blocker to publishing the focused layer-2 FFN-down output slice.
+- No current blocker to adding the layer-2 post-FFN residual status smoke.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines after publishing the SwiGLU
@@ -60,6 +61,7 @@ module and add durable external oracle coverage for the exact four f32 words.
 
 - `src/infer/token0_layer2_ffn.s`
 - `src/infer/token0_layer2_ffn_down.s`
+- `src/infer/token0_layer2_post_attn_residual.s`
 - `src/entry/start/constants.inc`
 - `src/entry/start/main/bootstrap.inc`
 - `src/entry/start/main/summary_header.inc`
@@ -79,23 +81,30 @@ module and add durable external oracle coverage for the exact four f32 words.
 - `work/oracle/token0-layer2-ffn-up.md`
 - `work/oracle/token0_layer2_ffn_swiglu_oracle.py`
 - `work/oracle/token0-layer2-ffn-swiglu.md`
+- `work/oracle/token0_layer2_ffn_down_oracle.py`
+- `work/oracle/token0-layer2-ffn-down.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-2 FFN-down status-only verification passed:
+Layer-2 FFN-down output-slice verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
+- `python3 work/oracle/token0_layer2_ffn_down_oracle.py
+  models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`
+  printed down words `0x440c0a37`, `0xc2008554`, `0xc2a866d8`, and
+  `0xc15e77da`
 - real target runtime smoke printed `layer2_ffn_down_tensor_found: 1`,
   `layer2_ffn_down_tensor_n_dimensions: 2`, `layer2_ffn_down_tensor_dim0: 9216`,
   `layer2_ffn_down_tensor_dim1: 3072`, `layer2_ffn_down_tensor_ggml_type: 8`,
   `layer2_ffn_down_tensor_offset: 708648960`, and
-  `token0_layer2_ffn_down_matvec: 1`, while preserving the reviewed layer-2 FFN
-  norm/gate/up/SwiGLU status and exact-hex output slices
+  `token0_layer2_ffn_down_matvec: 1`, followed by exact-hex down words
+  `0x440c0a37`, `0xc2008554`, `0xc2a866d8`, and `0xc15e77da`; it preserved the
+  reviewed layer-2 FFN norm/gate/up/SwiGLU status and exact-hex output slices
 - temporary 24-byte empty valid GGUF kept `layer2_ffn_norm_tensor_*`,
   `layer2_ffn_gate_tensor_*`, `layer2_ffn_up_tensor_*`,
   `layer2_ffn_down_tensor_*`,
@@ -110,11 +119,12 @@ Layer-2 FFN-down status-only verification passed:
 - undefined-symbol check
 - exported-symbol inspection for `run_token0_layer2_ffn_down_matvec_status`,
   `token0_layer2_ffn_down_matvec_status`, and the layer-2 SwiGLU handoff buffer
-- targeted scan confirmed no layer-2 FFN-down output slice labels or printer
-  exist yet
+- local symbol scan confirmed the layer-2 FFN-down output slice labels, private
+  output storage, and printer are present
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish the first guarded layer-2 FFN-down output slice from the focused down
-module and add durable external oracle coverage for the exact four f32 words.
+Add status-only token-0 layer-2 post-FFN residual smoke in the focused
+layer-2 FFN-down module, summing the retained layer-2 post-attention residual
+and FFN-down output without exposing a residual output slice yet.

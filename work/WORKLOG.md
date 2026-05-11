@@ -2282,3 +2282,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, include dependency,
   static-link, undefined-symbol, exported-symbol, no-output-slice,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T16:28:01+02:00
+
+- Published the first guarded layer-2 FFN-down matvec output slice from the
+  focused down module. The four exact-hex labels are emitted only after
+  `token0_layer2_ffn_down_matvec: 1`; the 24-byte empty valid GGUF guard path
+  keeps layer-2 FFN norm/gate/up/SwiGLU/down statuses at `0` and emits no
+  guarded layer-2 FFN output words.
+- Verification evidence: the real target printed down words `0x440c0a37`,
+  `0xc2008554`, `0xc2a866d8`, and `0xc15e77da`. The focused external oracle
+  recomputed the full layer-2 FFN RMSNorm, gate/up projections, full 9216-word
+  SwiGLU activation, and first four rows of `blk.2.ffn_down.weight`, matching
+  the runtime slice exactly. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.
