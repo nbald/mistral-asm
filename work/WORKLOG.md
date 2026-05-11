@@ -3199,3 +3199,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   output and post-attention residual statuses at `0` and emitted no guarded
   layer-4 exact-hex labels. Because the next feature step starts layer-4 FFN
   scope, continuation should run review gate pass 1 first.
+
+## 2026-05-11T23:46:53+02:00
+
+- Review gate pass 1 over the token-0 layer-4 post-attention residual handoff
+  found no blocking issues. The handoff remains limited to process-owned static
+  buffers: layer-3 post-FFN residual plus retained layer-4 attention output,
+  gated by their statuses and the repeated 3072-wide output descriptor check.
+- Verification evidence: rebuild/check, help, oracle compilation, static link
+  checks, source/dependency/artifact scans, and line-count checks passed. The
+  real-target runtime/oracle diff was empty for the public layer-3 post-FFN
+  residual, layer-4 attention output, and layer-4 post-attention residual
+  slices, while a 24-byte header-only GGUF kept the reviewed layer-4 guards at
+  `0` and emitted no guarded layer-4 exact-hex labels.

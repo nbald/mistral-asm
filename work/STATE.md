@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 over the token-0 layer-4 post-attention residual handoff
+Run review gate pass 2 over the token-0 layer-4 post-attention residual handoff
 before starting layer-4 FFN scope.
 
 ## Completed Work
@@ -130,11 +130,17 @@ before starting layer-4 FFN scope.
   the first four layer-3 post-FFN residual words with scalar f32 rounding.
   `work/oracle/token0-layer4-post-attn-residual.md` records the oracle command
   and exact comparison evidence.
+- Review gate pass 1 for the token-0 layer-4 post-attention residual handoff
+  completed cleanly under
+  `work/reviews/2026-05-11-layer4-post-attn-residual-review-1.md`. It found no
+  blocking issues in status/descriptor guards, exact-slice oracle quality,
+  header-only silence, help text accuracy, or readiness for focused layer-4 FFN
+  work after the second review pass.
 
 ## Known Blockers
 
-- No functional blocker is known. Because the next feature step starts layer-4
-  FFN scope after the layer-4 attention/residual handoff, run review gate pass 1
+- No functional blocker is known. Because the review gate requires two
+  consecutive passes before layer-4 FFN scope starts, run review gate pass 2
   first.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
@@ -179,6 +185,7 @@ before starting layer-4 FFN scope.
 - `work/oracle/token0_layer4_attn_output_oracle.py`
 - `work/oracle/token0-layer4-post-attn-residual.md`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
+- `work/reviews/2026-05-11-layer4-post-attn-residual-review-1.md`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`
 - `work/STATE.md`
@@ -186,15 +193,17 @@ before starting layer-4 FFN scope.
 
 ## Last Verification
 
-Layer-4 post-attention residual slice verification passed:
+Layer-4 post-attention residual review pass 1 verification passed:
 
 - `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target focused runtime/oracle diff was empty for the public layer-3
+- real-target focused runtime/oracle diff was empty for public layer-3
   post-FFN residual, layer-4 attention output, and layer-4 post-attention
-  residual slices; the new residual words are `0x440c288f`, `0xc1fe4c53`,
-  `0xc2a99143`, and `0xc15f94a3`
-- 24-byte header-only GGUF reported `token0_layer4_attn_output_matvec: 0` and
+  residual slices; the reviewed layer-4 output and residual statuses were both
+  `1`
+- 24-byte header-only GGUF reported `layer4_attn_output_tensor_found: 0`,
+  `layer4_attn_output_tensor_dim1: 0`,
+  `token0_layer4_attn_output_matvec: 0`, and
   `token0_layer4_post_attn_residual: 0`, and emitted no guarded
   `token0_layer4_*_f32_hex` labels
 - `git diff --check`
@@ -211,6 +220,7 @@ Layer-4 post-attention residual slice verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 1 over the token-0 layer-4 post-attention residual handoff,
-including descriptor/status guards, exact-slice oracle quality, header-only
-silence, help text accuracy, and readiness to begin focused layer-4 FFN work.
+Run review gate pass 2 over the token-0 layer-4 post-attention residual handoff,
+independently rechecking descriptor/status guards, exact-slice oracle quality,
+header-only silence, help text accuracy, and readiness to begin focused
+layer-4 FFN work.
