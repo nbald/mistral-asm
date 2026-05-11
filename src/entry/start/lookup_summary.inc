@@ -896,3 +896,5 @@ print_layer1_ffn_down_lookup_summary:
 	ret
 
 .size print_layer1_ffn_down_lookup_summary, . - print_layer1_ffn_down_lookup_summary
+
+.include "src/entry/start/lookup_summary/layer2.inc"

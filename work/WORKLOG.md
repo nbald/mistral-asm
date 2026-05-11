@@ -1777,3 +1777,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, real target smoke, exact scalar branch oracle, and the empty-GGUF
   negative guard check passed. The runtime's layer-1 FFN gate/up/SwiGLU/down and
   post-FFN residual public words matched the oracle exactly.
+
+## 2026-05-11T11:49:40+02:00
+
+- Added descriptor-only layer-2 attention RMSNorm setup through the reusable
+  tensor-info lookup helper. The new `blk.2.attn_norm.weight` slot is separate
+  from layer-1 handoff state, prints only directory fields, and does not touch
+  tensor payload bytes.
+- Verification evidence: the real target reported found `1`, one dimension
+  `3072`, f32 type `0`, and relative offset `678555648`; a temporary empty
+  valid GGUF kept the new slot zeroed. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.

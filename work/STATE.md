@@ -6,8 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only lookup coverage for `blk.2.attn_norm.weight` as the first
-layer-2 setup step, without reading tensor payload bytes.
+Add status-only token-0 layer-2 attention RMSNorm coverage in a focused
+inference module, consuming the retained layer-1 post-FFN residual and the
+`blk.2.attn_norm.weight` descriptor only after descriptor/type/shape/bounds
+checks.
 
 ## Completed Work
 
@@ -135,10 +137,16 @@ layer-2 setup step, without reading tensor payload bytes.
   in `work/reviews/2026-05-11-layer1-ffn-branch-review-2.md`. It found no
   blocking runtime/oracle ordering, guard, or maintainability issue. The required
   two-pass review gate is complete.
+- Descriptor-only reusable lookup coverage now includes
+  `blk.2.attn_norm.weight` as the first layer-2 setup step. The descriptor is
+  stored in a separate layer-2 scratch slot and printed as
+  found/dimension/type/offset summary lines without reading payload bytes; the
+  new print routine lives in a focused lookup-summary include to avoid growing
+  the existing summary file toward the 1000-line threshold.
 
 ## Known Blockers
 
-- No current blocker to starting layer-2 descriptor-only setup work.
+- No current blocker to starting status-only layer-2 attention RMSNorm work.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -149,6 +157,7 @@ layer-2 setup step, without reading tensor payload bytes.
 - `src/entry/_start.s`
 - `src/entry/start/*.inc`
 - `src/entry/start/main/*.inc`
+- `src/entry/start/lookup_summary/*.inc`
 - `src/entry/start/rodata/*.inc`
 - `src/entry/start/output_slices/*.inc`
 - `src/entry/start/token0_smokes/*.inc`
@@ -177,20 +186,20 @@ layer-2 setup step, without reading tensor payload bytes.
 
 ## Last Verification
 
-- Review pass 2 verification passed: `make`; `make check`;
+- Layer-2 descriptor setup verification passed: `make`; `make check`;
   `./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
-  runtime smoke for the layer-1 FFN branch; exact scalar oracle run for
-  `work/oracle/token0_layer1_post_ffn_residual_oracle.py` against the local
-  target GGUF; runtime layer-1 FFN gate/up/SwiGLU/down and post-FFN residual
-  words matched the oracle exactly; a temporary 24-byte empty valid GGUF kept
-  the reviewed branch statuses at `0` and emitted no guarded layer-1 FFN output
-  word labels; `git diff --check`; runtime source extension scan allowing `.s`
-  drivers and tracked `.inc` fragments; static-link/no-dynamic-section check;
-  undefined-symbol check; exported-symbol inspection; tracked-artifact and
-  tracked large-file checks.
+  runtime smoke reporting `layer2_attn_norm_tensor_found: 1`,
+  `n_dimensions: 1`, `dim0: 3072`, `ggml_type: 0`, and
+  `offset: 678555648`; temporary 24-byte empty valid GGUF reporting zeroed
+  layer-2 attention norm descriptor fields and no guarded post-FFN residual
+  output words; `git diff --check`; runtime source extension scan allowing
+  `.s` drivers and tracked `.inc` fragments; static-link/no-dynamic-section
+  check; undefined-symbol check; exported-symbol inspection; tracked-artifact
+  and tracked large-file checks.
 
 ## Next Exact Step
 
-Add descriptor-only reusable lookup coverage for `blk.2.attn_norm.weight`,
-store it in a separate layer-2 scratch slot, and print found/dimension/type/offset
-summary lines without reading payload bytes.
+Add status-only token-0 layer-2 attention RMSNorm coverage in a focused
+inference module, consuming the retained layer-1 post-FFN residual and the
+`blk.2.attn_norm.weight` descriptor only after descriptor/type/shape/bounds
+checks.

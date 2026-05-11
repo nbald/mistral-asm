@@ -20,7 +20,8 @@ help_text:
 	.ascii "and layer-1 attention RMSNorm/query/key/value/context/output "
 	.ascii "smoke plus layer-1 post-attention residual smoke and "
 	.ascii "FFN RMSNorm, gate/up matvec, SwiGLU/down output slices, "
-	.ascii "and post-FFN residual output slice.\n"
+	.ascii "post-FFN residual output slice, and layer-2 attention "
+	.ascii "RMSNorm descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -62,3 +63,7 @@ layer1_ffn_up_tensor_request_end:
 layer1_ffn_down_tensor_request:
 	.ascii "blk.1.ffn_down.weight"
 layer1_ffn_down_tensor_request_end:
+
+layer2_attn_norm_tensor_request:
+	.ascii "blk.2.attn_norm.weight"
+layer2_attn_norm_tensor_request_end:

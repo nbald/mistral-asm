@@ -322,3 +322,23 @@ layer1_ffn_down_tensor_ggml_type_text_end:
 layer1_ffn_down_tensor_offset_text:
 	.ascii "layer1_ffn_down_tensor_offset: "
 layer1_ffn_down_tensor_offset_text_end:
+
+layer2_attn_norm_tensor_found_text:
+	.ascii "layer2_attn_norm_tensor_found: "
+layer2_attn_norm_tensor_found_text_end:
+
+layer2_attn_norm_tensor_n_dimensions_text:
+	.ascii "layer2_attn_norm_tensor_n_dimensions: "
+layer2_attn_norm_tensor_n_dimensions_text_end:
+
+layer2_attn_norm_tensor_dim0_text:
+	.ascii "layer2_attn_norm_tensor_dim0: "
+layer2_attn_norm_tensor_dim0_text_end:
+
+layer2_attn_norm_tensor_ggml_type_text:
+	.ascii "layer2_attn_norm_tensor_ggml_type: "
+layer2_attn_norm_tensor_ggml_type_text_end:
+
+layer2_attn_norm_tensor_offset_text:
+	.ascii "layer2_attn_norm_tensor_offset: "
+layer2_attn_norm_tensor_offset_text_end:

@@ -34,6 +34,9 @@ ENTRY_START_INCLUDES := \
 	src/entry/start/token0_smokes.inc \
 	src/entry/start/gnu_stack.inc
 
+ENTRY_LOOKUP_SUMMARY_INCLUDES := \
+	src/entry/start/lookup_summary/layer2.inc
+
 ENTRY_RODATA_INCLUDES := \
 	src/entry/start/rodata/cli_requests.inc \
 	src/entry/start/rodata/summary_labels.inc \
@@ -63,6 +66,7 @@ ENTRY_TOKEN0_SMOKE_INCLUDES := \
 
 ENTRY_START_ALL_INCLUDES := \
 	$(ENTRY_START_INCLUDES) \
+	$(ENTRY_LOOKUP_SUMMARY_INCLUDES) \
 	$(ENTRY_RODATA_INCLUDES) \
 	$(ENTRY_MAIN_INCLUDES) \
 	$(ENTRY_OUTPUT_SLICE_INCLUDES) \

@@ -31,10 +31,11 @@
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
 # `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, `blk.1.ffn_up.weight`, and
-# `blk.1.ffn_down.weight` into separate process-owned scratch slots before the
-# token-0 math path. The layer-1 FFN descriptors and retained activation outputs
-# are consumed only by the guarded layer-1 FFN smokes after their prerequisite
-# activations exist.
+# `blk.1.ffn_down.weight`, plus descriptor-only setup for
+# `blk.2.attn_norm.weight`, into separate process-owned scratch slots before
+# the token-0 math path. The layer-1 FFN descriptors and retained activation
+# outputs are consumed only by the guarded layer-1 FFN smokes after their
+# prerequisite activations exist.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
@@ -359,6 +360,27 @@ _start:
 	lea r8, [rip + layer1_ffn_down_tensor_request]
 	mov r9, layer1_ffn_down_tensor_request_end - layer1_ffn_down_tensor_request
 	lea r10, [rip + layer1_ffn_down_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
+	jz .Llookup_layer2_attn_norm_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer2_attn_norm_tensor:
+	# Start layer-2 setup with a descriptor-only RMSNorm lookup. The payload
+	# stays unread until a future guarded layer-2 attention RMSNorm smoke has a
+	# retained layer-1 post-FFN residual activation to consume.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer2_attn_norm_tensor_request]
+	mov r9, layer2_attn_norm_tensor_request_end - layer2_attn_norm_tensor_request
+	lea r10, [rip + layer2_attn_norm_tensor_slot]
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
