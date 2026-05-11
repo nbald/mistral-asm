@@ -1679,3 +1679,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   FFN norm/gate/up/SwiGLU/down statuses at `0`. Build, no-libc harnesses, help,
   oracle py-compile, whitespace, runtime purity, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T10:30:14+02:00
+
+- Added the first public layer-1 FFN down projection slice behind the existing
+  down matvec status gate. This is a diagnostic publish-only step: the private
+  down output buffer was already produced by the bounded matvec smoke, and the
+  new printer only reads its first four words after status `1`.
+- Verification evidence: the real target printed down output words
+  `0x3babc025`, `0x3db2eb07`, `0xbeba3568`, and `0x3df45039` immediately after
+  `token0_layer1_ffn_down_matvec: 1`. A temporary empty valid GGUF kept the
+  layer-1 FFN statuses at `0` and emitted no layer-1 down output labels. Build,
+  no-libc harnesses, help, oracle py-compile, whitespace, runtime purity,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.
