@@ -19,7 +19,7 @@ help_text:
 	.ascii "reusable descriptor lookup smoke, "
 	.ascii "and layer-1 attention RMSNorm/query/key/value/context/output "
 	.ascii "smoke plus layer-1 post-attention residual smoke and "
-	.ascii "FFN RMSNorm, gate/up matvec, and SwiGLU status.\n"
+	.ascii "FFN RMSNorm, gate/up matvec, and SwiGLU output slice.\n"
 help_text_end:
 
 lookup_tensor_request:

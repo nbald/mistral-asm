@@ -1635,3 +1635,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0` and emitted no layer-1 FFN output word labels. Build, no-libc harnesses,
   help, whitespace, runtime purity, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T10:06:29+02:00
+
+- Added the first public layer-1 FFN SwiGLU activation slice behind the existing
+  SwiGLU status gate. This keeps the focused inference module responsible for
+  the private activation buffer and mirrors the earlier gate/up slice behavior:
+  non-target inputs print only zero statuses, while the real target emits four
+  SwiGLU words immediately after the status line.
+- Verification evidence: the real target printed SwiGLU output words
+  `0xbd436233`, `0xbe8aab8b`, `0x3d3f2f78`, and `0xbe38ceee`; the existing
+  Python oracle scalar SwiGLU routine reproduced those values from the
+  published gate/up words. A temporary empty valid GGUF kept layer-1 FFN
+  norm/gate/up/SwiGLU statuses at `0` and emitted no layer-1 FFN output word
+  labels. Build, no-libc harnesses, help, oracle py-compile, whitespace,
+  runtime purity, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
