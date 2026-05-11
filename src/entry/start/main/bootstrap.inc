@@ -45,7 +45,7 @@
 # `blk.3.attn_k.weight`, `blk.3.attn_v.weight`, and
 # `blk.3.attn_output.weight`, plus `blk.3.ffn_norm.weight`,
 # `blk.3.ffn_gate.weight`, `blk.3.ffn_up.weight`, and
-# `blk.3.ffn_down.weight`, and descriptor-only layer-4 attention RMSNorm setup
+# `blk.3.ffn_down.weight`, and layer-4 attention RMSNorm setup
 # for `blk.4.attn_norm.weight`, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention/FFN descriptors and retained
@@ -65,7 +65,8 @@
 # projection, key projection, value projection, output projection, FFN RMSNorm
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
 # attention/FFN, layer-3 attention/FFN, and layer-4 attention RMSNorm setup
-# descriptors. The layer-2 FFN
+# descriptors. The layer-4 attention RMSNorm descriptor is consumed by a
+# guarded status smoke after the layer-3 post-FFN residual exists. The layer-2 FFN
 # RMSNorm smoke consumes the retained layer-2 post-attention residual and
 # publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
 # descriptors and layer-3 FFN gate/up/down descriptors feed shape-gated Q8_0

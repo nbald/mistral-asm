@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded layer-4 attention RMSNorm smoke over the retained
-`blk.4.attn_norm.weight` descriptor and the layer-3 post-FFN residual, starting
-with status-only coverage before publishing exact-hex activation words.
+Publish the first guarded exact-hex slice for token-0 layer-4 attention
+RMSNorm, with a focused external oracle for the local target.
 
 ## Completed Work
 
@@ -28,11 +27,18 @@ with status-only coverage before publishing exact-hex activation words.
   completed cleanly; feature work resumed in focused layer-4 entry fragments.
 - Layer-4 attention scope now has descriptor-only retained lookup and summary
   coverage for `blk.4.attn_norm.weight`. On the real target it is f32
-  `[3072]`, relative offset `925937664`. No layer-4 payload bytes are read yet.
+  `[3072]`, relative offset `925937664`.
+- `src/infer/token0_layer4_attn.s` now owns guarded status-only token-0
+  layer-4 attention RMSNorm coverage. It requires the retained layer-3
+  post-FFN residual, captured RMSNorm epsilon, the exact f32 `[3072]`
+  `blk.4.attn_norm.weight` descriptor, and a bounded payload span before
+  filling retained layer-4 attention norm activation storage and printing
+  `token0_layer4_attn_norm`. It deliberately publishes no layer-4 activation
+  exact-hex words yet.
 
 ## Known Blockers
 
-- No functional blocker to the layer-4 RMSNorm status-only smoke.
+- No functional blocker to the layer-4 RMSNorm exact-hex slice/oracle step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -57,12 +63,14 @@ with status-only coverage before publishing exact-hex activation words.
 - `src/entry/start/main/bootstrap/layer3.inc`
 - `src/entry/start/main/bootstrap/layer4.inc`
 - `src/entry/start/main/summary_header.inc`
+- `src/entry/start/main/smoke_orchestration.inc`
+- `src/infer/token0_layer4_attn.s`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 descriptor-only lookup verification passed:
+Layer-4 attention RMSNorm status-only smoke verification passed:
 
 - `make clean all check`
 - post-documentation `make all check`
@@ -72,11 +80,13 @@ Layer-4 descriptor-only lookup verification passed:
   `layer4_attn_norm_tensor_dim0: 3072`,
   `layer4_attn_norm_tensor_ggml_type: 0`, and
   `layer4_attn_norm_tensor_offset: 925937664`
-- real-target run kept layer-3 FFN down and post-FFN residual statuses at `1`
-  and kept the published layer-3 post-FFN residual words unchanged
+- real-target run kept layer-3 FFN down and post-FFN residual statuses at `1`,
+  kept the published layer-3 post-FFN residual words unchanged, and reported
+  `token0_layer4_attn_norm: 1`
+- real-target run emitted no `token0_layer4_attn_norm*_f32_hex` labels
 - 24-byte header-only GGUF kept all layer-4 attention norm descriptor fields at
-  `0`, kept dependent layer-3 terminal statuses at `0`, and emitted no guarded
-  layer-3 post-FFN residual exact-hex labels
+  `0`, kept dependent layer-3 terminal statuses at `0`, and reported
+  `token0_layer4_attn_norm: 0`
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
@@ -89,6 +99,5 @@ Layer-4 descriptor-only lookup verification passed:
 
 ## Next Exact Step
 
-Add a guarded layer-4 attention RMSNorm smoke over the retained
-`blk.4.attn_norm.weight` descriptor and the layer-3 post-FFN residual, starting
-with status-only coverage before publishing exact-hex activation words.
+Publish the first guarded exact-hex slice for token-0 layer-4 attention
+RMSNorm, with a focused external oracle for the local target.

@@ -2937,3 +2937,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   descriptor as f32 `[3072]` at relative offset `925937664`, while the 24-byte
   header-only GGUF kept all layer-4 descriptor fields at `0`. Existing layer-3
   terminal smoke statuses and post-FFN residual words stayed unchanged.
+
+## 2026-05-11T21:32:14+02:00
+
+- Added the guarded status-only token-0 layer-4 attention RMSNorm smoke. The
+  new focused module requires the layer-3 post-FFN residual, captured epsilon,
+  exact f32 `[3072]` `blk.4.attn_norm.weight` descriptor, and a bounded payload
+  span before filling retained layer-4 activation storage.
+- Verification evidence: the real target reported `token0_layer4_attn_norm: 1`
+  while preserving the layer-3 post-FFN residual words
+  `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`; the 24-byte
+  header-only GGUF reported `token0_layer4_attn_norm: 0`. No layer-4 exact-hex
+  activation labels are published yet.
