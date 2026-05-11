@@ -171,3 +171,4 @@
 	call print_layer3_attn_norm_lookup_summary
 	call print_layer3_attn_q_lookup_summary
 	call print_layer3_attn_k_lookup_summary
+	call print_layer3_attn_v_lookup_summary
