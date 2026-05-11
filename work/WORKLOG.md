@@ -2314,3 +2314,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   include dependency, static-link, undefined-symbol, exported-symbol,
   no-output-slice, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T16:44:25+02:00
+
+- Published the first guarded layer-2 post-FFN residual slice from the focused
+  FFN-down module. The labels are emitted only after the residual status is
+  `1`, and the help text now describes this as an output slice rather than a
+  status-only smoke.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-2 post-attention residual, FFN norm/gate/up/SwiGLU/down, and post-FFN
+  residual public labels. The new residual words are `0x440c1d48`,
+  `0xc200a8d7`, `0xc2a8120a`, and `0xc15da38d`; the 24-byte empty valid GGUF
+  kept the layer-2 FFN and post-residual gates at `0` and emitted no guarded
+  layer-2 FFN/post-residual output words.
+- Decision: this completes the layer-2 FFN branch slice sequence, so the next
+  iteration should enter the two-pass review gate before adding new feature
+  scope.
