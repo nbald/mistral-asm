@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-4 FFN up matvec smoke for `blk.4.ffn_up.weight`, without
-publishing an exact-hex output slice yet.
+Publish the first guarded exact-hex output slice for the layer-4 FFN up matvec,
+with a focused external oracle.
 
 ## Completed Work
 
@@ -36,16 +36,18 @@ publishing an exact-hex output slice yet.
   `blk.4.ffn_gate.weight`. The real-target descriptor is Q8_0
   `[3072 x 9216]` at relative offset `986112000`; the first four output words
   are `0x3ee0150a`, `0xbdd9edb2`, `0xbfbf1ff1`, and `0x3f5b31a5`.
-- Layer-4 FFN up descriptor-only setup is complete for `blk.4.ffn_up.weight`.
-  The retained real-target descriptor is Q8_0 `[3072 x 9216]` at relative
-  offset `1016205312`. This step intentionally added no layer-4 FFN up matvec
-  status, output buffer, output slice, or Q8_0 payload read.
+- Layer-4 FFN up descriptor and status-only matvec coverage is complete for
+  `blk.4.ffn_up.weight`. The retained real-target descriptor is Q8_0
+  `[3072 x 9216]` at relative offset `1016205312`. The guarded real-target
+  up matvec reports `token0_layer4_ffn_up_matvec: 1`, fills private
+  module-owned output storage, and intentionally publishes no exact-hex up
+  output labels yet.
 
 ## Known Blockers
 
 - No functional blocker is known.
 - Keep new layer-4 FFN work in focused modules. `src/infer/token0_layer4_ffn.s`
-  is 502 lines and still has room for the next focused layer-4 FFN branch work.
+  is 651 lines and still has room for the next focused layer-4 FFN branch work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
@@ -80,38 +82,40 @@ publishing an exact-hex output slice yet.
 
 ## Last Verification
 
-Layer-4 FFN up descriptor verification passed:
+Layer-4 FFN up status-only matvec verification passed:
 
 - `make clean all check`
 - `./mistral-asm --help`
 - real-target output reported `layer4_ffn_up_tensor_found: 1`,
   `layer4_ffn_up_tensor_n_dimensions: 2`, dim0 `3072`, dim1 `9216`,
-  ggml_type `8`, and relative offset `1016205312`
+  ggml_type `8`, relative offset `1016205312`, and
+  `token0_layer4_ffn_up_matvec: 1`
 - real-target output kept layer-4 post-attention residual, FFN RMSNorm, and FFN
   gate matvec statuses at `1`, with the existing layer-4 public exact-hex slices
-  unchanged
+  unchanged and no `token0_layer4_ffn_up_output*_f32_hex` labels emitted
 - the public layer-3 post-FFN residual, layer-4 attention output, layer-4
   post-attention residual, layer-4 FFN RMSNorm, and layer-4 FFN gate output
   slices diffed cleanly against `work/oracle/token0_layer4_ffn_gate_oracle.py`
 - 24-byte zero-count GGUF reported all `layer4_ffn_norm_tensor_*`,
   `layer4_ffn_gate_tensor_*`, and `layer4_ffn_up_tensor_*` summary fields as
-  `0`, kept layer-4 output/residual/FFN-norm/gate-matvec statuses at `0`, and
-  emitted no guarded layer-4 exact-hex labels
+  `0`, kept layer-4 output/residual/FFN-norm/gate-matvec/up-matvec statuses at
+  `0`, and emitted no guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - exported symbol check for the six `layer4_ffn_up_tensor_*` descriptor fields;
-  no `token0_layer4_ffn_up` status or runner symbol exists yet
+  exported symbol check for `token0_layer4_ffn_up_matvec_status` and
+  `run_token0_layer4_ffn_up_matvec_status`
 - tracked artifact and tracked large-file scans
 - line-count check; `src/entry/start/lookup_summary/layer4.inc` is 795 lines,
-  `src/infer/token0_layer4_ffn.s` is 502 lines,
+  `src/infer/token0_layer4_ffn.s` is 651 lines,
   `src/infer/token0_layer4_attn.s` remains 945 lines, and
   `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
   tensor-directory walker
 
 ## Next Exact Step
 
-Add status-only layer-4 FFN up matvec smoke for `blk.4.ffn_up.weight`, without
-publishing an exact-hex output slice yet.
+Publish the first guarded exact-hex output slice for the layer-4 FFN up matvec,
+with a focused external oracle.

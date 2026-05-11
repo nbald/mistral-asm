@@ -3316,3 +3316,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   the existing oracle exactly. A 24-byte zero-count GGUF keeps the new up
   descriptor fields at `0`, keeps dependent layer-4 statuses at `0`, and emits
   no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T00:40:22+02:00
+
+- Added status-only layer-4 FFN up matvec coverage. The smoke reuses the
+  retained layer-4 FFN RMSNorm activation, proves the `blk.4.ffn_up.weight`
+  Q8_0 `[3072 x 9216]` payload span, and writes a private output buffer for
+  later SwiGLU work without publishing exact-hex up output labels yet.
+- Verification evidence: the real target reports `token0_layer4_ffn_up_matvec:
+  1` and still matches the existing layer-4 FFN gate oracle for all previously
+  public slices. A 24-byte zero-count GGUF reports the new status as `0` and
+  emits no guarded layer-4 exact-hex labels.
