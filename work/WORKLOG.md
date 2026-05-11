@@ -2634,3 +2634,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   extension, include dependency, no-output-payload, static-link,
   undefined-symbol, symbol, line-count, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T18:57:23+02:00
+
+- Added status-only layer-3 attention output-projection coverage. The focused
+  smoke consumes the guarded layer-3 context, rechecks the retained
+  `blk.3.attn_output.weight` shape/type, bounds the complete Q8_0 matrix
+  payload against the live mapping, and fills private output storage without
+  publishing output exact-hex words.
+- Verification evidence: the real target reported
+  `token0_layer3_attn_output_matvec: 1`, while the 24-byte empty valid GGUF
+  kept the context and new output matvec gates at `0`. Existing public layer-2
+  post-FFN residual, layer-3 RMSNorm, value, and context exact-hex slices still
+  matched the focused oracle; no `token0_layer3_attn_output*_f32_hex` labels
+  were emitted. Clean build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, static-link, undefined-symbol,
+  symbol, line-count, tracked-artifact, and tracked large-file scans passed.
