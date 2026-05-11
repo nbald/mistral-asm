@@ -117,6 +117,28 @@
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
+	jz .Llookup_layer3_ffn_gate_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer3_ffn_gate_tensor:
+	# Capture the layer-3 FFN gate descriptor for the focused status-only
+	# projection smoke. Descriptor publication is still separate from the
+	# guarded Q8_0 payload read performed after the FFN RMSNorm activation is
+	# available.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer3_ffn_gate_tensor_request]
+	mov r9, layer3_ffn_gate_tensor_request_end - layer3_ffn_gate_tensor_request
+	lea r10, [rip + layer3_ffn_gate_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
 	jz .Lsummary_print
 	cmp rax, 12
 	je .Llookup_tensor_alignment_error

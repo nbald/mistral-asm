@@ -23,3 +23,7 @@ layer3_attn_output_tensor_request_end:
 layer3_ffn_norm_tensor_request:
 	.ascii "blk.3.ffn_norm.weight"
 layer3_ffn_norm_tensor_request_end:
+
+layer3_ffn_gate_tensor_request:
+	.ascii "blk.3.ffn_gate.weight"
+layer3_ffn_gate_tensor_request_end:

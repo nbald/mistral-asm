@@ -32,3 +32,9 @@
 .global layer3_ffn_norm_tensor_dim0
 .global layer3_ffn_norm_tensor_ggml_type
 .global layer3_ffn_norm_tensor_offset
+.global layer3_ffn_gate_tensor_found
+.global layer3_ffn_gate_tensor_n_dimensions
+.global layer3_ffn_gate_tensor_dim0
+.global layer3_ffn_gate_tensor_dim1
+.global layer3_ffn_gate_tensor_ggml_type
+.global layer3_ffn_gate_tensor_offset

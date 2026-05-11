@@ -2733,3 +2733,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, symbol, line-count, tracked-artifact, and tracked
   large-file scans passed.
+
+## 2026-05-11T19:50:25+02:00
+
+- Added a status-only layer-3 FFN gate projection smoke. The runtime retains
+  `blk.3.ffn_gate.weight`, requires the guarded layer-3 FFN RMSNorm activation,
+  bounds the complete Q8_0 `[3072 x 9216]` payload, fills private gate output
+  storage, and intentionally publishes no gate exact-hex output words yet.
+- Verification evidence: the real target reported the gate descriptor as type
+  `8`, dimensions `3072 x 9216`, relative offset `862420992`, and
+  `token0_layer3_ffn_gate_matvec: 1`. An independent external parser check
+  computed the same descriptor and a `30081024` byte payload span. The focused
+  runtime/oracle diff for the already-published layer-3 attention output,
+  post-attention residual, and FFN RMSNorm labels was empty; the 24-byte
+  header-only GGUF kept the new descriptor and dependent status at `0`.
