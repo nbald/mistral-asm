@@ -2527,3 +2527,23 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification note: the first include-dependency probe inspected
   `source:include` strings because `rg` printed filenames; the corrected probe
   disabled filename prefixes and passed.
+
+## 2026-05-11T18:14:44+02:00
+
+- Added status-only layer-3 attention value projection coverage. The smoke waits
+  for the layer-3 attention RMSNorm activation, rechecks the retained
+  `blk.3.attn_v.weight` shape/type, bounds the complete Q8_0 matrix payload,
+  and fills private value-output storage without publishing value output words.
+- Verification evidence: the real target reported
+  `token0_layer3_attn_v_matvec: 1` while preserving the existing layer-2
+  post-FFN residual, layer-3 RMSNorm, layer-3 query output, and layer-3 key
+  output slices; focused runtime/oracle diffs for the public query and key
+  labels were empty. The 24-byte empty valid GGUF kept the layer-3 descriptors
+  and dependent statuses at `0`, including the new value matvec status, and no
+  layer-3 value output labels were emitted. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  no-layer3-value-output-label, static-link, undefined-symbol, symbol,
+  tracked-artifact, and tracked large-file scans passed.
+- Planning note: the focused layer-3 attention module is now close enough to
+  the 1000-line threshold that the next value-output feature slice should start
+  with a behavior-preserving split or move into focused tracked source.
