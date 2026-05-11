@@ -217,14 +217,15 @@ run_token0_layer3_attn_k_matvec_status:
 .type run_token0_layer3_attn_v_matvec_status, @function
 
 # Contract: run the token-0 layer-3 attention value matvec smoke and publish
-# its status line only.
+# its status line plus the fixed exact-hex oracle slice on success.
 # Inputs: no register inputs. Reads the live mapping handoff slots, the retained
 # blk.3.attn_v.weight descriptor, token0_layer3_attn_norm_status, and the
 # token0_layer3_attn_norm_activation buffer owned by this module.
 # Outputs: writes token0_layer3_attn_v_matvec_status and, on success, fills the
 # private token0_layer3_attn_v_output buffer. Always prints exactly one status
-# label/value/newline sequence to stdout. No value output exact-hex slice is
-# printed in this milestone slice. The return register is unspecified.
+# label/value/newline sequence to stdout and prints the first four exact-hex
+# value output words only when the status is 1. The return register is
+# unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the callee-saved
 # registers it uses internally.
@@ -253,6 +254,7 @@ run_token0_layer3_attn_v_matvec_status:
 	mov rdx, newline_text_end - newline_text
 	call sys_write
 
+	call print_token0_layer3_attn_v_output_slice
 	ret
 
 .size run_token0_layer3_attn_v_matvec_status, . - run_token0_layer3_attn_v_matvec_status

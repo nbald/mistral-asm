@@ -2564,3 +2564,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-3 object rebuild; build, harnesses, help, oracle py-compile,
   whitespace, runtime source extension, static-link, undefined-symbol, symbol,
   tracked-artifact, and tracked large-file scans passed.
+
+## 2026-05-11T18:30:21+02:00
+
+- Published the first guarded layer-3 attention value output slice from the
+  focused layer-3 slice include. The labels are emitted only after
+  `token0_layer3_attn_v_matvec: 1`, using the private value projection buffer
+  already filled by the bounded Q8_0 matvec smoke.
+- Verification evidence: the focused runtime/oracle diff was empty for the
+  layer-2 post-FFN residual, layer-3 attention RMSNorm, and new layer-3 value
+  output public labels. The new value words are `0x3a75acca`, `0x3baaa296`,
+  `0xbbde3580`, and `0x3bcdaf05`; the 24-byte empty valid GGUF kept all
+  layer-3 descriptor fields and dependent statuses at `0` and emitted no
+  guarded layer-3 exact-hex labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, and symbol checks passed.

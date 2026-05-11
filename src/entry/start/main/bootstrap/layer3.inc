@@ -62,8 +62,8 @@
 
 .Llookup_layer3_attn_v_tensor:
 	# Capture the layer-3 value projection descriptor for the next attention
-	# step. This remains descriptor-only: no Q8_0 value matrix bytes are read and
-	# no value-output storage is introduced in this milestone slice.
+	# step. This publishes directory shape metadata only; the Q8_0 value payload
+	# remains untouched until the guarded value matvec smoke succeeds.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]

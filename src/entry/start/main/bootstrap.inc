@@ -47,8 +47,7 @@
 # layer-2 attention/FFN, and layer-3 attention descriptors and retained
 # activation outputs are consumed only by guarded focused smokes after their
 # prerequisite activations exist, including the layer-3 query and key matvec
-# output slice smokes. The retained layer-3 value descriptor is summary-only in
-# this step and has no value payload read or output storage yet.
+# output slice smokes plus the layer-3 value matvec output slice smoke.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata

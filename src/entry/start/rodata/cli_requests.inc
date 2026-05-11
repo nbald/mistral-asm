@@ -29,7 +29,7 @@ help_text:
 	.ascii "and layer-3 attention RMSNorm descriptor lookup/output "
 	.ascii "slice plus query descriptor lookup/matvec output slice "
 	.ascii "and key descriptor lookup/matvec output slice plus "
-	.ascii "value descriptor lookup/matvec smoke.\n"
+	.ascii "value descriptor lookup/matvec output slice.\n"
 help_text_end:
 
 lookup_tensor_request:
