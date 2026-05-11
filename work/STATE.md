@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 over the token-0 layer-4 post-attention residual handoff
-before starting layer-4 FFN scope.
+Start focused layer-4 FFN scope by adding descriptor-only retained lookup and
+summary coverage for `blk.4.ffn_norm.weight`.
 
 ## Completed Work
 
@@ -136,12 +136,17 @@ before starting layer-4 FFN scope.
   blocking issues in status/descriptor guards, exact-slice oracle quality,
   header-only silence, help text accuracy, or readiness for focused layer-4 FFN
   work after the second review pass.
+- Review gate pass 2 for the token-0 layer-4 post-attention residual handoff
+  completed cleanly under
+  `work/reviews/2026-05-11-layer4-post-attn-residual-review-2.md`. The
+  two-pass review gate is complete; feature work can resume with focused
+  layer-4 FFN descriptor lookup.
 
 ## Known Blockers
 
-- No functional blocker is known. Because the review gate requires two
-  consecutive passes before layer-4 FFN scope starts, run review gate pass 2
-  first.
+- No functional blocker is known. The review gate is complete; keep the next
+  feature step focused on layer-4 FFN descriptor lookup/summary coverage before
+  adding FFN activation math.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
   layer-4 residual/FFN work in focused modules.
@@ -185,6 +190,7 @@ before starting layer-4 FFN scope.
 - `work/oracle/token0_layer4_attn_output_oracle.py`
 - `work/oracle/token0-layer4-post-attn-residual.md`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
+- `work/reviews/2026-05-11-layer4-post-attn-residual-review-2.md`
 - `work/reviews/2026-05-11-layer4-post-attn-residual-review-1.md`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`
@@ -193,7 +199,7 @@ before starting layer-4 FFN scope.
 
 ## Last Verification
 
-Layer-4 post-attention residual review pass 1 verification passed:
+Layer-4 post-attention residual review pass 2 verification passed:
 
 - `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`

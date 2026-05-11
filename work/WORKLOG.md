@@ -3212,3 +3212,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   residual, layer-4 attention output, and layer-4 post-attention residual
   slices, while a 24-byte header-only GGUF kept the reviewed layer-4 guards at
   `0` and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T23:51:33+02:00
+
+- Review gate pass 2 over the token-0 layer-4 post-attention residual handoff
+  found no blocking issues. The important handoff invariant remains that slice
+  output is controlled by the stored residual status, so a failed prerequisite
+  or width guard cannot print stale layer-4 post-attention residual words.
+- Verification evidence: rebuild/check, help, oracle compilation, static link
+  checks, source/dependency/artifact scans, and line-count checks passed. The
+  real-target runtime/oracle diff was empty for the public layer-3 post-FFN
+  residual, layer-4 attention output, and layer-4 post-attention residual
+  slices; a valid 24-byte zero-count GGUF kept the reviewed layer-4 guards at
+  `0` and emitted no guarded layer-4 exact-hex labels.
