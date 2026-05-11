@@ -24,7 +24,7 @@ help_text:
 	.ascii "RMSNorm/query/key/value output slices plus output descriptor "
 	.ascii "lookup, context smoke, output matvec slice, and "
 	.ascii "post-attention residual output slice plus FFN RMSNorm "
-	.ascii "output slice and FFN gate matvec smoke.\n"
+	.ascii "and FFN gate matvec output slices.\n"
 help_text_end:
 
 lookup_tensor_request:

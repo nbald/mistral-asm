@@ -2163,3 +2163,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   at `0`. Build, harnesses, help, oracle py-compile, whitespace, runtime source
   extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:31:56+02:00
+
+- Published the first guarded layer-2 FFN gate matvec output slice from the
+  focused FFN module. The four exact-hex labels are emitted only after
+  `token0_layer2_ffn_gate_matvec: 1`; the 24-byte empty valid GGUF guard path
+  still keeps the layer-2 FFN norm and gate statuses at `0` and emits no
+  guarded gate output words.
+- Verification evidence: the real target printed gate words `0x4204511d`,
+  `0xbfebf5bb`, `0x414216d1`, and `0x3f72ec48`. The focused external oracle
+  reused the full layer-2 FFN RMSNorm oracle path, dotted the activation with
+  the first four rows of `blk.2.ffn_gate.weight`, and matched the runtime slice
+  exactly. Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.
