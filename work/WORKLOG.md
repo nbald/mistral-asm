@@ -1865,3 +1865,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   tracked include dependencies, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T12:46:52+02:00
+
+- Added descriptor-only layer-2 attention key setup. The new
+  `blk.2.attn_k.weight` descriptor is retained in its own exported layer-2
+  scratch slot and published only as summary fields, so this step does not read
+  key matrix payload bytes.
+- Verification evidence: the real target reported found `1`, dimensions
+  `3072` and `1024`, Q8_0 type `8`, and relative offset `675213312`; the
+  previously published layer-2 RMSNorm and query output words stayed unchanged.
+  A temporary empty valid GGUF kept the layer-2 norm/query/key descriptor slots
+  zeroed and kept the layer-2 norm/query statuses at `0`. Build, harnesses,
+  help, oracle py-compile, whitespace, runtime source extension, tracked include
+  dependencies, static-link, undefined-symbol, exported-symbol,
+  tracked-artifact, and tracked large-file checks passed.
