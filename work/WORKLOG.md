@@ -2207,3 +2207,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
   checks passed.
+
+## 2026-05-11T15:52:23+02:00
+
+- Published the first guarded layer-2 FFN up matvec output slice from the
+  focused FFN module. The four exact-hex labels are emitted only after
+  `token0_layer2_ffn_up_matvec: 1`; the 24-byte empty valid GGUF guard path
+  still keeps layer-2 FFN norm, gate, and up statuses at `0` and emits no
+  guarded FFN norm/gate/up output words.
+- Verification evidence: the real target printed up words `0x4289660c`,
+  `0x3ef6cc7e`, `0xc1421f69`, and `0x3e00b19d`. The focused external oracle
+  reused the full layer-2 FFN RMSNorm oracle path, dotted the activation with
+  the first four rows of `blk.2.ffn_up.weight`, and matched the runtime slice
+  exactly. Build, harnesses, help, oracle py-compile, whitespace, runtime
+  source extension, include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.
