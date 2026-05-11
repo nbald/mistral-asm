@@ -81,3 +81,24 @@ layer3_attn_v_tensor_ggml_type:
 	.skip 8
 layer3_attn_v_tensor_offset:
 	.skip 8
+
+.balign 8
+layer3_attn_output_tensor_slot:
+layer3_attn_output_tensor_found:
+	.skip 8
+layer3_attn_output_tensor_name:
+	.skip LAYER3_ATTN_OUTPUT_TENSOR_NAME_CAP
+layer3_attn_output_tensor_n_dimensions:
+	.skip 8
+layer3_attn_output_tensor_dim0:
+	.skip 8
+layer3_attn_output_tensor_dim1:
+	.skip 8
+layer3_attn_output_tensor_dim2:
+	.skip 8
+layer3_attn_output_tensor_dim3:
+	.skip 8
+layer3_attn_output_tensor_ggml_type:
+	.skip 8
+layer3_attn_output_tensor_offset:
+	.skip 8

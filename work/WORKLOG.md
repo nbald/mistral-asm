@@ -2579,3 +2579,23 @@ redundant entries. Do not treat it as the primary continuation source; use
   guarded layer-3 exact-hex labels. Build, harnesses, help, oracle py-compile,
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, and symbol checks passed.
+
+## 2026-05-11T18:37:00+02:00
+
+- Added descriptor-only retained lookup coverage for `blk.3.attn_output.weight`
+  in the focused layer-3 entry fragments. The runtime publishes the output
+  descriptor summary but still has no layer-3 attention context, output matvec,
+  output storage, or payload-read path for that matrix.
+- Verification evidence: the real target reported the output descriptor as
+  found with dimensions `4096x3072`, type `8`, and relative offset
+  `802258944`, while preserving the existing layer-2 post-FFN residual,
+  layer-3 RMSNorm, and layer-3 value public exact-hex labels against the
+  focused external oracle. The 24-byte empty valid GGUF kept every layer-3
+  descriptor field and dependent status at `0` and emitted no guarded layer-3
+  exact-hex labels. Build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, descriptor-only, static-link,
+  undefined-symbol, symbol, tracked-artifact, and tracked large-file scans
+  passed.
+- Verification note: one initial empty-GGUF check accidentally created a
+  21-byte file, and one static-link probe treated `readelf -d`'s zero exit
+  status as a failure. Both probes were corrected and passed before commit.
