@@ -11,6 +11,11 @@
 .equ TOKEN0_LAYER4_ATTN_K_OUTPUT_BYTES, TOKEN0_LAYER4_ATTN_K_OUTPUT_VALUES * 4
 .equ TOKEN0_LAYER4_ATTN_V_OUTPUT_VALUES, 1024
 .equ TOKEN0_LAYER4_ATTN_V_OUTPUT_BYTES, TOKEN0_LAYER4_ATTN_V_OUTPUT_VALUES * 4
+.equ TOKEN0_LAYER4_ATTN_HEAD_DIM_VALUES, 128
+.equ TOKEN0_LAYER4_ATTN_QUERY_HEADS_PER_KV_HEAD, 4
+.equ TOKEN0_LAYER4_ATTN_KV_HEADS, TOKEN0_LAYER4_ATTN_V_OUTPUT_VALUES / TOKEN0_LAYER4_ATTN_HEAD_DIM_VALUES
+.equ TOKEN0_LAYER4_ATTN_CONTEXT_VALUES, TOKEN0_LAYER4_ATTN_Q_OUTPUT_VALUES
+.equ TOKEN0_LAYER4_ATTN_CONTEXT_BYTES, TOKEN0_LAYER4_ATTN_CONTEXT_VALUES * 4
 
 .section .rodata
 
@@ -29,6 +34,10 @@ token0_layer4_attn_k_matvec_text_end:
 token0_layer4_attn_v_matvec_text:
 	.ascii "token0_layer4_attn_v_matvec: "
 token0_layer4_attn_v_matvec_text_end:
+
+token0_layer4_attn_context_text:
+	.ascii "token0_layer4_attn_context: "
+token0_layer4_attn_context_text_end:
 
 newline_text:
 	.ascii "\n"
@@ -72,6 +81,16 @@ token0_layer4_attn_v_matvec_status:
 .balign 4
 token0_layer4_attn_v_output:
 	.skip TOKEN0_LAYER4_ATTN_V_OUTPUT_BYTES
+
+.global token0_layer4_attn_context_status
+.balign 8
+token0_layer4_attn_context_status:
+	.skip 8
+
+.global token0_layer4_attn_context
+.balign 4
+token0_layer4_attn_context:
+	.skip TOKEN0_LAYER4_ATTN_CONTEXT_BYTES
 
 .section .text
 
@@ -258,6 +277,50 @@ run_token0_layer4_attn_v_matvec_status:
 	ret
 
 .size run_token0_layer4_attn_v_matvec_status, . - run_token0_layer4_attn_v_matvec_status
+
+.global run_token0_layer4_attn_context_status
+.type run_token0_layer4_attn_context_status, @function
+
+# Contract: run the token-0 layer-4 single-token attention context smoke and
+# publish its status line without adding a public exact-hex context slice.
+# Inputs: no register inputs. Reads token0_layer4_attn_q_matvec_status,
+# token0_layer4_attn_k_matvec_status, token0_layer4_attn_v_matvec_status, the
+# private layer-4 value projection output, and the retained blk.4 attention
+# query, key, value, and output projection tensor descriptors.
+# Outputs: writes token0_layer4_attn_context_status and, on success, fills the
+# retained token0_layer4_attn_context buffer. Always prints exactly one status
+# label/value/newline sequence to stdout. The return register is unspecified.
+# Clobbers: caller-saved registers and flags through the smoke helper and
+# summary writers.
+# Ownership/lifetime: reads private module-owned layer-4 value projection
+# storage only during this call, then owns the retained context storage for a
+# later guarded output-projection step. Descriptor slots remain process-owned
+# parser summaries. This function does not read model payload bytes.
+# Error behavior: status is 1 only after all prerequisite statuses and tensor
+# shapes match the narrow target GGUF. Otherwise status is 0, no context bytes
+# are written, and no context exact-hex words are printed. Output write failures
+# are diagnostic-only in the current milestone.
+run_token0_layer4_attn_context_status:
+	call token0_layer4_attn_context_smoke
+	mov qword ptr [rip + token0_layer4_attn_context_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer4_attn_context_text]
+	mov rdx, token0_layer4_attn_context_text_end - token0_layer4_attn_context_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer4_attn_context_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size run_token0_layer4_attn_context_status, . - run_token0_layer4_attn_context_status
 
 .include "src/infer/token0_layer4_attn_slices.inc"
 
@@ -616,5 +679,112 @@ token0_layer4_attn_v_matvec_smoke:
 	ret
 
 .size token0_layer4_attn_v_matvec_smoke, . - token0_layer4_attn_v_matvec_smoke
+
+.type token0_layer4_attn_context_smoke, @function
+
+# Contract: derive the token-0 layer-4 single-token attention context from the
+# retained layer-4 value projection output.
+# Inputs: no register inputs. Reads the layer-4 query/key/value matvec
+# statuses, token0_layer4_attn_v_output, and retained layer-4 query, key, value,
+# and output projection tensor descriptors.
+# Outputs: rax = 1 after writing a 4096-f32 token0_layer4_attn_context by
+# repeating each 128-f32 KV-head value block four times for the associated query
+# heads; otherwise rax = 0 and no context bytes are written.
+# Clobbers: caller-saved registers and flags.
+# Ownership/lifetime: reads only process-owned static layer-4 value-output
+# storage and writes only process-owned static layer-4 context storage. The
+# query/key descriptors prove the prerequisite projection shapes, while the
+# blk.4.attn_output.weight descriptor is used as a shape guard for the eventual
+# consumer. This function does not read any output-projection payload bytes.
+# Error behavior: this smoke gate returns status only; invalid inputs and shape
+# mismatches are skipped with status 0.
+token0_layer4_attn_context_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer4_attn_q_matvec_status], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + token0_layer4_attn_k_matvec_status], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + token0_layer4_attn_v_matvec_status], 1
+	jne .Llayer4_attn_context_done
+
+	cmp qword ptr [rip + layer4_attn_q_tensor_found], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_q_tensor_n_dimensions], 2
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_q_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_q_tensor_dim0], TOKEN0_LAYER4_ATTN_NORM_VALUES
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_q_tensor_dim1], TOKEN0_LAYER4_ATTN_Q_OUTPUT_VALUES
+	jne .Llayer4_attn_context_done
+
+	cmp qword ptr [rip + layer4_attn_k_tensor_found], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_k_tensor_n_dimensions], 2
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_k_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_k_tensor_dim0], TOKEN0_LAYER4_ATTN_NORM_VALUES
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_k_tensor_dim1], TOKEN0_LAYER4_ATTN_K_OUTPUT_VALUES
+	jne .Llayer4_attn_context_done
+
+	cmp qword ptr [rip + layer4_attn_v_tensor_found], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_v_tensor_n_dimensions], 2
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_v_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_v_tensor_dim0], TOKEN0_LAYER4_ATTN_NORM_VALUES
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_v_tensor_dim1], TOKEN0_LAYER4_ATTN_V_OUTPUT_VALUES
+	jne .Llayer4_attn_context_done
+
+	cmp qword ptr [rip + layer4_attn_output_tensor_found], 1
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_output_tensor_n_dimensions], 2
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_output_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_output_tensor_dim0], TOKEN0_LAYER4_ATTN_CONTEXT_VALUES
+	jne .Llayer4_attn_context_done
+	cmp qword ptr [rip + layer4_attn_output_tensor_dim1], TOKEN0_LAYER4_ATTN_NORM_VALUES
+	jne .Llayer4_attn_context_done
+
+	# With one token in the layer-local sequence, every query head has exactly
+	# one key/value entry. Softmax is therefore 1, so grouped-query attention is
+	# the value vector repeated from each KV head into its four query heads.
+	lea rsi, [rip + token0_layer4_attn_v_output]
+	lea rdi, [rip + token0_layer4_attn_context]
+	mov r8, TOKEN0_LAYER4_ATTN_KV_HEADS
+
+.Llayer4_attn_context_kv_head_loop:
+	mov r9, TOKEN0_LAYER4_ATTN_QUERY_HEADS_PER_KV_HEAD
+
+.Llayer4_attn_context_repeat_loop:
+	mov rcx, TOKEN0_LAYER4_ATTN_HEAD_DIM_VALUES
+	mov r10, rsi
+
+.Llayer4_attn_context_copy_loop:
+	mov eax, dword ptr [r10]
+	mov dword ptr [rdi], eax
+	add r10, 4
+	add rdi, 4
+	dec rcx
+	jnz .Llayer4_attn_context_copy_loop
+
+	dec r9
+	jnz .Llayer4_attn_context_repeat_loop
+
+	add rsi, TOKEN0_LAYER4_ATTN_HEAD_DIM_VALUES * 4
+	dec r8
+	jnz .Llayer4_attn_context_kv_head_loop
+
+	mov eax, 1
+
+.Llayer4_attn_context_done:
+	ret
+
+.size token0_layer4_attn_context_smoke, . - token0_layer4_attn_context_smoke
 
 .section .note.GNU-stack,"",@progbits

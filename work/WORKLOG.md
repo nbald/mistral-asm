@@ -3098,3 +3098,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   post-FFN, layer-4 RMSNorm, and layer-4 value exact-hex oracle slices. The
   24-byte header-only GGUF kept all layer-4 descriptor fields, including
   output, at `0` and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T23:01:52+02:00
+
+- Added guarded status-only layer-4 attention context coverage in the focused
+  layer-4 module. The smoke requires successful layer-4 query/key/value matvecs
+  plus exact query/key/value/output descriptor shapes, then expands the
+  single-token grouped-query context from the value output without reading the
+  output-projection payload or publishing a context exact-hex slice.
+- Verification evidence: the real target reported
+  `token0_layer4_attn_context: 1` while the existing layer-4 attention public
+  slices still matched their external oracles exactly. A 24-byte header-only
+  GGUF kept all layer-4 guarded statuses, including context, at `0` and emitted
+  no guarded layer-4 exact-hex labels.

@@ -6,8 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add guarded status-only token-0 layer-4 attention context coverage, with no
-new public exact-hex slice and no layer-4 output-projection payload reads yet.
+Add guarded status-only token-0 layer-4 attention output-projection matvec
+coverage, using the retained layer-4 attention context and
+`blk.4.attn_output.weight` descriptor, with no new public exact-hex output
+slice yet.
 
 ## Completed Work
 
@@ -83,11 +85,16 @@ new public exact-hex slice and no layer-4 output-projection payload reads yet.
   Q8_0 `[4096,3072]`, relative offset `925949952`. The descriptor is retained
   only for future layer-4 context/output projection shape guarding; no
   layer-4 output-projection payload reads were added.
+- Layer-4 attention context coverage is now status-only and retained inside
+  `src/infer/token0_layer4_attn.s`. It requires layer-4 query/key/value matvec
+  success plus exact retained query/key/value/output descriptor shapes, expands
+  the single-token grouped-query context from the value output, reports
+  `token0_layer4_attn_context`, and publishes no context exact-hex slice.
 
 ## Known Blockers
 
-- No functional blocker to adding a guarded layer-4 attention context status
-  smoke.
+- No functional blocker to adding a guarded layer-4 attention output-projection
+  matvec status smoke.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -128,38 +135,31 @@ new public exact-hex slice and no layer-4 output-projection payload reads yet.
 
 ## Last Verification
 
-Layer-4 attention output descriptor verification passed:
+Layer-4 attention context status verification passed:
 
-- `make all check && ./mistral-asm --help`
-- real-target run reported existing layer-4 norm/query/key/value descriptors
-  unchanged and added `layer4_attn_output_tensor_found: 1`,
-  `layer4_attn_output_tensor_n_dimensions: 2`,
-  `layer4_attn_output_tensor_dim0: 4096`,
-  `layer4_attn_output_tensor_dim1: 3072`,
-  `layer4_attn_output_tensor_ggml_type: 8`, and
-  `layer4_attn_output_tensor_offset: 925949952`
-- real-target run kept the published layer-3 post-FFN residual words unchanged
-  and reported `token0_layer4_attn_norm: 1`,
-  `token0_layer4_attn_q_matvec: 1`, `token0_layer4_attn_k_matvec: 1`, and
-  `token0_layer4_attn_v_matvec: 1`
-- real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
-  residual prerequisite slice, layer-4 attention RMSNorm slice, and layer-4
-  attention value output slice
-- 24-byte header-only GGUF kept all layer-4 norm/query/key/value/output
-  descriptor fields at `0`, reported all layer-4 guarded math statuses at `0`,
-  and emitted no guarded layer-4 exact-hex labels
+- `make all check` and `./mistral-asm --help`
+- real-target run reported `token0_layer4_attn_context: 1`, kept the retained
+  layer-4 query/key/value/output descriptors at their expected target shapes,
+  and emitted no `token0_layer4_attn_context*_f32_hex` labels
+- real-target runtime/oracle diffs stayed empty for the layer-3 post-FFN
+  residual prerequisite slice and layer-4 attention RMSNorm/query/key/value
+  public slices
+- 24-byte header-only GGUF kept all layer-4 query/key/value/output descriptor
+  fields at `0`, reported `token0_layer4_attn_context: 0`, and emitted no
+  guarded layer-4 exact-hex labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- inference source line-count check
+- inference source line-count check; `src/infer/token0_layer4_attn.s` is now
+  790 lines
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add guarded status-only token-0 layer-4 attention context coverage, using the
-retained layer-4 query/key/value outputs and the retained
-`blk.4.attn_output.weight` descriptor as shape guards, while preserving the
-existing public slices and 24-byte header-only GGUF guard behavior.
+Add guarded status-only token-0 layer-4 attention output-projection matvec
+coverage, using the retained layer-4 attention context and
+`blk.4.attn_output.weight` descriptor, while preserving the existing public
+slices and 24-byte header-only GGUF guard behavior.
