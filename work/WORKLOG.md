@@ -1708,3 +1708,21 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, static-link,
   undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
   checks passed.
+
+## 2026-05-11T10:48:47+02:00
+
+- Added the first public layer-1 post-FFN residual slice behind the existing
+  post-FFN residual status gate. The focused FFN down module remains the owner
+  of the retained residual buffer, and non-target inputs print only the zero
+  status without residual word labels.
+- Verification evidence: the real target printed post-FFN residual words
+  `0xbd2addbf`, `0xbef2bcaa`, `0x4003aae1`, and `0xbddfb01f` immediately after
+  `token0_layer1_post_ffn_residual: 1`. A narrow f32-add oracle using the
+  adjacent published layer-1 post-attention residual and FFN down output words
+  reproduced those values exactly. Full-path Python recomputation was abandoned
+  for this loop because the scalar/vectorized one-off scripts were too slow for
+  routine verification; a persistent optimized oracle can be added later if
+  review says this evidence is too narrow. Build, no-libc harnesses, help,
+  negative empty-GGUF guard check, oracle py-compile, whitespace, source
+  extension, static-link, undefined-symbol, exported-symbol, tracked-artifact,
+  and tracked large-file checks passed.
