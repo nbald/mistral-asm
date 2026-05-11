@@ -1974,3 +1974,23 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, tracked include
   dependencies, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T13:47:03+02:00
+
+- Added focused layer-2 single-token attention context smoke in
+  `src/infer/token0_layer2_attn_context.s` instead of extending the 997-line
+  layer-2 attention projection module. The context gate requires the retained
+  layer-2 value projection status plus the layer-2 value and output-projection
+  descriptor shapes, then repeats each 128-f32 KV-head block four times for the
+  associated query heads. The output-projection descriptor remains a shape gate
+  only; this step does not read `blk.2.attn_output.weight` payload bytes.
+- Verification evidence: the real target printed
+  `token0_layer2_attn_context: 1` with first-four context words
+  `0x3d38e19b`, `0x3ae7765b`, `0xbd4bbba8`, and `0xbf48b85f`, matching the
+  retained layer-2 value projection first-four words exactly. A temporary
+  24-byte empty valid GGUF kept the layer-2 value/output descriptor slots
+  zeroed and kept layer-2 norm/query/key/value/context statuses at `0`, with no
+  guarded layer-2 output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, tracked include dependencies,
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
+  large-file checks passed.
