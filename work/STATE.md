@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-2 post-FFN residual smoke in the focused
-layer-2 FFN-down module, summing the retained layer-2 post-attention residual
-and FFN-down output without exposing a residual output slice yet.
+Publish the first guarded token-0 layer-2 post-FFN residual exact-hex output
+slice and add the focused external oracle note/script coverage for that slice.
 
 ## Completed Work
 
@@ -34,6 +33,11 @@ and FFN-down output without exposing a residual output slice yet.
   descriptor, proves the full mapped payload span, runs `q8_0_matvec_f32`, and
   publishes `token0_layer2_ffn_down_matvec` plus the first four guarded
   exact-hex output words.
+- The layer-2 FFN-down module now also owns the status-only layer-2 post-FFN
+  residual smoke. It requires the layer-2 post-attention residual and FFN-down
+  matvec statuses, rechecks the retained 3072-wide down descriptor, sums the
+  full retained f32 rows into `token0_layer2_post_ffn_residual`, and publishes
+  only `token0_layer2_post_ffn_residual`.
 - The layer-2 FFN SwiGLU status now prints four guarded exact-hex output words:
   `0x450e084e`, `0xbdf8abeb`, `0xc3132ce7`, and `0x3db01261`.
 - The layer-2 FFN-down status now prints four guarded exact-hex output words:
@@ -48,7 +52,7 @@ and FFN-down output without exposing a residual output slice yet.
 
 ## Known Blockers
 
-- No current blocker to adding the layer-2 post-FFN residual status smoke.
+- No current blocker to publishing the layer-2 post-FFN residual output slice.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines after publishing the SwiGLU
@@ -88,43 +92,42 @@ and FFN-down output without exposing a residual output slice yet.
 
 ## Last Verification
 
-Layer-2 FFN-down output-slice verification passed:
+Layer-2 post-FFN residual status-smoke verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- `python3 work/oracle/token0_layer2_ffn_down_oracle.py
-  models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf`
-  printed down words `0x440c0a37`, `0xc2008554`, `0xc2a866d8`, and
-  `0xc15e77da`
 - real target runtime smoke printed `layer2_ffn_down_tensor_found: 1`,
   `layer2_ffn_down_tensor_n_dimensions: 2`, `layer2_ffn_down_tensor_dim0: 9216`,
   `layer2_ffn_down_tensor_dim1: 3072`, `layer2_ffn_down_tensor_ggml_type: 8`,
-  `layer2_ffn_down_tensor_offset: 708648960`, and
-  `token0_layer2_ffn_down_matvec: 1`, followed by exact-hex down words
+  `layer2_ffn_down_tensor_offset: 708648960`,
+  `token0_layer2_ffn_down_matvec: 1`, exact-hex down words
   `0x440c0a37`, `0xc2008554`, `0xc2a866d8`, and `0xc15e77da`; it preserved the
   reviewed layer-2 FFN norm/gate/up/SwiGLU status and exact-hex output slices
+  and then printed `token0_layer2_post_ffn_residual: 1` with no guarded
+  post-FFN residual output words
 - temporary 24-byte empty valid GGUF kept `layer2_ffn_norm_tensor_*`,
   `layer2_ffn_gate_tensor_*`, `layer2_ffn_up_tensor_*`,
   `layer2_ffn_down_tensor_*`,
   `token0_layer2_ffn_norm`, `token0_layer2_ffn_gate_matvec`,
   `token0_layer2_ffn_up_matvec`, and `token0_layer2_ffn_swiglu` at `0`, and
-  `token0_layer2_ffn_down_matvec` at `0`; emitted no guarded layer-2 FFN
-  norm/gate/up/SwiGLU/down output words
+  `token0_layer2_ffn_down_matvec` and `token0_layer2_post_ffn_residual` at `0`;
+  emitted no guarded layer-2 FFN norm/gate/up/SwiGLU/down or post-FFN residual
+  output words
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for `run_token0_layer2_ffn_down_matvec_status`,
-  `token0_layer2_ffn_down_matvec_status`, and the layer-2 SwiGLU handoff buffer
-- local symbol scan confirmed the layer-2 FFN-down output slice labels, private
-  output storage, and printer are present
+- exported-symbol inspection for `run_token0_layer2_post_ffn_residual_status`,
+  `token0_layer2_post_ffn_residual_status`, and
+  `token0_layer2_post_ffn_residual`
+- local symbol scan confirmed no layer-2 post-FFN residual output-slice printer
+  or numbered output labels are present yet
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add status-only token-0 layer-2 post-FFN residual smoke in the focused
-layer-2 FFN-down module, summing the retained layer-2 post-attention residual
-and FFN-down output without exposing a residual output slice yet.
+Publish the first guarded token-0 layer-2 post-FFN residual exact-hex output
+slice and add the focused external oracle note/script coverage for that slice.

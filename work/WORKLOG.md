@@ -2298,3 +2298,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
   checks passed.
+
+## 2026-05-11T16:36:23+02:00
+
+- Added status-only layer-2 post-FFN residual coverage in the focused FFN-down
+  module. The path waits for the retained layer-2 post-attention residual and
+  FFN-down output statuses, rechecks the 3072-wide down descriptor, fills a
+  retained 3072-f32 post-FFN residual buffer, and prints only
+  `token0_layer2_post_ffn_residual`.
+- Verification evidence: the real target preserved the reviewed layer-2 FFN
+  norm/gate/up/SwiGLU/down exact-hex slices and printed
+  `token0_layer2_post_ffn_residual: 1` with no residual output words. A
+  temporary 24-byte empty valid GGUF kept the layer-2 post-attention residual,
+  FFN norm/gate/up/SwiGLU/down, and post-FFN residual statuses at `0`. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  include dependency, static-link, undefined-symbol, exported-symbol,
+  no-output-slice, tracked-artifact, and tracked large-file checks passed.
