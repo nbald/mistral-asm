@@ -1607,3 +1607,17 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Verification evidence: reconstruction checks passed for the GGUF loader and
   the split entry fragments after normalizing terminal blank lines, then
   `make`, `make check`, and `git diff --check` passed.
+
+## 2026-05-11T09:55:40+02:00
+
+- Added the first public layer-1 FFN up projection slice behind the existing up
+  matvec status gate. The status line remains the guard: non-target inputs do
+  not print output words, while the real target emits the four up words after
+  `token0_layer1_ffn_up_matvec: 1`.
+- Verification evidence: the real target printed up output words `0x3f1797a4`,
+  `0x3f80ec8f`, `0xbe651441`, and `0x3f2943b9`; a one-off external Python
+  oracle recomputed the upstream layer-1 path and matched those words exactly.
+  A temporary empty valid GGUF kept layer-1 FFN norm/gate/up statuses at `0` and
+  emitted no layer-1 FFN output word labels. Build, no-libc harnesses, help,
+  oracle py-compile, whitespace, runtime purity, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

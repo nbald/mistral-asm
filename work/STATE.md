@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Resume feature work by adding a guarded first-four exact-hex slice printer for
-`token0_layer1_ffn_up_output` in `src/infer/token0_layer1_ffn.s`,
-preserving the existing output order.
+Add status-only token-0 layer-1 FFN SwiGLU coverage in
+`src/infer/token0_layer1_ffn.s`, consuming the existing private layer-1 FFN
+gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
 
 ## Completed Work
 
@@ -73,10 +73,14 @@ preserving the existing output order.
   `work/prompts/continue.md` now requires splitting or moving focused work
   before adding substantial code to files near or above 1000 lines, and requires
   Makefile dependencies for introduced include fragments.
+- The layer-1 FFN up matvec wrapper now also prints a guarded first-four
+  exact-hex slice from the private `token0_layer1_ffn_up_output` buffer when
+  its status is 1. The new up output words appear after
+  `token0_layer1_ffn_up_matvec: 1`, matching the layer-0 FFN diagnostic order.
 
 ## Known Blockers
 
-- No current blocker for the next focused layer-1 FFN up output slice step.
+- No current blocker for the next focused layer-1 FFN SwiGLU status step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -109,15 +113,19 @@ preserving the existing output order.
 
 ## Last Verification
 
-- Large-file split verification passed: reconstruction comparisons after
-  normalizing terminal blank lines for `src/gguf/load_header.s`,
-  `src/entry/start/main.inc`, `src/entry/start/rodata.inc`,
-  `src/entry/start/output_slices.inc`, and
-  `src/entry/start/token0_smokes.inc`; `make`; `make check`;
-  `git diff --check`.
+- Layer-1 FFN up output verification passed: `make`; `make check`;
+  `./mistral-asm --help`; real target smoke printed
+  `token0_layer1_ffn_up_matvec: 1` followed by up output words `0x3f1797a4`,
+  `0x3f80ec8f`, `0xbe651441`, and `0x3f2943b9`; a one-off external Python
+  oracle recomputed the upstream layer-1 path and matched those words exactly;
+  a temporary 24-byte empty valid GGUF kept layer-1 FFN norm/gate/up statuses at
+  0 and emitted no layer-1 FFN output word labels; oracle py-compile;
+  `git diff --check`; runtime source purity scan;
+  static-link, undefined-symbol, exported-symbol, tracked-artifact, and
+  tracked large-file checks.
 
 ## Next Exact Step
 
-Add a guarded first-four exact-hex slice printer for
-`token0_layer1_ffn_up_output` in `src/infer/token0_layer1_ffn.s`,
-preserving the existing output order.
+Add status-only token-0 layer-1 FFN SwiGLU coverage in
+`src/infer/token0_layer1_ffn.s`, consuming the existing private layer-1 FFN
+gate/up output buffers and printing only `token0_layer1_ffn_swiglu`.
