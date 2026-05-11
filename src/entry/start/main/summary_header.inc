@@ -166,3 +166,4 @@
 	call print_layer2_attn_output_lookup_summary
 	call print_layer2_ffn_norm_lookup_summary
 	call print_layer2_ffn_gate_lookup_summary
+	call print_layer2_ffn_up_lookup_summary

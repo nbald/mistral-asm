@@ -482,3 +482,27 @@ layer2_ffn_gate_tensor_ggml_type_text_end:
 layer2_ffn_gate_tensor_offset_text:
 	.ascii "layer2_ffn_gate_tensor_offset: "
 layer2_ffn_gate_tensor_offset_text_end:
+
+layer2_ffn_up_tensor_found_text:
+	.ascii "layer2_ffn_up_tensor_found: "
+layer2_ffn_up_tensor_found_text_end:
+
+layer2_ffn_up_tensor_n_dimensions_text:
+	.ascii "layer2_ffn_up_tensor_n_dimensions: "
+layer2_ffn_up_tensor_n_dimensions_text_end:
+
+layer2_ffn_up_tensor_dim0_text:
+	.ascii "layer2_ffn_up_tensor_dim0: "
+layer2_ffn_up_tensor_dim0_text_end:
+
+layer2_ffn_up_tensor_dim1_text:
+	.ascii "layer2_ffn_up_tensor_dim1: "
+layer2_ffn_up_tensor_dim1_text_end:
+
+layer2_ffn_up_tensor_ggml_type_text:
+	.ascii "layer2_ffn_up_tensor_ggml_type: "
+layer2_ffn_up_tensor_ggml_type_text_end:
+
+layer2_ffn_up_tensor_offset_text:
+	.ascii "layer2_ffn_up_tensor_offset: "
+layer2_ffn_up_tensor_offset_text_end:
