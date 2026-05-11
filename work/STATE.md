@@ -6,10 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a guarded first-four exact-hex slice from `token0_layer2_attn_q_output` in
-`src/infer/token0_layer2_attn.s`, emitted only after
-`token0_layer2_attn_q_matvec_status` is 1, and verify it against a focused
-external oracle.
+Add descriptor-only reusable lookup coverage for `blk.2.attn_k.weight`,
+storing it in a new layer-2 scratch slot and printing
+found/dimension/type/offset summary lines without reading payload bytes.
 
 ## Completed Work
 
@@ -169,11 +168,18 @@ external oracle.
   descriptor/type/shape, mapping-base, and full Q8_0 payload bounds checks,
   writes a private 4096-f32 query output buffer plus status word, and prints
   only `token0_layer2_attn_q_matvec`.
+- The layer-2 attention query matvec wrapper now also prints a guarded
+  first-four exact-hex slice from the private `token0_layer2_attn_q_output`
+  buffer when its status is 1. Durable external oracle coverage lives in
+  `work/oracle/token0_layer2_attn_q_oracle.py` and
+  `work/oracle/token0-layer2-attn-q-output.md`; the oracle recomputes the full
+  layer-1 post-FFN residual, applies layer-2 attention RMSNorm, dots the first
+  four rows of `blk.2.attn_q.weight`, and matches the runtime output exactly.
 
 ## Known Blockers
 
-- No current blocker to adding a guarded layer-2 attention query output slice
-  and focused oracle coverage as the next layer-2 attention step.
+- No current blocker to adding descriptor-only layer-2 attention key lookup
+  coverage as the next layer-2 attention step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -203,6 +209,8 @@ external oracle.
 - `work/oracle/`
 - `work/oracle/token0_layer2_attn_norm_oracle.py`
 - `work/oracle/token0-layer2-attn-norm.md`
+- `work/oracle/token0_layer2_attn_q_oracle.py`
+- `work/oracle/token0-layer2-attn-q-output.md`
 - `work/oracle/token0_layer1_post_ffn_residual_oracle.py`
 - `work/oracle/token0-layer1-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer1-ffn-branch-review-1.md`
@@ -216,23 +224,23 @@ external oracle.
 
 ## Last Verification
 
-Layer-2 attention query matvec status verification passed: `make`;
-`make check`; `./mistral-asm --help`;
-`python3 -m py_compile work/oracle/*.py`; real target runtime smoke reporting
-`layer2_attn_q_tensor_found: 1`, dimensions `3072` and `4096`, type `8`,
-offset `691937280`, preserved layer-2 RMSNorm words `0xbf898056`,
-`0xc152dc8b`, `0x4248afc4`, `0xc0556342`, and
-`token0_layer2_attn_q_matvec: 1`; temporary 24-byte empty valid GGUF reporting
-zeroed layer-2 descriptor fields, `token0_layer2_attn_norm: 0`, and
-`token0_layer2_attn_q_matvec: 0` with no guarded layer-2 norm word labels;
-`git diff --check`; runtime source extension scan allowing `.s` drivers and
-tracked `.inc` fragments; tracked include dependency scan;
-static-link/no-dynamic-section check; undefined-symbol check; exported-symbol
-inspection; tracked-artifact and tracked large-file checks.
+Layer-2 attention query output slice verification passed: `make`; `make check`;
+`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`;
+`python3 work/oracle/token0_layer2_attn_q_oracle.py <local target>`; real target
+runtime smoke reporting preserved layer-2 RMSNorm words `0xbf898056`,
+`0xc152dc8b`, `0x4248afc4`, `0xc0556342`, `token0_layer2_attn_q_matvec: 1`,
+and query output words `0x3f29ab97`, `0x3fa60667`, `0x4000572f`,
+`0x3fb6f799`; the focused oracle matched those public words exactly;
+temporary 24-byte empty valid GGUF reporting zeroed layer-2 descriptor fields,
+`token0_layer2_attn_norm: 0`, and `token0_layer2_attn_q_matvec: 0` with no
+guarded layer-2 query output labels; `git diff --check`; runtime source
+extension scan allowing `.s` drivers and tracked `.inc` fragments; tracked
+include dependency scan; static-link/no-dynamic-section check;
+undefined-symbol check; exported-symbol inspection; tracked-artifact and
+tracked large-file checks.
 
 ## Next Exact Step
 
-Add a guarded first-four exact-hex slice from `token0_layer2_attn_q_output` in
-`src/infer/token0_layer2_attn.s`, emitted only after
-`token0_layer2_attn_q_matvec_status` is 1, and verify it against a focused
-external oracle.
+Add descriptor-only reusable lookup coverage for `blk.2.attn_k.weight`,
+storing it in a new layer-2 scratch slot and printing
+found/dimension/type/offset summary lines without reading payload bytes.
