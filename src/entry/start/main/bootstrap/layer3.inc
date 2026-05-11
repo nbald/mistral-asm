@@ -125,10 +125,9 @@
 	jmp .Llookup_unknown_error
 
 .Llookup_layer3_ffn_gate_tensor:
-	# Capture the layer-3 FFN gate descriptor for the focused status-only
-	# projection smoke. Descriptor publication is still separate from the
-	# guarded Q8_0 payload read performed after the FFN RMSNorm activation is
-	# available.
+	# Capture the layer-3 FFN gate descriptor for the focused projection smoke.
+	# Descriptor publication is still separate from the guarded Q8_0 payload
+	# read performed after the FFN RMSNorm activation is available.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
@@ -147,9 +146,9 @@
 	jmp .Llookup_unknown_error
 
 .Llookup_layer3_ffn_up_tensor:
-	# Capture the layer-3 FFN up descriptor for the focused status-only
-	# projection smoke. The later matvec gate rechecks shape and proves the
-	# complete Q8_0 payload span before reading matrix bytes.
+	# Capture the layer-3 FFN up descriptor for the focused projection smoke.
+	# The later matvec gate rechecks shape and proves the complete Q8_0 payload
+	# span before reading matrix bytes.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]

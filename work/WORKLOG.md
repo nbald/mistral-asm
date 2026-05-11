@@ -2783,3 +2783,22 @@ redundant entries. Do not treat it as the primary continuation source; use
   RMSNorm, and FFN gate labels was empty; the 24-byte header-only GGUF kept the
   new descriptor and dependent status at `0` and emitted no guarded gate/up
   output labels.
+
+## 2026-05-11T20:15:44+02:00
+
+- Published the first guarded layer-3 FFN up projection slice. The existing
+  bounded matvec still fills the full 9216-word private up buffer; stdout now
+  prints only the first four words after `token0_layer3_ffn_up_matvec: 1`.
+- Added an external layer-3 FFN up oracle and note. The oracle reuses the full
+  layer-3 FFN RMSNorm chain, then dots the first four rows of
+  `blk.3.ffn_up.weight` with the same scalar Q8_0 accumulation order used by
+  the runtime helper.
+- Verification evidence: the real-target runtime/oracle diff was empty for
+  layer-3 attention output, post-attention residual, FFN RMSNorm, FFN gate, and
+  new FFN up public labels. The new up words are `0x3fd71f53`, `0xbd86d8f4`,
+  `0xbef486a9`, and `0xc026c494`; the 24-byte header-only GGUF kept the
+  layer-3 FFN gate/up descriptors and dependent statuses at `0` and emitted no
+  guarded gate/up output labels. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, symbol, line-count, tracked-artifact, and tracked
+  large-file scans passed.
