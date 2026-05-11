@@ -2473,3 +2473,23 @@ redundant entries. Do not treat it as the primary continuation source; use
   oracle py-compile, whitespace, runtime source extension, include dependency,
   descriptor-only, static-link, undefined-symbol, symbol, tracked-artifact, and
   tracked large-file scans passed.
+
+## 2026-05-11T17:55:14+02:00
+
+- Added status-only layer-3 attention key projection coverage in the focused
+  layer-3 module. The smoke waits for `token0_layer3_attn_norm`, rechecks the
+  retained key descriptor shape/type, bounds the complete Q8_0 matrix payload,
+  fills private key-output storage, and prints no key output words yet.
+- Verification evidence: the real target reported
+  `token0_layer3_attn_k_matvec: 1` while preserving the existing layer-2
+  post-FFN residual, layer-3 RMSNorm, and layer-3 query output slices; the
+  runtime/oracle diff for those existing public labels was empty. The 24-byte
+  empty valid GGUF kept the layer-3 descriptors and dependent statuses at `0`,
+  printed `token0_layer3_attn_k_matvec: 0`, and emitted no guarded layer-3 key
+  output labels. Build, harnesses, help, oracle py-compile, whitespace, runtime
+  source extension, include dependency, no-layer3-key-output-label,
+  static-link, undefined-symbol, symbol, tracked-artifact, and tracked
+  large-file scans passed.
+- Verification note: two static probe invocations were corrected during
+  verification because they inspected tool behavior rather than repository
+  state; the corrected include-dependency and dynamic-section checks passed.

@@ -28,7 +28,7 @@ help_text:
 	.ascii "matvec output slice, post-FFN residual output slice, "
 	.ascii "and layer-3 attention RMSNorm descriptor lookup/output "
 	.ascii "slice plus query descriptor lookup/matvec output slice "
-	.ascii "and key descriptor lookup.\n"
+	.ascii "and key descriptor lookup/matvec status smoke.\n"
 help_text_end:
 
 lookup_tensor_request:

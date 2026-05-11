@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-3 attention key matvec coverage in the focused
-layer-3 inference module, consuming the retained `blk.3.attn_k.weight`
-descriptor and existing layer-3 attention RMSNorm activation, with no key
-output slice yet.
+Publish the first guarded token-0 layer-3 attention key output slice, backed by
+a focused external oracle, now that the status-only key matvec smoke is present.
 
 ## Completed Work
 
@@ -52,13 +50,19 @@ output slice yet.
   with no layer-3 key payload reads. On the real target it reports found `1`,
   dimensions `2`, dim0 `3072`, dim1 `1024`, type `8`, and relative offset
   `798904320`.
+- Layer-3 attention key matvec coverage consumes the retained
+  `blk.3.attn_k.weight` descriptor and `token0_layer3_attn_norm` activation.
+  It bounds the full row-major Q8_0 [3072 x 1024] payload, fills private
+  `token0_layer3_attn_k_output` storage, publishes
+  `token0_layer3_attn_k_matvec`, and intentionally prints no key output slice
+  yet.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention key matvec status step.
+- No current blocker to the layer-3 attention key output slice step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -94,7 +98,7 @@ output slice yet.
 
 ## Last Verification
 
-Layer-3 attention key descriptor verification passed:
+Layer-3 attention key matvec status verification passed:
 
 - `make`
 - `make check`
@@ -106,29 +110,32 @@ Layer-3 attention key descriptor verification passed:
   attention key descriptor found `1`, dimensions `2`, dim0 `3072`, dim1
   `1024`, type `8`, and offset `798904320`; it also preserved
   `token0_layer2_post_ffn_residual: 1`, `token0_layer3_attn_norm: 1`,
-  `token0_layer3_attn_q_matvec: 1`, and the known guarded exact-hex words
+  `token0_layer3_attn_q_matvec: 1`, printed
+  `token0_layer3_attn_k_matvec: 1`, and preserved the known guarded exact-hex
+  words
 - real-target runtime/oracle diff was empty for the layer-2 post-FFN residual,
   layer-3 attention RMSNorm, and layer-3 attention query output public
   exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
   including the new key descriptor slot, kept `token0_layer2_post_ffn_residual`
   and `token0_layer3_attn_norm` at `0`, printed
-  `token0_layer3_attn_q_matvec: 0`, and emitted no guarded layer-2 post-FFN
-  residual, layer-3 attention RMSNorm, or layer-3 attention query exact-hex
-  output labels
+  `token0_layer3_attn_q_matvec: 0` and `token0_layer3_attn_k_matvec: 0`, and
+  emitted no guarded layer-2 post-FFN residual, layer-3 attention RMSNorm,
+  layer-3 attention query, or layer-3 attention key exact-hex output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- descriptor-only scan found no layer-3 key matvec or payload-read code
+- no-layer3-key-output-slice scan found no public key exact-hex labels or
+  printer
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- local/exported symbol inspection for the layer-3 key descriptor summary
-  printer and retained descriptor fields
+- local/exported symbol inspection for the layer-3 key descriptor fields,
+  matvec runner, status slot, smoke helper, and private output buffer
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add status-only token-0 layer-3 attention key matvec coverage in
-`src/infer/token0_layer3_attn.s`, using the retained key descriptor and
-`token0_layer3_attn_norm_activation`, with no key output slice yet.
+Publish a guarded first-four-word exact-hex layer-3 attention key output slice
+from `src/infer/token0_layer3_attn.s`, and add focused oracle coverage for
+`blk.3.attn_k.weight` before comparing the runtime labels.
