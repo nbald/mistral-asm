@@ -40,10 +40,12 @@
 # `blk.2.attn_k.weight`, `blk.2.attn_v.weight`, and
 # `blk.2.attn_output.weight`, plus FFN RMSNorm setup for
 # `blk.2.ffn_norm.weight`, `blk.2.ffn_gate.weight`, `blk.2.ffn_up.weight`, and
-# `blk.2.ffn_down.weight`, into separate process-owned scratch slots before the
-# token-0 math path. The layer-1 FFN and layer-2 attention/FFN descriptors and
-# retained activation outputs are consumed only by guarded focused smokes after
-# their prerequisite activations exist.
+# `blk.2.ffn_down.weight`, then layer-3 attention setup for
+# `blk.3.attn_norm.weight` and `blk.3.attn_q.weight`, into separate
+# process-owned scratch slots before the token-0 math path. The layer-1 FFN,
+# layer-2 attention/FFN, and layer-3 attention descriptors and retained
+# activation outputs are consumed only by guarded focused smokes after their
+# prerequisite activations exist.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
@@ -55,12 +57,13 @@
 # retained descriptor for the first-layer attention RMSNorm weights, query
 # projection, key projection, value projection, output projection, FFN RMSNorm
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
-# attention/FFN setup descriptors. The layer-2 FFN RMSNorm smoke consumes the
-# retained layer-2 post-attention residual and publishes a guarded exact-hex
-# output slice; the layer-2 FFN gate/up/down descriptors feed shape-gated Q8_0
-# matvec smoke steps only after their prerequisites exist, then the layer-2
-# post-FFN residual smoke adds the retained post-attention residual and FFN-down
-# output without publishing a residual data slice yet.
+# attention/FFN and layer-3 attention setup descriptors. The layer-2 FFN
+# RMSNorm smoke consumes the retained layer-2 post-attention residual and
+# publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
+# descriptors feed shape-gated Q8_0 matvec smoke steps only after their
+# prerequisites exist, then the layer-2 post-FFN residual smoke adds the
+# retained post-attention residual and FFN-down output before publishing its
+# guarded residual data slice.
 # Error behavior: maps gguf_validate_file and post-validation tensor lookup
 # status codes to stderr diagnostics after releasing any live mapping.
 _start:

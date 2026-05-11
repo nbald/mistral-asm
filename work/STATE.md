@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add retained descriptor lookup coverage for `blk.3.attn_q.weight` without
-payload reads.
+Add status-only layer-3 attention query matvec coverage from the retained
+`blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation,
+without publishing an output slice.
 
 ## Completed Work
 
@@ -33,13 +34,17 @@ payload reads.
   exact-hex activation slice. On the real target it prints `0x41be7bcf`,
   `0xc06721de`, `0xc13cb538`, and `0xbfe354dc`, matching the focused external
   oracle.
+- Descriptor-only retained lookup coverage now includes `blk.3.attn_q.weight`
+  with no layer-3 query payload reads. On the real target it reports found `1`,
+  dimensions `2`, dim0 `3072`, dim1 `4096`, type `8`, and relative offset
+  `815628288`.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention query descriptor lookup step.
+- No current blocker to the layer-3 attention query matvec status step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -73,33 +78,36 @@ payload reads.
 
 ## Last Verification
 
-Layer-3 attention RMSNorm output-slice verification passed:
+Layer-3 attention query descriptor-only verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - real-target run printed layer-3 attention RMSNorm descriptor found `1`,
   dimensions `1`, dim0 `3072`, type `0`, and offset `802246656`, then printed
+  layer-3 attention query descriptor found `1`, dimensions `2`, dim0 `3072`,
+  dim1 `4096`, type `8`, and offset `815628288`; it also preserved
   `token0_layer3_attn_norm: 1` and words `0x41be7bcf`, `0xc06721de`,
   `0xc13cb538`, and `0xbfe354dc`
 - real-target runtime/oracle diff was empty for the layer-2 post-FFN residual
   and layer-3 attention RMSNorm public exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
-  kept `token0_layer2_post_ffn_residual` and `token0_layer3_attn_norm` at `0`,
-  and emitted no guarded layer-2 post-FFN residual or layer-3 attention RMSNorm
-  exact-hex output labels
+  including the new query descriptor slot, kept `token0_layer2_post_ffn_residual`
+  and `token0_layer3_attn_norm` at `0`, and emitted no guarded layer-2
+  post-FFN residual or layer-3 attention RMSNorm exact-hex output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- scan found no layer-3 attention query/key/value/output expansion
+- scan found no layer-3 attention query matvec/output expansion
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- local/exported symbol inspection for the retained layer-3 descriptor slot,
-  layer-3 RMSNorm status, activation buffer, slice printer, labels, and runner
+- local/exported symbol inspection for the retained layer-3 query descriptor
+  slot and summary printer
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add retained descriptor lookup coverage for `blk.3.attn_q.weight` without
-payload reads.
+Add status-only layer-3 attention query matvec coverage from the retained
+`blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation,
+without publishing an output slice.

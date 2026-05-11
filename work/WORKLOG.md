@@ -2408,3 +2408,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   harnesses, help, oracle py-compile, whitespace, runtime source extension,
   include dependency, static-link, undefined-symbol, symbol, tracked-artifact,
   and tracked large-file checks passed.
+
+## 2026-05-11T17:27:30+02:00
+
+- Added descriptor-only retained lookup coverage for `blk.3.attn_q.weight` in
+  the focused layer-3 bootstrap, state, rodata, and summary fragments. The path
+  publishes the query matrix descriptor but does not add any layer-3 query
+  matvec or Q8_0 payload read.
+- Verification evidence: the real target reported the new descriptor as found
+  with dimensions `3072x4096`, type `8`, and relative offset `815628288`, while
+  preserving the existing layer-2 post-FFN residual and layer-3 RMSNorm exact
+  slices. The runtime/oracle diff for those existing public labels was empty.
+  A 24-byte header-only GGUF left both layer-3 descriptor slots and dependent
+  statuses at `0`. Build, harnesses, help, oracle py-compile, whitespace,
+  runtime source extension, include dependency, no-layer3-query-matvec,
+  static-link, undefined-symbol, symbol, tracked-artifact, and tracked
+  large-file scans passed.
