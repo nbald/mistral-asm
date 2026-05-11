@@ -3391,3 +3391,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   exact-hex labels through layer-4 FFN SwiGLU still matched, and no down
   exact-hex labels were emitted. The 24-byte zero-count GGUF kept the layer-4
   FFN down status at `0` and emitted no guarded down exact-hex labels.
+
+## 2026-05-12T01:22:54+02:00
+
+- Published the first guarded layer-4 FFN down matvec exact-hex slice. The
+  first four words are `0x3e13ea6f`, `0xbac8ccef`, `0x3ce99bed`, and
+  `0xbcc152bc`.
+- Added a focused external oracle that computes the full 9216-word layer-4 FFN
+  gate/up/SwiGLU activation before dotting the first four rows of
+  `blk.4.ffn_down.weight`, matching the runtime scalar f32 Q8_0 accumulation
+  order.
+- Verification evidence: the real-target runtime/oracle comparison matched all
+  public layer-4 FFN chain labels through down output. The 24-byte zero-count
+  GGUF kept the layer-4 FFN dependent statuses at `0` and emitted no guarded
+  layer-4 down exact-hex labels.
