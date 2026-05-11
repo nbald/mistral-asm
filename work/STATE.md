@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded layer-3 attention RMSNorm exact-hex output slice and
-compare it with an external oracle.
+Add retained descriptor lookup coverage for `blk.3.attn_q.weight` without
+payload reads.
 
 ## Completed Work
 
@@ -24,19 +24,22 @@ compare it with an external oracle.
   entry fragments.
 - On the real target, `blk.3.attn_norm.weight` reports found `1`, dimensions
   `1`, dim0 `3072`, type `0`, and relative offset `802246656`.
-- Status-only token-0 layer-3 attention RMSNorm coverage now lives in focused
+- Token-0 layer-3 attention RMSNorm coverage now lives in focused
   `src/infer/token0_layer3_attn.s`. It waits for the retained layer-2 post-FFN
   residual, rechecks the retained layer-3 RMSNorm descriptor and epsilon,
   bounds the full 3072-f32 weight span inside the live mapping, fills private
-  layer-3 norm activation storage, and prints only
-  `token0_layer3_attn_norm`.
+  layer-3 norm activation storage, and publishes `token0_layer3_attn_norm`.
+- The layer-3 attention RMSNorm smoke now publishes a guarded first-four-word
+  exact-hex activation slice. On the real target it prints `0x41be7bcf`,
+  `0xc06721de`, `0xc13cb538`, and `0xbfe354dc`, matching the focused external
+  oracle.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention RMSNorm output-slice step.
+- No current blocker to the layer-3 attention query descriptor lookup step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -63,39 +66,40 @@ compare it with an external oracle.
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer3_attn.s`
 - `src/infer/token0_layer2_ffn_down.s`
+- `work/oracle/token0_layer3_attn_norm_oracle.py`
+- `work/oracle/token0-layer3-attn-norm.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention RMSNorm status verification passed:
+Layer-3 attention RMSNorm output-slice verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - real-target run printed layer-3 attention RMSNorm descriptor found `1`,
   dimensions `1`, dim0 `3072`, type `0`, and offset `802246656`, then printed
-  `token0_layer3_attn_norm: 1`
-- real-target run preserved layer-2 post-FFN residual status `1` and words
-  `0x440c1d48`, `0xc200a8d7`, `0xc2a8120a`, and `0xc15da38d`
-- real-target scan found no layer-3 attention RMSNorm exact-hex output labels
-  in this status-only step
+  `token0_layer3_attn_norm: 1` and words `0x41be7bcf`, `0xc06721de`,
+  `0xc13cb538`, and `0xbfe354dc`
+- real-target runtime/oracle diff was empty for the layer-2 post-FFN residual
+  and layer-3 attention RMSNorm public exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
   kept `token0_layer2_post_ffn_residual` and `token0_layer3_attn_norm` at `0`,
-  and emitted no layer-3 attention RMSNorm exact-hex output labels
+  and emitted no guarded layer-2 post-FFN residual or layer-3 attention RMSNorm
+  exact-hex output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- scan found no layer-3 attention query/key/value/output expansion and no
-  layer-3 attention RMSNorm exact-hex labels
+- scan found no layer-3 attention query/key/value/output expansion
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
 - local/exported symbol inspection for the retained layer-3 descriptor slot,
-  new layer-3 RMSNorm status, activation buffer, and runner
+  layer-3 RMSNorm status, activation buffer, slice printer, labels, and runner
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish the first guarded layer-3 attention RMSNorm exact-hex output slice and
-compare it with an external oracle.
+Add retained descriptor lookup coverage for `blk.3.attn_q.weight` without
+payload reads.

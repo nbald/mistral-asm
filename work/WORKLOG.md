@@ -2393,3 +2393,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   or output expansion. Build, harnesses, help, oracle py-compile, whitespace,
   runtime source extension, include dependency, static-link, undefined-symbol,
   symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T17:19:19+02:00
+
+- Published the first guarded layer-3 attention RMSNorm output slice from the
+  focused layer-3 module. The labels are emitted only after
+  `token0_layer3_attn_norm: 1`, and the help text now describes layer-3
+  attention RMSNorm as an output slice rather than a status-only smoke.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-2 post-FFN residual and layer-3 attention RMSNorm public labels. The
+  new layer-3 RMSNorm words are `0x41be7bcf`, `0xc06721de`, `0xc13cb538`, and
+  `0xbfe354dc`; the 24-byte empty valid GGUF kept the layer-3 descriptor fields
+  and status at `0` and emitted no guarded layer-3 RMSNorm output words. Build,
+  harnesses, help, oracle py-compile, whitespace, runtime source extension,
+  include dependency, static-link, undefined-symbol, symbol, tracked-artifact,
+  and tracked large-file checks passed.

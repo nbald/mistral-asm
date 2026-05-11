@@ -26,8 +26,8 @@ help_text:
 	.ascii "post-attention residual output slice plus FFN RMSNorm, "
 	.ascii "gate/up matvec, SwiGLU output slices, FFN down "
 	.ascii "matvec output slice, post-FFN residual output slice, "
-	.ascii "and layer-3 attention RMSNorm descriptor lookup/status "
-	.ascii "smoke.\n"
+	.ascii "and layer-3 attention RMSNorm descriptor lookup/output "
+	.ascii "slice.\n"
 help_text_end:
 
 lookup_tensor_request:
