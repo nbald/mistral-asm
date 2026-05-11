@@ -3084,3 +3084,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-4 value public labels. The new value words are `0x3bb659d7`,
   `0xbc5c2ba7`, `0x3bf35210`, and `0xbc1e7f5f`; the 24-byte header-only GGUF
   kept layer-4 guarded statuses at `0` and emitted no layer-4 exact-hex labels.
+
+## 2026-05-11T22:53:49+02:00
+
+- Added descriptor-only retained lookup and summary coverage for
+  `blk.4.attn_output.weight`. This keeps the layer-4 output projection at the
+  same metadata-only boundary used before guarded payload reads: the descriptor
+  is available for the next attention-context step, but no output-projection
+  bytes are consumed yet.
+- Verification evidence: the real target reported the output descriptor as
+  Q8_0 `[4096,3072]` at relative offset `925949952`, while preserving the
+  existing layer-4 norm/query/key/value descriptors and public layer-3
+  post-FFN, layer-4 RMSNorm, and layer-4 value exact-hex oracle slices. The
+  24-byte header-only GGUF kept all layer-4 descriptor fields, including
+  output, at `0` and emitted no guarded layer-4 exact-hex labels.
