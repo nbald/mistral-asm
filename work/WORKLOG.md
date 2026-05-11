@@ -2869,3 +2869,20 @@ redundant entries. Do not treat it as the primary continuation source; use
   py-compile, whitespace, runtime source extension, include dependency,
   static-link, undefined-symbol, symbol, line-count, tracked-artifact, and
   tracked large-file scans passed.
+
+## 2026-05-11T20:57:02+02:00
+
+- Added status-only layer-3 post-FFN residual coverage in the focused down
+  module. The smoke requires both the retained layer-3 post-attention residual
+  and FFN-down matvec statuses, rechecks the down output width as 3072, fills
+  retained 3072-f32 post-FFN residual storage, and emits only
+  `token0_layer3_post_ffn_residual`.
+- Verification evidence: the real target reported the retained down output
+  width as `3072`, kept the published down words unchanged, and reported
+  `token0_layer3_post_ffn_residual: 1` without any post-FFN residual exact-hex
+  labels. The 24-byte header-only GGUF reported the new status as `0` and
+  emitted no guarded residual labels. The focused layer-3 FFN runtime/oracle
+  diff stayed empty for RMSNorm, gate, up, SwiGLU, and down public labels.
+- The next residual slice oracle should expect the first four post-FFN residual
+  words to be `0x440c2692`, `0xc1ff9359`, `0xc2a96a19`, and `0xc15e5fea`
+  when computed as f32-rounded post-attention residual plus FFN-down output.

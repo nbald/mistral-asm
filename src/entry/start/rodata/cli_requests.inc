@@ -34,7 +34,8 @@ help_text:
 	.ascii "output matvec slice, post-attention residual slice, "
 	.ascii "FFN RMSNorm slice, FFN gate matvec slice, and "
 	.ascii "FFN up matvec slice plus FFN SwiGLU activation slice "
-	.ascii "and FFN down matvec output slice.\n"
+	.ascii "and FFN down matvec output slice plus post-FFN residual "
+	.ascii "status smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
