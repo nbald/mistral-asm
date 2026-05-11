@@ -2965,3 +2965,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   The new layer-4 words are `0x420c4b32`, `0xc0768887`, `0xc14b813f`, and
   `0xbffefae6`; the 24-byte header-only GGUF kept the layer-4 RMSNorm status at
   `0` and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-11T21:46:43+02:00
+
+- Added descriptor-only retained lookup and summary coverage for
+  `blk.4.attn_q.weight`. This extends layer-4 attention setup with shape/type
+  metadata only; the Q8_0 query payload remains unread until a guarded matvec
+  smoke is added.
+- Verification evidence: the real target reported the query descriptor as Q8_0
+  `[3072,4096]` at relative offset `939319296`, while preserving the layer-4
+  RMSNorm descriptor and published layer-3 post-FFN residual words. The
+  existing layer-4 RMSNorm runtime/oracle diff stayed empty, and a temporary
+  24-byte header-only GGUF kept all layer-4 norm/query descriptor fields at `0`
+  with no guarded layer-4 exact-hex labels.

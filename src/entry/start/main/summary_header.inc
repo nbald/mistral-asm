@@ -178,3 +178,4 @@
 	call print_layer3_ffn_up_lookup_summary
 	call print_layer3_ffn_down_lookup_summary
 	call print_layer4_attn_norm_lookup_summary
+	call print_layer4_attn_q_lookup_summary

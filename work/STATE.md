@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only retained lookup and summary coverage for
+Add guarded status-only token-0 layer-4 attention query matvec coverage for
 `blk.4.attn_q.weight`.
 
 ## Completed Work
@@ -37,10 +37,13 @@ Add descriptor-only retained lookup and summary coverage for
   covered by `work/oracle/token0_layer4_attn_norm_oracle.py`. The first four
   layer-4 attention RMSNorm words are `0x420c4b32`, `0xc0768887`,
   `0xc14b813f`, and `0xbffefae6`.
+- Layer-4 attention scope now also has descriptor-only retained lookup and
+  summary coverage for `blk.4.attn_q.weight`. On the real target it is Q8_0
+  `[3072,4096]`, relative offset `939319296`.
 
 ## Known Blockers
 
-- No functional blocker to the layer-4 attention query descriptor step.
+- No functional blocker to the layer-4 attention query matvec status step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -74,7 +77,7 @@ Add descriptor-only retained lookup and summary coverage for
 
 ## Last Verification
 
-Layer-4 attention RMSNorm exact-hex slice verification passed:
+Layer-4 attention query descriptor verification passed:
 
 - `make clean all check`
 - post-documentation `make all check`
@@ -84,14 +87,18 @@ Layer-4 attention RMSNorm exact-hex slice verification passed:
   `layer4_attn_norm_tensor_dim0: 3072`,
   `layer4_attn_norm_tensor_ggml_type: 0`, and
   `layer4_attn_norm_tensor_offset: 925937664`
-- real-target run kept layer-3 FFN down and post-FFN residual statuses at `1`,
-  kept the published layer-3 post-FFN residual words unchanged, and reported
-  `token0_layer4_attn_norm: 1`
-- real-target runtime/oracle diff was empty for the layer-3 post-FFN residual
-  prerequisite slice and new layer-4 attention RMSNorm slice
-- 24-byte header-only GGUF kept all layer-4 attention norm descriptor fields at
-  `0`, kept dependent layer-3 terminal statuses at `0`, and reported
-  `token0_layer4_attn_norm: 0`
+- real-target run reported `layer4_attn_q_tensor_found: 1`,
+  `layer4_attn_q_tensor_n_dimensions: 2`,
+  `layer4_attn_q_tensor_dim0: 3072`,
+  `layer4_attn_q_tensor_dim1: 4096`,
+  `layer4_attn_q_tensor_ggml_type: 8`, and
+  `layer4_attn_q_tensor_offset: 939319296`
+- real-target run kept the published layer-3 post-FFN residual words unchanged
+  and reported `token0_layer4_attn_norm: 1`
+- real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
+  residual prerequisite slice and layer-4 attention RMSNorm slice
+- 24-byte header-only GGUF kept all layer-4 attention norm and query descriptor
+  fields at `0`, and reported `token0_layer4_attn_norm: 0`
 - 24-byte header-only GGUF emitted no `token0_layer4_attn_norm*_f32_hex`
   labels
 - `python3 -m py_compile work/oracle/*.py`
@@ -106,5 +113,5 @@ Layer-4 attention RMSNorm exact-hex slice verification passed:
 
 ## Next Exact Step
 
-Add descriptor-only retained lookup and summary coverage for
+Add guarded status-only token-0 layer-4 attention query matvec coverage for
 `blk.4.attn_q.weight`.
