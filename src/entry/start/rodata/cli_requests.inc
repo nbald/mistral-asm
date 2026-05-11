@@ -23,7 +23,8 @@ help_text:
 	.ascii "post-FFN residual output slice, and layer-2 attention "
 	.ascii "RMSNorm/query/key/value output slices plus output descriptor "
 	.ascii "lookup, context smoke, output matvec slice, and "
-	.ascii "post-attention residual output slice.\n"
+	.ascii "post-attention residual output slice plus FFN RMSNorm "
+	.ascii "descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:
@@ -85,3 +86,7 @@ layer2_attn_v_tensor_request_end:
 layer2_attn_output_tensor_request:
 	.ascii "blk.2.attn_output.weight"
 layer2_attn_output_tensor_request_end:
+
+layer2_ffn_norm_tensor_request:
+	.ascii "blk.2.ffn_norm.weight"
+layer2_ffn_norm_tensor_request_end:

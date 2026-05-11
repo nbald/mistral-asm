@@ -2090,3 +2090,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   Q/K/V oracle batch was stopped because the first standalone Q oracle was too
   slow for this review pass; the optimized residual oracle covers the
   output/residual handoff needed for the next layer-2 FFN descriptor step.
+
+## 2026-05-11T14:52:59+02:00
+
+- Added descriptor-only coverage for `blk.2.ffn_norm.weight` in the entry-side
+  lookup chain. The retained slot prints found, dimension count, dim0, type, and
+  relative offset after the layer-2 attention output descriptor. This step does
+  not introduce a layer-2 FFN norm runtime status and does not read FFN norm
+  payload bytes.
+- Verification evidence: the real target printed found `1`, dimensions `1`,
+  dim0 `3072`, type `0`, and offset `768811008` for the new descriptor while
+  preserving the reviewed layer-2 attention output and post-attention residual
+  statuses. A temporary 24-byte empty valid GGUF kept the new descriptor fields
+  at `0`. Build, harnesses, help, oracle py-compile, whitespace, runtime source
+  extension, include dependency, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

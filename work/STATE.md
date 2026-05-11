@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only lookup and summary coverage for `blk.2.ffn_norm.weight`
-before adding any layer-2 FFN payload reads.
+Add status-only layer-2 FFN RMSNorm smoke coverage after the retained
+post-attention residual, using `blk.2.ffn_norm.weight`.
 
 ## Completed Work
 
@@ -28,6 +28,10 @@ before adding any layer-2 FFN payload reads.
   descriptor is retained in its own layer-2 scratch slot, printed immediately
   after the layer-2 value descriptor, and no output-projection payload bytes are
   read by this step.
+- Descriptor-only coverage for `blk.2.ffn_norm.weight` is complete. The
+  descriptor is retained in its own layer-2 scratch slot, printed immediately
+  after the layer-2 output projection descriptor, and no FFN norm payload bytes
+  are read by this step.
 - Layer-2 single-token attention context smoke now lives in
   `src/infer/token0_layer2_attn_context.s`. It requires the retained layer-2
   value projection status and exact layer-2 value/output-projection descriptor
@@ -84,7 +88,7 @@ before adding any layer-2 FFN payload reads.
 
 ## Known Blockers
 
-- No current blocker to starting descriptor-only layer-2 FFN work.
+- No current blocker to starting status-only layer-2 FFN RMSNorm work.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -101,7 +105,13 @@ before adding any layer-2 FFN payload reads.
 - `src/infer/token0_layer2_attn_context.s`
 - `src/infer/token0_layer2_attn_output.s`
 - `src/infer/token0_layer2_post_attn_residual.s`
+- `src/entry/start/constants.inc`
+- `src/entry/start/state.inc`
+- `src/entry/start/main/bootstrap.inc`
+- `src/entry/start/main/summary_header.inc`
+- `src/entry/start/lookup_summary/layer2.inc`
 - `src/entry/start/rodata/cli_requests.inc`
+- `src/entry/start/rodata/summary_labels.inc`
 - `src/infer/token0_layer1_ffn.s`
 - `src/infer/token0_layer1_ffn_down.s`
 - `src/math/*.s`
@@ -125,32 +135,33 @@ before adding any layer-2 FFN payload reads.
 
 ## Last Verification
 
-Layer-2 attention branch review pass 2 verification passed:
+Layer-2 FFN RMSNorm descriptor-only verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke reported all reviewed layer-2 statuses at `1` and
-  printed layer-2 attention output words `0x3eade180`, `0x3ee0fb2f`,
-  `0xbff22222`, `0x3e24eb6b` plus post-attention residual words
-  `0x3e9885c8`, `0xbd0e0bd8`, `0x3e299d00`, and `0x3d544d6e`
-- `work/oracle/token0_layer2_post_attn_residual_oracle.py` produced matching
-  output/residual words, and a normalized runtime/oracle diff was empty
-- temporary 24-byte empty valid GGUF kept all reviewed layer-2 descriptor found
-  flags and statuses at `0`, with no guarded layer-2 exact-hex labels
+- real target runtime smoke printed `layer2_ffn_norm_tensor_found: 1`,
+  `layer2_ffn_norm_tensor_n_dimensions: 1`, `layer2_ffn_norm_tensor_dim0: 3072`,
+  `layer2_ffn_norm_tensor_ggml_type: 0`, and
+  `layer2_ffn_norm_tensor_offset: 768811008`, while preserving
+  `token0_layer2_attn_output_matvec: 1` and
+  `token0_layer2_post_attn_residual: 1`
+- temporary 24-byte empty valid GGUF kept the layer-2 output and FFN norm
+  descriptor slots zeroed and kept the reviewed layer-2 output/residual statuses
+  at `0`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the layer-2 attention/context/output/residual
-  runners, statuses, and buffers
+- exported-symbol inspection for the new layer-2 FFN norm descriptor handoff
+  symbols
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add descriptor-only lookup and summary coverage for `blk.2.ffn_norm.weight`.
-Extend the tracked entry state, request string, bootstrap lookup chain, summary
-labels, lookup-summary printer, and Makefile-tracked include dependencies as
-needed, but do not read `blk.2.ffn_norm.weight` payload bytes in that step.
+Add a focused layer-2 FFN RMSNorm status-only runtime module. It should consume
+the retained layer-2 post-attention residual and `blk.2.ffn_norm.weight`
+descriptor, check epsilon/type/shape/mapping bounds, write a private 3072-f32
+activation buffer, and print only `token0_layer2_ffn_norm` status in this step.
