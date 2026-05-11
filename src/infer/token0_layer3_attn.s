@@ -126,7 +126,7 @@ run_token0_layer3_attn_norm_status:
 .type run_token0_layer3_attn_q_matvec_status, @function
 
 # Contract: run the token-0 layer-3 attention query matvec smoke and publish
-# its status line only.
+# its status line plus the fixed exact-hex oracle slice on success.
 # Inputs: no register inputs. Reads the live mapping handoff slots, the retained
 # blk.3.attn_q.weight descriptor, token0_layer3_attn_norm_status, and the
 # token0_layer3_attn_norm_activation buffer owned by this module.

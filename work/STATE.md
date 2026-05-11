@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 for the completed token-0 layer-3 attention chain before
+Run review gate pass 2 for the completed token-0 layer-3 attention chain before
 adding layer-3 post-attention residual or FFN work.
 
 ## Completed Work
@@ -37,10 +37,15 @@ adding layer-3 post-attention residual or FFN work.
   output projection; the runtime/oracle diff is empty for the layer-2 post-FFN
   residual, layer-3 RMSNorm, layer-3 value, layer-3 context, and new layer-3
   output public labels.
+- Review gate pass 1 for the completed layer-3 attention chain found no
+  blocking issues. It corrected one stale layer-3 query runner contract phrase
+  and recorded the current residual risk that context expansion is only a
+  one-token grouped-query smoke, not proof of multi-token attention
+  score/mask/softmax behavior.
 
 ## Known Blockers
 
-- No functional blocker to the next review pass.
+- No functional blocker to the second review pass.
 - Keep layer-3 output-projection work in
   `src/infer/token0_layer3_attn_output.s`.
 - Existing layer-3 attention RMSNorm/query/key/value slice labels and printer
@@ -66,23 +71,25 @@ adding layer-3 post-attention residual or FFN work.
 - `work/oracle/token0-layer3-attn-context.md`
 - `work/oracle/token0_layer3_attn_output_oracle.py`
 - `work/oracle/token0-layer3-attn-output.md`
+- `work/reviews/2026-05-11-layer3-attn-chain-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention output-projection exact-hex slice verification passed:
+Layer-3 attention review-gate pass 1 verification passed:
 
-- `make clean && make && make check`
+- `make clean all check`
+- post-comment-correction `make all check`
 - `./mistral-asm --help`
-- real-target run reported `token0_layer3_attn_output_matvec: 1` and emitted
-  `token0_layer3_attn_output0_f32_hex` through
-  `token0_layer3_attn_output3_f32_hex`
-- temporary 24-byte empty valid GGUF reported `token0_layer3_attn_context: 0`
-  and `token0_layer3_attn_output_matvec: 0`
+- real-target run reported all reviewed layer-3 descriptor found flags and
+  statuses at `1`, including `token0_layer3_attn_output_matvec: 1`
 - focused runtime/oracle diff was empty for the layer-2 post-FFN residual,
-  layer-3 attention RMSNorm, layer-3 value, layer-3 context, and new layer-3
+  layer-3 attention RMSNorm, layer-3 value, layer-3 context, and layer-3
   output public labels
+- temporary 24-byte empty valid GGUF reported all reviewed layer-3 descriptor
+  found flags and statuses at `0` and emitted no guarded layer-3 exact-hex
+  labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
@@ -95,5 +102,5 @@ Layer-3 attention output-projection exact-hex slice verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 1 for the completed token-0 layer-3 attention chain before
+Run review gate pass 2 for the completed token-0 layer-3 attention chain before
 adding layer-3 post-attention residual or FFN work.

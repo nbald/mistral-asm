@@ -2666,3 +2666,18 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Planning note: the layer-3 attention chain now has public checks through the
   output projection. The next feature step would broaden scope into residual or
   FFN work, so the next iteration should start review gate pass 1.
+
+## 2026-05-11T19:12:41+02:00
+
+- Review gate pass 1 over the completed token-0 layer-3 attention chain found
+  no blocking issue. The review specifically rechecked descriptor handoff,
+  payload bounds gates, one-token context semantics, status-gated public slices,
+  split discipline, and the focused output oracle comparison. One stale query
+  runner contract phrase was corrected so it matches the guarded slice now
+  emitted on success.
+- Verification evidence: clean build and harnesses passed; the real-target
+  runtime/oracle diff was empty for the reviewed layer-3 public labels; the
+  temporary empty GGUF kept reviewed layer-3 descriptors/statuses at `0` and
+  emitted no guarded layer-3 exact-hex labels; static-link, undefined-symbol,
+  source-extension, include-dependency, line-count, tracked-artifact, and
+  tracked large-file scans passed.
