@@ -1665,3 +1665,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-1 FFN statuses at `0`. Build, harnesses, help, oracle py-compile,
   whitespace, runtime purity, static-link, undefined-symbol, exported-symbol,
   tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T10:21:04+02:00
+
+- Added status-only layer-1 FFN down matvec coverage in a new focused inference
+  source rather than growing the existing layer-1 FFN module beyond the
+  near-1000-line threshold. The new path consumes the retained layer-1 SwiGLU
+  activation and the `blk.1.ffn_down.weight` descriptor only after descriptor,
+  type, shape, and full Q8_0 payload bounds checks.
+- Verification evidence: the real target reported
+  `token0_layer1_ffn_down_matvec: 1` after the unchanged layer-1 FFN
+  norm/gate/up/SwiGLU diagnostics. A temporary empty valid GGUF kept layer-1
+  FFN norm/gate/up/SwiGLU/down statuses at `0`. Build, no-libc harnesses, help,
+  oracle py-compile, whitespace, runtime purity, static-link, undefined-symbol,
+  exported-symbol, tracked-artifact, and tracked large-file checks passed.

@@ -24,17 +24,17 @@
 # residual from process-owned static buffers, then applying guarded layer-1
 # attention RMSNorm, query/key/value projection, context, output projection, and
 # post-attention residual smokes through reusable layer-1 descriptors, delegating
-# the layer-1 FFN RMSNorm, gate/up matvec, and SwiGLU smokes to focused
-# inference code, and publishing status-gated exact-hex slices from the audited
-# output buffers. It also
-# performs non-math reusable descriptor lookups for
+# the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, and down matvec smokes to
+# focused inference code, and publishing status-gated exact-hex slices from the
+# audited output buffers. It also performs non-math reusable descriptor lookups
+# for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
 # `blk.1.ffn_norm.weight`, `blk.1.ffn_gate.weight`, `blk.1.ffn_up.weight`, and
 # `blk.1.ffn_down.weight` into separate process-owned scratch slots before the
-# token-0 math path. The down descriptor is descriptor-only in this step, while
-# the norm/gate/up descriptors and retained gate/up outputs are consumed only by
-# the guarded layer-1 FFN smokes after their prerequisite activations exist.
+# token-0 math path. The layer-1 FFN descriptors and retained activation outputs
+# are consumed only by the guarded layer-1 FFN smokes after their prerequisite
+# activations exist.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata

@@ -6,10 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-1 FFN down matvec coverage in
-`src/infer/token0_layer1_ffn.s`, consuming the private SwiGLU activation and
-the focused `blk.1.ffn_down.weight` descriptor only after descriptor, type,
-shape, and bounds checks.
+Add a guarded first-four exact-hex slice for the private
+`token0_layer1_ffn_down_output` buffer in
+`src/infer/token0_layer1_ffn_down.s`, printing it immediately after
+`token0_layer1_ffn_down_matvec: 1` and only when that status is 1.
 
 ## Completed Work
 
@@ -93,10 +93,16 @@ shape, and bounds checks.
   scratch slot and printed as found/dimension/type/offset summary lines after
   the existing layer-1 FFN gate/up descriptor summaries without reading payload
   bytes.
+- Status-only layer-1 FFN down matvec coverage now lives in a focused
+  `src/infer/token0_layer1_ffn_down.s` module instead of growing the existing
+  layer-1 FFN module past the 1000-line threshold. It consumes the private
+  layer-1 SwiGLU activation and the focused `blk.1.ffn_down.weight` descriptor
+  only after descriptor/type/shape/bounds checks, writes a private down output
+  buffer and status word, and prints only `token0_layer1_ffn_down_matvec`.
 
 ## Known Blockers
 
-- No current blocker for the next status-only layer-1 FFN down matvec step.
+- No current blocker for the next layer-1 FFN down output slice step.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -113,6 +119,7 @@ shape, and bounds checks.
 - `src/gguf/load_header.s`
 - `src/gguf/load_header/*.inc`
 - `src/infer/token0_layer1_ffn.s`
+- `src/infer/token0_layer1_ffn_down.s`
 - `src/math/q8_0_dot.s`
 - `src/math/rmsnorm.s`
 - `src/math/swiglu.s`
@@ -129,20 +136,19 @@ shape, and bounds checks.
 
 ## Last Verification
 
-- Layer-1 FFN down descriptor lookup verification passed: `make`;
-  `make check`; `./mistral-asm --help`; real target smoke printed
+- Layer-1 FFN down matvec status verification passed: `make`; `make check`;
+  `./mistral-asm --help`; real target smoke printed
   `layer1_ffn_down_tensor_found: 1`, dimensions `9216x3072`, type `8`, offset
-  `584957952`, and the unchanged layer-1 FFN norm/gate/up/SwiGLU diagnostics;
-  a temporary 24-byte empty valid GGUF kept the gate/up/down descriptor slots
-  zeroed and layer-1 FFN norm/gate/up/SwiGLU statuses at 0; oracle py-compile;
+  `584957952`, the unchanged layer-1 FFN norm/gate/up/SwiGLU diagnostics, and
+  `token0_layer1_ffn_down_matvec: 1`; a temporary 24-byte empty valid GGUF kept
+  the gate/up/down descriptor slots zeroed and layer-1 FFN
+  norm/gate/up/SwiGLU/down statuses at 0; oracle py-compile;
   `git diff --check`; runtime source purity scan;
   static-link, undefined-symbol, exported-symbol, tracked-artifact, and tracked
   large-file checks.
 
 ## Next Exact Step
 
-Add status-only layer-1 FFN down matvec coverage in
-`src/infer/token0_layer1_ffn.s`, consuming `token0_layer1_ffn_swiglu_output` and
-the `blk.1.ffn_down.weight` descriptor only after descriptor, type, shape, and
-bounds checks, then storing a private down output/status and printing exactly
-one status line.
+Add a guarded first-four exact-hex slice for `token0_layer1_ffn_down_output` in
+`src/infer/token0_layer1_ffn_down.s`, printing it immediately after
+`token0_layer1_ffn_down_matvec: 1` and only when that status is 1.
