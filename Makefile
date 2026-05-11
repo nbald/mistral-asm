@@ -98,6 +98,9 @@ GGUF_LOAD_HEADER_INCLUDES := \
 	src/gguf/load_header/skip_helpers.inc \
 	src/gguf/load_header/gnu_stack.inc
 
+TOKEN0_LAYER3_ATTN_INCLUDES := \
+	src/infer/token0_layer3_attn_slices.inc
+
 OBJECTS := $(ASM_SOURCES:src/%.s=$(BUILD_DIR)/%.o)
 Q8_0_DOT_CHECK := $(BUILD_DIR)/tests/q8_0_dot_check
 RMSNORM_CHECK := $(BUILD_DIR)/tests/rmsnorm_check
@@ -173,6 +176,8 @@ $(BUILD_DIR)/%.o: src/%.s
 $(BUILD_DIR)/entry/_start.o: $(ENTRY_START_ALL_INCLUDES)
 
 $(BUILD_DIR)/gguf/load_header.o: $(GGUF_LOAD_HEADER_INCLUDES)
+
+$(BUILD_DIR)/infer/token0_layer3_attn.o: $(TOKEN0_LAYER3_ATTN_INCLUDES)
 
 $(BUILD_DIR)/tests/%.o: tests/%.s
 	mkdir -p $(dir $@)

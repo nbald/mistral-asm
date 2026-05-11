@@ -6,11 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Move the layer-3 attention exact-hex slice rodata labels and printer functions
-from `src/infer/token0_layer3_attn.s` into a Makefile-tracked
-`src/infer/token0_layer3_attn_slices.inc`, preserving behavior with no feature
-change, so the following value output slice does not grow the main module past
-the project threshold.
+Publish the first guarded token-0 layer-3 attention value output exact-hex
+slice, keeping slice labels and printer code in
+`src/infer/token0_layer3_attn_slices.inc` and preserving the existing guard
+that no value words print unless `token0_layer3_attn_v_matvec: 1`.
 
 ## Completed Work
 
@@ -36,6 +35,11 @@ the project threshold.
   `2`, dim0 `3072`, dim1 `1024`, type `8`, and relative offset `828997632`;
   `token0_layer3_attn_v_matvec: 1` prints after a bounded Q8_0 matvec writes
   private storage, with no value output slice labels yet.
+- The existing layer-3 attention exact-hex rodata labels and printer helpers
+  for the RMSNorm, query, and key public slices now live in the Makefile-tracked
+  `src/infer/token0_layer3_attn_slices.inc` include. This was a
+  behavior-preserving split; `src/infer/token0_layer3_attn.s` is now 618 lines
+  and the include is 288 lines.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
@@ -43,10 +47,9 @@ the project threshold.
 ## Known Blockers
 
 - No functional blocker to the layer-3 attention value output slice.
-- `src/infer/token0_layer3_attn.s` is 901 lines. Split it by clear
-  responsibility or move focused work elsewhere before adding the next
-  substantial layer-3 attention value output slice. If `.include` fragments are
-  introduced, list every fragment in the Makefile dependencies.
+- Keep layer-3 attention slice labels and printer code in
+  `src/infer/token0_layer3_attn_slices.inc`; it is tracked in `Makefile` so
+  edits rebuild `build/infer/token0_layer3_attn.o`.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -69,47 +72,46 @@ the project threshold.
 - `src/entry/start/lookup_summary/layer3.inc`
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer3_attn.s`
+- `src/infer/token0_layer3_attn_slices.inc`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention value matvec status verification passed:
+Layer-3 attention exact-hex slice split verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
-- real-target run printed layer-3 attention norm/query/key/value descriptors
-  as found with the expected dimensions, types, and offsets; the value
-  descriptor remained dim0 `3072`, dim1 `1024`, type `8`, and offset
-  `828997632`
-- real-target run preserved `token0_layer2_post_ffn_residual: 1`,
-  `token0_layer3_attn_norm: 1`, `token0_layer3_attn_q_matvec: 1`,
-  `token0_layer3_attn_k_matvec: 1`, `token0_layer3_attn_v_matvec: 1`, and the
-  known guarded exact-hex words for the layer-2 post-FFN residual, layer-3
-  RMSNorm, query output, and key output
-- focused real-target runtime/oracle diffs were empty for the existing public
-  layer-3 query and key slices, and no
-  `token0_layer3_attn_v_output*_f32_hex` labels were emitted
+- real-target runtime/oracle diff was empty for the moved public exact-hex
+  labels: layer-2 post-FFN residual, layer-3 attention RMSNorm, layer-3 query
+  output, and layer-3 key output
+- real-target run printed layer-3 attention norm/query/key/value descriptors as
+  found with the expected dimensions, types, and offsets; the value descriptor
+  remained dim0 `3072`, dim1 `1024`, type `8`, and offset `828997632`
+- real-target run preserved `token0_layer3_attn_norm: 1`,
+  `token0_layer3_attn_q_matvec: 1`, `token0_layer3_attn_k_matvec: 1`, and
+  `token0_layer3_attn_v_matvec: 1`, with no
+  `token0_layer3_attn_v_output*_f32_hex` labels emitted
 - temporary 24-byte empty valid GGUF kept all layer-3 descriptor fields and
   dependent statuses at `0`, including `token0_layer3_attn_v_matvec: 0`, and
-  emitted no guarded layer-3 query/key/value output labels
+  emitted no guarded layer-3 norm/query/key/value output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - corrected include dependency scan covering `.include` fragments in
   `Makefile`
-- static source scan found no token-0 layer-3 value output slice labels
+- touching `src/infer/token0_layer3_attn_slices.inc` made
+  `make -n build/infer/token0_layer3_attn.o` schedule the assembler, followed
+  by a normal rebuild and `make check`
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- local/exported symbol inspection for the layer-3 value matvec runner, status,
-  local smoke helper, and private output storage
+- local/exported symbol inspection for the layer-3 public runners/statuses,
+  private output storage, and local slice printer helpers
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Move the layer-3 attention exact-hex slice rodata labels and printer functions
-from `src/infer/token0_layer3_attn.s` into a Makefile-tracked
-`src/infer/token0_layer3_attn_slices.inc`, preserving behavior with no feature
-change, so the following value output slice does not grow the main module past
-the project threshold.
+Publish the first guarded token-0 layer-3 attention value output exact-hex
+slice in `src/infer/token0_layer3_attn_slices.inc`, verified against a focused
+external oracle and still silent on the 24-byte empty GGUF failure path.

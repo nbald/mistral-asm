@@ -2547,3 +2547,20 @@ redundant entries. Do not treat it as the primary continuation source; use
 - Planning note: the focused layer-3 attention module is now close enough to
   the 1000-line threshold that the next value-output feature slice should start
   with a behavior-preserving split or move into focused tracked source.
+
+## 2026-05-11T18:22:17+02:00
+
+- Split the existing layer-3 attention exact-hex rodata labels and printer
+  helpers for the RMSNorm, query, and key public slices into a focused
+  Makefile-tracked include. This preserves behavior while leaving the main
+  layer-3 attention module comfortably below the project threshold before value
+  output words are published.
+- Verification evidence: the real-target runtime/oracle diff for the moved
+  public labels was empty, the real target still reported all layer-3
+  norm/query/key/value descriptors and matvec statuses as available, and no
+  value output labels were emitted. The 24-byte empty GGUF kept every layer-3
+  descriptor/status at `0` and emitted no guarded layer-3 exact-hex labels.
+  Include dependency checks confirmed touching the new fragment schedules the
+  layer-3 object rebuild; build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, static-link, undefined-symbol, symbol,
+  tracked-artifact, and tracked large-file scans passed.
