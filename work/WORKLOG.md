@@ -1754,3 +1754,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   also reuses the full layer-1 FFN norm activation and post-attention residual
   arrays from the previous oracle path, which removes the review blocker without
   changing runtime assembly.
+
+## 2026-05-11T11:23:59+02:00
+
+- Review pass 1 over the completed layer-1 FFN branch found no blocking issue
+  in the branch ordering, status gates, mmap payload bounds, or durable oracle
+  coverage. The previous oracle gap is closed for the public gate/up/SwiGLU/down
+  and post-FFN residual words.
+- Verification evidence for the review: the exact scalar oracle reproduced the
+  runtime's layer-1 post-attention residual, FFN norm, gate/up/SwiGLU/down, and
+  post-FFN residual public words exactly; a temporary empty valid GGUF kept the
+  reviewed branch statuses at `0` with no guarded layer-1 FFN output labels.
+  Final whitespace, runtime source extension, static-link, undefined-symbol,
+  tracked-artifact, and tracked large-file checks passed.
