@@ -31,3 +31,7 @@ layer4_ffn_gate_tensor_request_end:
 layer4_ffn_up_tensor_request:
 	.ascii "blk.4.ffn_up.weight"
 layer4_ffn_up_tensor_request_end:
+
+layer4_ffn_down_tensor_request:
+	.ascii "blk.4.ffn_down.weight"
+layer4_ffn_down_tensor_request_end:

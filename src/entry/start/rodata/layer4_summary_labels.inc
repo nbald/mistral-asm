@@ -183,3 +183,27 @@ layer4_ffn_up_tensor_ggml_type_text_end:
 layer4_ffn_up_tensor_offset_text:
 	.ascii "layer4_ffn_up_tensor_offset: "
 layer4_ffn_up_tensor_offset_text_end:
+
+layer4_ffn_down_tensor_found_text:
+	.ascii "layer4_ffn_down_tensor_found: "
+layer4_ffn_down_tensor_found_text_end:
+
+layer4_ffn_down_tensor_n_dimensions_text:
+	.ascii "layer4_ffn_down_tensor_n_dimensions: "
+layer4_ffn_down_tensor_n_dimensions_text_end:
+
+layer4_ffn_down_tensor_dim0_text:
+	.ascii "layer4_ffn_down_tensor_dim0: "
+layer4_ffn_down_tensor_dim0_text_end:
+
+layer4_ffn_down_tensor_dim1_text:
+	.ascii "layer4_ffn_down_tensor_dim1: "
+layer4_ffn_down_tensor_dim1_text_end:
+
+layer4_ffn_down_tensor_ggml_type_text:
+	.ascii "layer4_ffn_down_tensor_ggml_type: "
+layer4_ffn_down_tensor_ggml_type_text_end:
+
+layer4_ffn_down_tensor_offset_text:
+	.ascii "layer4_ffn_down_tensor_offset: "
+layer4_ffn_down_tensor_offset_text_end:

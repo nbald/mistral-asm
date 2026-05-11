@@ -165,3 +165,24 @@ layer4_ffn_up_tensor_ggml_type:
 	.skip 8
 layer4_ffn_up_tensor_offset:
 	.skip 8
+
+.balign 8
+layer4_ffn_down_tensor_slot:
+layer4_ffn_down_tensor_found:
+	.skip 8
+layer4_ffn_down_tensor_name:
+	.skip LAYER4_FFN_DOWN_TENSOR_NAME_CAP
+layer4_ffn_down_tensor_n_dimensions:
+	.skip 8
+layer4_ffn_down_tensor_dim0:
+	.skip 8
+layer4_ffn_down_tensor_dim1:
+	.skip 8
+layer4_ffn_down_tensor_dim2:
+	.skip 8
+layer4_ffn_down_tensor_dim3:
+	.skip 8
+layer4_ffn_down_tensor_ggml_type:
+	.skip 8
+layer4_ffn_down_tensor_offset:
+	.skip 8

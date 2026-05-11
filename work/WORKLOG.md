@@ -3368,3 +3368,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   currently public layer-4 FFN chain labels through SwiGLU. The 24-byte
   zero-count GGUF kept the layer-4 dependent statuses at `0` and emitted no
   guarded layer-4 exact-hex labels.
+
+## 2026-05-12T01:07:25+02:00
+
+- Added descriptor-only layer-4 FFN down setup. The retained slot records
+  `blk.4.ffn_down.weight` as Q8_0 `[9216 x 3072]` at relative offset
+  `956030976`; no down matvec status, private output buffer, exact-hex labels,
+  or Q8_0 payload read was introduced.
+- Verification evidence: the existing public layer-4 FFN chain still diffed
+  cleanly against the SwiGLU oracle, and the 24-byte header-only GGUF kept the
+  new down descriptor fields plus dependent layer-4 statuses at `0` with no
+  guarded layer-4 exact-hex labels.
