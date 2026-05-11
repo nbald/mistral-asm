@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 of 2 for the token-0 layer-3 FFN/down/post-residual
-chain before extending feature work to the next layer.
+Begin layer-4 attention scope with descriptor-only retained lookup/summary
+coverage for `blk.4.attn_norm.weight` in focused Makefile-tracked layer-4 entry
+fragments.
 
 ## Completed Work
 
@@ -45,11 +46,13 @@ chain before extending feature work to the next layer.
   rounding.
 - Review gate pass 1 of 2 for the token-0 layer-3 FFN/down/post-residual chain
   found no blocking issues and required no source changes.
+- Review gate pass 2 of 2 for the token-0 layer-3 FFN/down/post-residual chain
+  found no blocking issues and required no source changes. Feature work may
+  resume in focused layer-4 files/fragments.
 
 ## Known Blockers
 
-- Review gate pass 2 remains required before extending the token-0 forward
-  chain beyond the completed layer-3 post-FFN residual slice.
+- No functional blocker to the layer-4 attention descriptor-only lookup step.
 - `src/infer/token0_layer3_ffn.s` is 942 lines. Do not add substantial down or
   residual code there; keep layer-3 down/residual work in the focused module.
 - `src/infer/token0_layer2_attn.s` is 997 lines and
@@ -76,12 +79,13 @@ chain before extending feature work to the next layer.
 - `work/oracle/token0-layer3-ffn-down.md`
 - `work/oracle/token0-layer3-post-ffn-residual.md`
 - `work/reviews/2026-05-11-layer3-ffn-chain-review-1.md`
+- `work/reviews/2026-05-11-layer3-ffn-chain-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 FFN chain review pass 1 verification passed:
+Layer-3 FFN chain review pass 2 verification passed:
 
 - `make clean all check`
 - post-documentation `make all check`
@@ -108,5 +112,6 @@ Layer-3 FFN chain review pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 of 2 for the token-0 layer-3 FFN/down/post-residual
-chain before extending feature work to the next layer.
+Begin layer-4 attention scope with descriptor-only retained lookup/summary
+coverage for `blk.4.attn_norm.weight` in focused Makefile-tracked layer-4 entry
+fragments.

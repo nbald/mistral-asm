@@ -2914,3 +2914,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   reviewed layer-3 FFN/residual statuses at `0` and emitted no guarded
   exact-hex labels from the reviewed chain. Static purity, include dependency,
   symbol, line-count, artifact, and large-file scans passed.
+
+## 2026-05-11T21:17:16+02:00
+
+- Completed review gate pass 2 for the token-0 layer-3 FFN/down/post-residual
+  chain. No blocking issues were found and no runtime source changes were
+  required, so the review gate is complete.
+- Verification evidence: clean build and harnesses passed; the real-target
+  runtime/oracle diff was empty across layer-3 post-attention residual, FFN
+  RMSNorm, gate, up, SwiGLU, down, and post-FFN residual public labels; the
+  empty-header GGUF kept reviewed descriptors/statuses at `0` and emitted no
+  guarded exact-hex labels. Static purity, include dependency, symbol,
+  line-count, artifact, and large-file scans passed.
