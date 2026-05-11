@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-4 attention key output exact-hex slice
-for `blk.4.attn_k.weight`.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_v.weight`.
 
 ## Completed Work
 
@@ -56,12 +56,16 @@ for `blk.4.attn_k.weight`.
   layer-4 attention key matvec coverage. It requires the retained layer-4
   attention RMSNorm activation, exact Q8_0 `[3072,1024]`
   `blk.4.attn_k.weight` descriptor, and a bounded payload span before filling
-  private key output storage and reporting `token0_layer4_attn_k_matvec`. No
-  layer-4 key exact-hex slice is published yet.
+  private key output storage and reporting `token0_layer4_attn_k_matvec`.
+- The first guarded layer-4 attention key exact-hex slice is published and
+  covered by `work/oracle/token0_layer4_attn_k_oracle.py`. The first four
+  layer-4 attention key words are `0xbc326305`, `0x3c2ff2f1`, `0x3a8970d8`,
+  and `0xbc83c191`.
 
 ## Known Blockers
 
-- No functional blocker to publishing the layer-4 attention key output slice.
+- No functional blocker to starting layer-4 attention value descriptor
+  coverage.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -92,12 +96,14 @@ for `blk.4.attn_k.weight`.
 - `work/oracle/token0_layer4_attn_norm_oracle.py`
 - `work/oracle/token0-layer4-attn-q-output.md`
 - `work/oracle/token0_layer4_attn_q_oracle.py`
+- `work/oracle/token0-layer4-attn-k-output.md`
+- `work/oracle/token0_layer4_attn_k_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention key matvec status verification passed:
+Layer-4 attention key output slice verification passed:
 
 - `make clean all check`
 - `make all check && ./mistral-asm --help`
@@ -124,9 +130,9 @@ Layer-4 attention key matvec status verification passed:
 - real-target run reported `token0_layer4_attn_k_matvec: 1`
 - real-target runtime/oracle diff stayed empty for the layer-3 post-FFN
   residual prerequisite slice, layer-4 attention RMSNorm slice, and layer-4
-  attention query output slice
-- real-target run reported layer-4 attention query output words
-  `0xbe996fc1`, `0xbefb10d3`, `0x3f524ef6`, and `0x3ea056cc`
+  attention key output slice
+- real-target run reported layer-4 attention key output words `0xbc326305`,
+  `0x3c2ff2f1`, `0x3a8970d8`, and `0xbc83c191`
 - 24-byte header-only GGUF kept all layer-4 attention norm, query, and key
   descriptor fields at `0`, and reported `token0_layer4_attn_norm: 0`
 - 24-byte header-only GGUF reported `token0_layer4_attn_q_matvec: 0` and
@@ -145,6 +151,6 @@ Layer-4 attention key matvec status verification passed:
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-4 attention key output exact-hex slice
-from the focused layer-4 module, add a matching external oracle/note for the
-first four key rows, and keep the 24-byte header-only GGUF silent.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.attn_v.weight`, without reading the value payload until a later guarded
+matvec smoke.

@@ -3030,3 +3030,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   and layer-4 query exact-hex oracle slices. A 24-byte header-only GGUF kept the
   layer-4 descriptors and guarded math statuses at `0` and emitted no guarded
   layer-4 exact-hex labels.
+
+## 2026-05-11T22:22:32+02:00
+
+- Published the first guarded layer-4 attention key output slice from the
+  focused layer-4 module. The slice is printed only after the layer-4 attention
+  RMSNorm activation and full `blk.4.attn_k.weight` Q8_0 matvec complete.
+- Added a focused external layer-4 attention key oracle. It reuses the full
+  layer-4 attention RMSNorm oracle path and dots that activation with the first
+  four key rows using ordered f32 Q8_0 accumulation.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-3 post-FFN residual prerequisite, layer-4 attention RMSNorm, and new
+  layer-4 key public labels. The new key words are `0xbc326305`, `0x3c2ff2f1`,
+  `0x3a8970d8`, and `0xbc83c191`; the 24-byte header-only GGUF kept the
+  layer-4 guarded statuses at `0` and emitted no layer-4 exact-hex labels.
