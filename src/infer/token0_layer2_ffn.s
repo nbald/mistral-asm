@@ -133,6 +133,7 @@ token0_layer2_ffn_up_output:
 token0_layer2_ffn_swiglu_status:
 	.skip 8
 
+.global token0_layer2_ffn_swiglu_output
 .balign 4
 token0_layer2_ffn_swiglu_output:
 	.skip TOKEN0_LAYER2_FFN_SWIGLU_BYTES
@@ -792,8 +793,8 @@ token0_layer2_ffn_up_matvec_smoke:
 # through the shared scalar SwiGLU helper and summary writers.
 # Ownership/lifetime: reads only module-owned gate and up projection buffers and
 # writes only module-owned SwiGLU output storage. The model mmap is not read by
-# this pure activation step, and the activation buffer remains private until a
-# later handoff step.
+# this pure activation step, and the activation buffer remains module-owned
+# storage borrowed by the focused layer-2 FFN down smoke.
 # Error behavior: status is 1 only after both prerequisite projection statuses
 # are available and the shared SwiGLU helper completes; otherwise status is 0.
 # Output write errors remain diagnostic-only and are not surfaced separately.

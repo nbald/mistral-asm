@@ -2266,3 +2266,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   whitespace, runtime source extension, include dependency, static-link,
   undefined-symbol, exported-symbol, no-payload-reference, tracked-artifact,
   and tracked large-file checks passed.
+
+## 2026-05-11T16:18:34+02:00
+
+- Added status-only layer-2 FFN-down matvec coverage in a focused down module.
+  The path waits for the layer-2 SwiGLU status, rechecks the retained
+  `blk.2.ffn_down.weight` Q8_0 `[9216 x 3072]` descriptor, proves the complete
+  mapped payload span, fills private 3072-f32 down output storage, and prints
+  only `token0_layer2_ffn_down_matvec`.
+- Verification evidence: the real target preserved the reviewed layer-2 FFN
+  norm/gate/up/SwiGLU exact-hex slices and printed
+  `token0_layer2_ffn_down_matvec: 1`. A temporary 24-byte empty valid GGUF kept
+  the layer-2 FFN norm, gate, up, SwiGLU, and down statuses at `0` and emitted
+  no guarded layer-2 FFN down output words. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  static-link, undefined-symbol, exported-symbol, no-output-slice,
+  tracked-artifact, and tracked large-file checks passed.

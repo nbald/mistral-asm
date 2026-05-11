@@ -27,9 +27,9 @@
 # the layer-1 FFN RMSNorm, gate/up matvec, SwiGLU, down matvec, and post-FFN
 # residual smokes plus the layer-2 attention RMSNorm, query/key/value matvec,
 # single-token context, output-projection matvec, post-attention residual, FFN
-# RMSNorm, gate/up matvec, and SwiGLU smokes to focused inference code, and
-# publishing status-gated exact-hex slices from the audited output buffers where
-# this milestone has oracle slices. It also performs non-math
+# RMSNorm, gate/up matvec, SwiGLU, and down matvec smokes to focused inference
+# code, and publishing status-gated exact-hex slices from the audited output
+# buffers where this milestone has oracle slices. It also performs non-math
 # reusable descriptor lookups for
 # `blk.1.attn_norm.weight`, `blk.1.attn_q.weight`, `blk.1.attn_k.weight`,
 # `blk.1.attn_v.weight`, `blk.1.attn_output.weight`, and
@@ -57,7 +57,7 @@
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
 # attention/FFN setup descriptors. The layer-2 FFN RMSNorm smoke consumes the
 # retained layer-2 post-attention residual and publishes a guarded exact-hex
-# output slice; the layer-2 FFN gate/up descriptors feed shape-gated Q8_0
+# output slice; the layer-2 FFN gate/up/down descriptors feed shape-gated Q8_0
 # matvec smoke steps only after their prerequisites exist.
 # Error behavior: maps gguf_validate_file and post-validation tensor lookup
 # status codes to stderr diagnostics after releasing any live mapping.
