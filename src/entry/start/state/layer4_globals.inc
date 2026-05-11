@@ -38,3 +38,9 @@
 .global layer4_ffn_gate_tensor_dim1
 .global layer4_ffn_gate_tensor_ggml_type
 .global layer4_ffn_gate_tensor_offset
+.global layer4_ffn_up_tensor_found
+.global layer4_ffn_up_tensor_n_dimensions
+.global layer4_ffn_up_tensor_dim0
+.global layer4_ffn_up_tensor_dim1
+.global layer4_ffn_up_tensor_ggml_type
+.global layer4_ffn_up_tensor_offset

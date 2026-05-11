@@ -49,7 +49,8 @@
 # `blk.4.attn_norm.weight`, `blk.4.attn_q.weight`,
 # `blk.4.attn_k.weight`, `blk.4.attn_v.weight`, and
 # `blk.4.attn_output.weight`, plus FFN RMSNorm setup for
-# `blk.4.ffn_norm.weight` and query/key/value matvec output slices for
+# `blk.4.ffn_norm.weight`, `blk.4.ffn_gate.weight`, and
+# `blk.4.ffn_up.weight`, with query/key/value matvec output slices for
 # the layer-4 query, key, and value descriptors, into separate
 # process-owned scratch slots before the token-0 math path. The layer-1 FFN,
 # layer-2 attention/FFN, and layer-3 attention/FFN descriptors and retained
@@ -69,15 +70,18 @@
 # projection, key projection, value projection, output projection, FFN RMSNorm
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
 # attention/FFN, layer-3 attention/FFN, layer-4 attention
-# RMSNorm/query/key/value/output setup descriptors, and a layer-4 FFN RMSNorm
-# setup descriptor. The layer-4 attention RMSNorm descriptor is consumed by a
-# guarded status smoke after the layer-3 post-FFN residual exists; the query,
+# RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
+# RMSNorm/gate/up setup descriptors. The layer-4 attention RMSNorm descriptor
+# is consumed by a guarded status smoke after the layer-3 post-FFN residual
+# exists; the query,
 # key, and value descriptors are consumed only after that RMSNorm smoke succeeds
 # and the full Q8_0 matrix spans are proven inside the live mapping. The layer-4
 # output descriptor is consumed after the single-token context handoff exists;
 # the FFN RMSNorm descriptor is consumed only by the focused layer-4 FFN
 # RMSNorm smoke after the post-attention residual handoff exists and the f32
-# payload span is proven inside the live mapping.
+# payload span is proven inside the live mapping. The layer-4 FFN gate
+# descriptor is consumed only after that FFN RMSNorm activation exists; the
+# layer-4 FFN up descriptor is retained for a later guarded matvec smoke.
 # The layer-2 FFN RMSNorm smoke consumes the retained layer-2 post-attention
 # residual and publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
 # descriptors and layer-3 FFN gate/up/down descriptors feed shape-gated Q8_0
