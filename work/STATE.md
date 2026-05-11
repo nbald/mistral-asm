@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 for the completed layer-2 attention through
-post-attention residual path before starting layer-2 FFN feature work.
+Add descriptor-only lookup and summary coverage for `blk.2.ffn_norm.weight`
+before adding any layer-2 FFN payload reads.
 
 ## Completed Work
 
@@ -74,14 +74,17 @@ post-attention residual path before starting layer-2 FFN feature work.
   findings. It checked status gates, tensor shape/type/bounds checks, exact-hex
   slice publication, oracle arithmetic, documentation consistency, split risk,
   real-target behavior, and empty-GGUF guard behavior.
+- Layer-2 attention branch review gate pass 2 is complete in
+  `work/reviews/2026-05-11-layer2-attn-branch-review-2.md` with no blocking
+  findings. It independently checked branch ordering, handoff ownership, failure
+  modes, oracle coverage gaps, and readiness to resume layer-2 FFN feature work.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or small
   include fragments with Makefile-tracked dependencies.
 
 ## Known Blockers
 
-- No current blocker to running the second review pass for the completed layer-2
-  attention branch.
+- No current blocker to starting descriptor-only layer-2 FFN work.
 - `src/infer/token0_layer2_attn.s` is 997 lines after the value slice step. Do
   not add substantial new code to it before splitting or moving the next
   responsibility into a focused module.
@@ -115,13 +118,14 @@ post-attention residual path before starting layer-2 FFN feature work.
 - `work/oracle/token0-layer2-attn-v-output.md`
 - `work/oracle/token0-layer2-attn-output.md`
 - `work/oracle/token0-layer2-post-attn-residual.md`
+- `work/reviews/2026-05-11-layer2-attn-branch-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 - `work/prompts/continue.md`
 
 ## Last Verification
 
-Layer-2 attention branch review pass 1 verification passed:
+Layer-2 attention branch review pass 2 verification passed:
 
 - `make`
 - `make check`
@@ -146,7 +150,7 @@ Layer-2 attention branch review pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the completed layer-2 attention/post-attention
-residual path. Inspect it independently from pass 1, focusing on branch ordering,
-handoff ownership, failure modes, oracle coverage gaps, and readiness to resume
-layer-2 FFN feature work; commit a focused review note under `work/reviews/`.
+Add descriptor-only lookup and summary coverage for `blk.2.ffn_norm.weight`.
+Extend the tracked entry state, request string, bootstrap lookup chain, summary
+labels, lookup-summary printer, and Makefile-tracked include dependencies as
+needed, but do not read `blk.2.ffn_norm.weight` payload bytes in that step.

@@ -2075,3 +2075,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime/oracle comparison, empty-GGUF guard behavior, whitespace, runtime
   source extension, tracked include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T14:45:29+02:00
+
+- Completed the second review-gate pass for the layer-2 attention through
+  post-attention residual branch. No blocking findings were found. The review
+  treated Q/K projection slices as sidecar smoke coverage for this one-token
+  branch; the durable handoff into layer-2 FFN work remains the guarded
+  post-attention residual buffer.
+- Verification evidence: build, harnesses, help, oracle py-compile, real-target
+  layer-2 status/output/residual smoke, the focused residual oracle diff, and
+  empty-GGUF guard behavior passed, along with the static purity, symbol,
+  include-dependency, tracked-artifact, and large-file scans. A broad standalone
+  Q/K/V oracle batch was stopped because the first standalone Q oracle was too
+  slow for this review pass; the optimized residual oracle covers the
+  output/residual handoff needed for the next layer-2 FFN descriptor step.
