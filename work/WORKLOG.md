@@ -3419,3 +3419,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   exact-hex labels through layer-4 FFN down still matched the down oracle, and
   the 24-byte zero-count GGUF kept the new residual status at `0` with no
   residual exact-hex labels.
+
+## 2026-05-12T01:36:18+02:00
+
+- Published the first guarded layer-4 post-FFN residual exact-hex slice from
+  the private residual buffer. The first four words are `0x440c31ce`,
+  `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`.
+- Added a focused external oracle that reuses the layer-4 FFN down path and
+  applies the same scalar f32 residual add against the retained layer-4
+  post-attention residual.
+- Verification evidence: the real-target runtime/oracle comparison matched the
+  37 exact-hex labels covered by the new oracle, and the 24-byte zero-count
+  GGUF kept the layer-4 post-attention/down/post-FFN statuses at `0` with no
+  guarded post-FFN residual labels.

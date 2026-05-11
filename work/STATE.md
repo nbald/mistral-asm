@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded token-0 layer-4 post-FFN residual exact-hex slice and add a
-focused oracle for it.
+Run review gate pass 1 over the completed layer-4 FFN/down/post-FFN residual
+chain before expanding feature scope.
 
 ## Completed Work
 
@@ -54,12 +54,13 @@ focused oracle for it.
   proves the mapped payload span, writes a private 3072-f32 down output buffer,
   and publishes the first four output words: `0x3e13ea6f`, `0xbac8ccef`,
   `0x3ce99bed`, and `0xbcc152bc`.
-- Status-only layer-4 post-FFN residual coverage is complete in the focused
+- Layer-4 post-FFN residual output-slice coverage is complete in the focused
   layer-4 FFN down/residual module. It requires
   `token0_layer4_post_attn_residual` and
   `token0_layer4_ffn_down_matvec` statuses, repeats the 3072-wide
   `blk.4.ffn_down.weight` output guard, writes a private 3072-f32 residual
-  buffer, and publishes only `token0_layer4_post_ffn_residual` status.
+  buffer, and publishes the first four residual words: `0x440c31ce`,
+  `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`.
 
 ## Known Blockers
 
@@ -100,38 +101,35 @@ focused oracle for it.
 - `work/oracle/token0_layer4_ffn_up_oracle.py`
 - `work/oracle/token0_layer4_ffn_swiglu_oracle.py`
 - `work/oracle/token0_layer4_ffn_down_oracle.py`
+- `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 post-FFN residual status verification passed:
+Layer-4 post-FFN residual output-slice verification passed:
 
-- `make clean all check`; after the help text update, `make all check`
-- `./mistral-asm --help` mentions the layer-4 post-FFN residual status smoke
+- `make all check`
+- `./mistral-asm --help` mentions the layer-4 post-FFN residual output slice
+- `python3 -m py_compile work/oracle/*.py`
 - real-target output reported `token0_layer4_post_attn_residual: 1`,
   `token0_layer4_ffn_down_matvec: 1`, and
   `token0_layer4_post_ffn_residual: 1`
-- real-target output emitted no
+- real-target output published
+  `token0_layer4_post_ffn_residual{0..3}_f32_hex` as `0x440c31ce`,
+  `0xc1fe4f76`, `0xc2a982a9`, and `0xc15ff54c`
+- the real-target runtime/oracle diff was empty for the 37 exact-hex labels
+  covered by `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
+- a 24-byte zero-count GGUF kept `token0_layer4_post_attn_residual`,
+  `token0_layer4_ffn_down_matvec`, and `token0_layer4_post_ffn_residual`
+  statuses at `0` and emitted no
   `token0_layer4_post_ffn_residual{0..3}_f32_hex` labels
-- the real-target runtime/oracle diff was empty for 32 public exact-hex labels
-  through layer-4 FFN down against
-  `work/oracle/token0_layer4_ffn_down_oracle.py`
-- 24-byte zero-count GGUF kept `token0_layer4_post_attn_residual`,
-  `token0_layer4_ffn_down_matvec`, and
-  `token0_layer4_post_ffn_residual` statuses at `0` and emitted no
-  `token0_layer4_post_ffn_residual{0..3}_f32_hex` labels
-- `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- symbol check for `run_token0_layer4_post_ffn_residual_status`,
-  `token0_layer4_post_ffn_residual_status`, private
-  `token0_layer4_post_ffn_residual`, and private
-  `token0_layer4_ffn_down_output`
 - tracked artifact and tracked large-file scans
-- line-count check; `src/infer/token0_layer4_ffn_down.s` is 375 lines,
+- line-count check; `src/infer/token0_layer4_ffn_down.s` is 471 lines,
   `src/entry/start/main/smoke_orchestration.inc` is 452 lines,
   `src/entry/start/rodata/cli_requests.inc` is 122 lines,
   `src/infer/token0_layer4_ffn.s` is 945 lines,
@@ -144,9 +142,6 @@ Layer-4 post-FFN residual status verification passed:
 
 ## Next Exact Step
 
-Publish the first four guarded
-`token0_layer4_post_ffn_residual{0..3}_f32_hex` labels from the retained
-private residual buffer, add a focused
-`work/oracle/token0_layer4_post_ffn_residual_oracle.py`, and verify the
-real-target runtime/oracle diff through the new layer-4 post-FFN residual slice
-plus zero-count GGUF suppression.
+Run review gate pass 1 for the layer-4 FFN/down/post-FFN residual chain; commit
+a focused review note under `work/reviews/` with findings or an explicit clean
+result.
