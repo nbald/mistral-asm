@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-2 attention value matvec coverage, consuming
-`token0_layer2_attn_norm_activation` and the reusable `blk.2.attn_v.weight`
-descriptor after checks, printing only `token0_layer2_attn_v_matvec`.
+Publish the first guarded token-0 layer-2 attention value output slice and add
+durable oracle coverage for the first four `blk.2.attn_v.weight` rows.
 
 ## Completed Work
 
@@ -201,11 +200,19 @@ descriptor after checks, printing only `token0_layer2_attn_v_matvec`.
   descriptor without reading payload bytes. On the local target GGUF it reports
   found `1`, two dimensions `3072` and `1024`, Q8_0 type `8`, and relative
   offset `705306624`.
+- Status-only token-0 layer-2 attention value matvec coverage now lives beside
+  the layer-2 attention RMSNorm/query/key paths in
+  `src/infer/token0_layer2_attn.s`. It consumes
+  `token0_layer2_attn_norm_activation` and the focused
+  `blk.2.attn_v.weight` descriptor only after prerequisite status,
+  descriptor/type/shape, mapping-base, and full Q8_0 payload bounds checks,
+  writes a private 1024-f32 value output buffer plus status word, and prints
+  only `token0_layer2_attn_v_matvec`.
 
 ## Known Blockers
 
-- No current blocker to adding status-only layer-2 attention value matvec
-  coverage.
+- No current blocker to publishing the first guarded layer-2 attention value
+  output slice.
 - Residual maintainability risk remains in
   `src/gguf/load_header/tensor_infos.inc` because it is still over 1000 lines,
   but it is a single coherent tensor-directory walker and should be reduced with
@@ -252,25 +259,25 @@ descriptor after checks, printing only `token0_layer2_attn_v_matvec`.
 
 ## Last Verification
 
-Layer-2 attention value descriptor verification passed: `make`; `make check`;
-`./mistral-asm --help`; `python3 -m py_compile work/oracle/*.py`; real target
-runtime smoke reporting preserved layer-2 norm/query/key descriptors and
-statuses plus `layer2_attn_v_tensor_found: 1`, dimensions `3072` and `1024`,
-Q8_0 type `8`, and relative offset `705306624`; temporary 24-byte empty valid
-GGUF reporting zeroed layer-2 norm/query/key/value descriptor fields,
-`token0_layer2_attn_norm: 0`, `token0_layer2_attn_q_matvec: 0`, and
-`token0_layer2_attn_k_matvec: 0` with no guarded layer-2 output labels;
-`git diff --check`; runtime source extension scan allowing `.s` drivers and
-tracked `.inc` fragments; tracked include dependency scan;
-static-link/no-dynamic-section check; undefined-symbol check; exported-symbol
-inspection for the layer-2 value descriptor symbols; tracked-artifact and
-tracked large-file checks.
+Layer-2 attention value matvec status verification passed: `make`;
+`make check`; `./mistral-asm --help`;
+`python3 -m py_compile work/oracle/*.py`; real target runtime smoke preserving
+the existing layer-2 RMSNorm/query/key outputs and reporting
+`token0_layer2_attn_v_matvec: 1`; temporary 24-byte empty valid GGUF reporting
+zeroed layer-2 norm/query/key/value descriptor fields,
+`token0_layer2_attn_norm: 0`, `token0_layer2_attn_q_matvec: 0`,
+`token0_layer2_attn_k_matvec: 0`, and `token0_layer2_attn_v_matvec: 0` with no
+guarded layer-2 output labels; `git diff --check`; runtime source extension
+scan allowing `.s` drivers and tracked `.inc` fragments; tracked include
+dependency scan; static-link/no-dynamic-section/file check; undefined-symbol
+check; exported-symbol inspection for the layer-2 value matvec/status/output
+symbols; tracked-artifact and tracked large-file checks.
 
 ## Next Exact Step
 
-Add status-only token-0 layer-2 attention value matvec coverage in
-`src/infer/token0_layer2_attn.s`: consume `token0_layer2_attn_norm_activation`
-and the `blk.2.attn_v.weight` descriptor only after prerequisite status,
-descriptor/type/shape, mapping-base, and full Q8_0 payload bounds checks, write
-a private 1024-f32 value output buffer plus status word, and print only
-`token0_layer2_attn_v_matvec`.
+Publish a guarded first-four exact-hex slice from
+`token0_layer2_attn_v_output` in `src/infer/token0_layer2_attn.s`: add labels
+and a printer called only after `token0_layer2_attn_v_matvec_status` is 1, keep
+the empty-GGUF path free of value output labels, and add durable external oracle
+coverage comparing the first four `blk.2.attn_v.weight` rows against runtime
+output.
