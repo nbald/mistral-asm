@@ -3159,3 +3159,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   oracles, and the 24-byte header-only GGUF kept all reviewed layer-4 descriptor
   found flags and dependent statuses at `0` with no guarded layer-4 exact-hex
   output.
+
+## 2026-05-11T23:29:22+02:00
+
+- Review gate pass 2 over the token-0 layer-4 attention chain found no blocking
+  issues. The two-pass gate is complete, with feature work resuming only in a
+  focused layer-4 post-attention residual module because the existing layer-4
+  attention source is already near the size guard.
+- Verification evidence: the real-target runtime matched the layer-4 output
+  oracle for the public output slice and prerequisite public slices, query/key
+  preservation diffs stayed empty against focused oracles, the 24-byte
+  header-only GGUF kept all reviewed layer-4 guards at `0` with no guarded
+  layer-4 exact-hex output, and source/dependency/static/artifact scans passed.

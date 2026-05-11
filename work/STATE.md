@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 for the token-0 layer-4 attention chain before starting
-layer-4 post-attention residual feature work.
+Add a focused token-0 layer-4 post-attention residual status smoke without
+growing `src/infer/token0_layer4_attn.s`.
 
 ## Completed Work
 
@@ -110,10 +110,14 @@ layer-4 post-attention residual feature work.
   blocking issues in descriptor guards, single-token context semantics,
   output-projection oracle quality, source-size pressure handling, or
   header-only guard behavior.
+- Review gate pass 2 for the token-0 layer-4 attention chain completed cleanly
+  under `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`. The two-pass
+  review gate is complete; feature work can resume in a focused layer-4
+  post-attention residual module.
 
 ## Known Blockers
 
-- No functional blocker to review gate pass 2 for the layer-4 attention chain.
+- No functional blocker to starting the layer-4 post-attention residual smoke.
 - `src/infer/token0_layer4_attn.s` is 945 lines after the output-projection
   slice call wiring. Keep future edits minimal there and put substantial new
   layer-4 residual/FFN work in focused modules.
@@ -155,12 +159,13 @@ layer-4 post-attention residual feature work.
 - `work/oracle/token0-layer4-attn-output.md`
 - `work/oracle/token0_layer4_attn_output_oracle.py`
 - `work/reviews/2026-05-11-layer4-attn-chain-review-1.md`
+- `work/reviews/2026-05-11-layer4-attn-chain-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 attention review gate pass 1 verification passed:
+Layer-4 attention review gate pass 2 verification passed:
 
 - `make clean all check` and `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
@@ -191,6 +196,8 @@ Layer-4 attention review gate pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the token-0 layer-4 attention chain, covering
-descriptor guards, single-token context semantics, output-projection oracle
-quality, source-size pressure, and 24-byte header-only guard behavior.
+Add a focused `token0_layer4_post_attn_residual` status smoke in a new layer-4
+post-attention residual module, guarded by
+`token0_layer4_attn_output_matvec_status` and
+`token0_layer3_post_ffn_residual_status`, then verify the real target reports
+status `1` while the 24-byte header-only GGUF keeps it at `0`.
