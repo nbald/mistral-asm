@@ -2192,3 +2192,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   payload smoke. Build, harnesses, help, oracle py-compile, whitespace, runtime
   source extension, include dependency, static-link, undefined-symbol,
   exported-symbol, tracked-artifact, and tracked large-file checks passed.
+
+## 2026-05-11T15:43:58+02:00
+
+- Added status-only layer-2 FFN up matvec coverage in the focused FFN module.
+  The path mirrors the gate projection guards with the retained
+  `blk.2.ffn_up.weight` Q8_0 `[3072 x 9216]` descriptor, verifies the complete
+  mapped payload span, fills private 9216-f32 output storage, and publishes only
+  `token0_layer2_ffn_up_matvec`.
+- Verification evidence: the real target preserved the reviewed layer-2 FFN
+  RMSNorm and gate output slices and printed `token0_layer2_ffn_up_matvec: 1`.
+  A temporary 24-byte empty valid GGUF kept the layer-2 FFN norm, gate, and up
+  matvec statuses at `0`. Build, harnesses, help, oracle py-compile,
+  whitespace, runtime source extension, include dependency, static-link,
+  undefined-symbol, exported-symbol, tracked-artifact, and tracked large-file
+  checks passed.

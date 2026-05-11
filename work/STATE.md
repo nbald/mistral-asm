@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only layer-2 FFN up matvec coverage in the focused FFN module,
-publishing only `token0_layer2_ffn_up_matvec`.
+Publish the first guarded layer-2 FFN up matvec output slice from the focused
+FFN module, with an external oracle for the first four `blk.2.ffn_up.weight`
+rows.
 
 ## Completed Work
 
@@ -17,18 +18,19 @@ publishing only `token0_layer2_ffn_up_matvec`.
   metadata summaries, tensor directory walking, retained descriptor lookups, and
   bounded tensor payload reads.
 - Token-0 smoke coverage now reaches layer-2 post-attention residual, layer-2
-  FFN RMSNorm activation, and layer-2 FFN gate matvec output.
+  FFN RMSNorm activation, layer-2 FFN gate matvec output, and layer-2 FFN up
+  matvec status.
 - The retained entry-side lookup chain now captures and prints
   `blk.2.ffn_up.weight` descriptor fields (`found`, dimension count, dim0,
   dim1, type, and relative offset) after the layer-2 FFN gate descriptor. This
   descriptor-only step does not read FFN up payload bytes.
 - `src/infer/token0_layer2_ffn.s` owns layer-2 FFN norm status/activation and
-  layer-2 FFN gate matvec status/output storage. The gate path requires
-  `token0_layer2_ffn_norm_status == 1`, retained `blk.2.ffn_gate.weight`
-  descriptor shape/type `Q8_0 [3072 x 9216]`, mapping base, and complete payload
-  bounds before filling its private 9216-f32 output buffer. It prints
-  `token0_layer2_ffn_gate_matvec` and the first four exact-hex gate output
-  words only when the guarded matvec succeeds.
+  layer-2 FFN gate/up matvec status/output storage. Both projection paths
+  require `token0_layer2_ffn_norm_status == 1`, retained Q8_0
+  `[3072 x 9216]` descriptors, mapping base, and complete payload bounds before
+  filling their private 9216-f32 output buffers. The gate path prints its
+  status and first four exact-hex output words; the up path currently publishes
+  only `token0_layer2_ffn_up_matvec`.
 - Durable external oracle coverage exists through the layer-2 FFN RMSNorm and
   gate slices in `work/oracle/token0_layer2_ffn_norm_oracle.py`,
   `work/oracle/token0-layer2-ffn-norm.md`,
@@ -42,9 +44,9 @@ publishing only `token0_layer2_ffn_up_matvec`.
 
 ## Known Blockers
 
-- No current blocker to adding status-only layer-2 FFN up matvec coverage.
-- The layer-2 FFN gate output buffer is intentionally module-private until a
-  later SwiGLU handoff needs to read it.
+- No current blocker to publishing the layer-2 FFN up output slice.
+- The layer-2 FFN gate and up output buffers are intentionally module-private
+  until a later SwiGLU handoff needs to read them.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/gguf/load_header/tensor_infos.inc` remains over 1000 lines, but it is a
@@ -71,31 +73,34 @@ publishing only `token0_layer2_ffn_up_matvec`.
 
 ## Last Verification
 
-Layer-2 FFN up descriptor-only verification passed:
+Layer-2 FFN up status-only matvec verification passed:
 
 - `make`
 - `make check`
 - `./mistral-asm --help`
 - `python3 -m py_compile work/oracle/*.py`
-- real target runtime smoke printed `layer2_ffn_up_tensor_found: 1`, dimensions
-  `2`, dim0 `3072`, dim1 `9216`, type `8`, and relative offset `768823296`,
-  while preserving the reviewed layer-2 FFN RMSNorm exact-hex words and gate
-  output words `0x4204511d`, `0xbfebf5bb`, `0x414216d1`, and `0x3f72ec48`
+- real target runtime smoke printed `token0_layer2_ffn_up_matvec: 1` after the
+  retained `blk.2.ffn_up.weight` Q8_0 `[3072 x 9216]` descriptor, while
+  preserving the reviewed layer-2 FFN RMSNorm exact-hex words and gate output
+  words `0x4204511d`, `0xbfebf5bb`, `0x414216d1`, and `0x3f72ec48`
 - temporary 24-byte empty valid GGUF kept `layer2_ffn_norm_tensor_*`,
   `layer2_ffn_gate_tensor_*`, `layer2_ffn_up_tensor_*`,
   `token0_layer2_attn_output_matvec`, `token0_layer2_post_attn_residual`,
-  `token0_layer2_ffn_norm`, and `token0_layer2_ffn_gate_matvec` at `0`
+  `token0_layer2_ffn_norm`, `token0_layer2_ffn_gate_matvec`, and
+  `token0_layer2_ffn_up_matvec` at `0`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and tracked `.inc` source files
 - tracked include dependency scan
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
-- exported-symbol inspection for the retained layer-2 FFN norm/gate/up
-  descriptor symbols and current layer-2 FFN gate status symbols
+- exported-symbol inspection for the retained layer-2 FFN norm/gate/up status
+  symbols, with `token0_layer2_ffn_up_output` remaining private
 - tracked-artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Add status-only layer-2 FFN up matvec coverage in `src/infer/token0_layer2_ffn.s`,
-mirroring the gate matvec guards with `layer2_ffn_up_tensor_*`, writing a private
-9216-f32 output buffer, and publishing only `token0_layer2_ffn_up_matvec`.
+Publish `token0_layer2_ffn_up_output0_f32_hex` through
+`token0_layer2_ffn_up_output3_f32_hex` behind
+`token0_layer2_ffn_up_matvec_status == 1`, add a focused external oracle for the
+first four `blk.2.ffn_up.weight` rows, and verify runtime/oracle equality while
+the empty valid GGUF still emits no guarded up output words.
