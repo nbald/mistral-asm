@@ -75,8 +75,9 @@
 # key, and value descriptors are consumed only after that RMSNorm smoke succeeds
 # and the full Q8_0 matrix spans are proven inside the live mapping. The layer-4
 # output descriptor is consumed after the single-token context handoff exists;
-# the FFN RMSNorm descriptor remains descriptor-only until a focused layer-4 FFN
-# RMSNorm smoke proves the f32 payload span.
+# the FFN RMSNorm descriptor is consumed only by the focused layer-4 FFN
+# RMSNorm smoke after the post-attention residual handoff exists and the f32
+# payload span is proven inside the live mapping.
 # The layer-2 FFN RMSNorm smoke consumes the retained layer-2 post-attention
 # residual and publishes a guarded exact-hex output slice; the layer-2 FFN gate/up/down
 # descriptors and layer-3 FFN gate/up/down descriptors feed shape-gated Q8_0

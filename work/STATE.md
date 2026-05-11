@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded layer-4 FFN RMSNorm exact-hex slice with a focused external
-oracle for the first four token-0 activation words.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.ffn_gate.weight`, keeping layer-4 FFN gate payload reads out of scope.
 
 ## Completed Work
 
@@ -28,15 +28,16 @@ oracle for the first four token-0 activation words.
 - The two-pass review gate for the layer-4 attention chain and the two-pass
   review gate for the layer-4 post-attention residual handoff both completed
   cleanly under `work/reviews/`.
-- Layer-4 FFN scope has descriptor-only retained lookup and summary coverage for
+- Layer-4 FFN RMSNorm scope has retained lookup and summary coverage for
   `blk.4.ffn_norm.weight`. On the real target it is f32 `[3072]`, relative
   offset `1016193024`.
-- Layer-4 FFN RMSNorm status coverage now lives in focused
+- Layer-4 FFN RMSNorm coverage lives in focused
   `src/infer/token0_layer4_ffn.s`. It consumes the retained layer-4
   post-attention residual and `blk.4.ffn_norm.weight`, computes and retains
-  `token0_layer4_ffn_norm_activation` on success, and currently prints only
-  `token0_layer4_ffn_norm: 1` on the real target. No public layer-4 FFN norm
-  exact-hex labels or oracle have been added yet.
+  `token0_layer4_ffn_norm_activation` on success, and publishes the first four
+  guarded exact-hex activation words. The real-target words are `0x423a3384`,
+  `0xc014dd2f`, `0xc0183cf3`, and `0xbf63db6c`, matching
+  `work/oracle/token0_layer4_ffn_norm_oracle.py`.
 
 ## Known Blockers
 
@@ -68,12 +69,13 @@ oracle for the first four token-0 activation words.
 - `src/infer/token0_layer4_post_attn_residual.s`
 - `src/infer/token0_layer4_ffn.s`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
+- `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-4 FFN RMSNorm status-only verification passed:
+Layer-4 FFN RMSNorm exact-hex slice verification passed:
 
 - `make clean all check`
 - `./mistral-asm --help`
@@ -85,10 +87,8 @@ Layer-4 FFN RMSNorm status-only verification passed:
   `token0_layer4_ffn_norm: 1`
 - real-target layer-4 attention output and post-attention residual statuses
   remained `1`; the public layer-3 post-FFN residual, layer-4 attention output,
-  and layer-4 post-attention residual slices still diffed cleanly against
-  `work/oracle/token0_layer4_post_attn_residual_oracle.py`
-- real-target output emitted no `token0_layer4_ffn_norm[0-3]_f32_hex` labels
-  in this status-only step
+  layer-4 post-attention residual, and layer-4 FFN RMSNorm slices diffed
+  cleanly against `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - 24-byte zero-count GGUF reported all `layer4_ffn_norm_tensor_*` summary fields
   as `0`, kept layer-4 output/residual/FFN-norm statuses at `0`, and emitted no
   guarded layer-4 exact-hex labels
@@ -101,13 +101,12 @@ Layer-4 FFN RMSNorm status-only verification passed:
   `token0_layer4_ffn_norm_status`, and
   `token0_layer4_ffn_norm_activation`
 - tracked artifact and tracked large-file scans
-- line-count check; new `src/infer/token0_layer4_ffn.s` is 156 lines,
+- line-count check; `src/infer/token0_layer4_ffn.s` is 253 lines,
   `src/infer/token0_layer4_attn.s` remains 945 lines, and
   `src/infer/token0_layer4_post_attn_residual.s` remains 223 lines
 
 ## Next Exact Step
 
-Add a focused `work/oracle/token0_layer4_ffn_norm_oracle.py` and publish the
-first four guarded `token0_layer4_ffn_norm*_f32_hex` words from
-`src/infer/token0_layer4_ffn.s`, keeping the existing layer-4 residual handoff
-checks intact.
+Add descriptor-only retained lookup and summary coverage for
+`blk.4.ffn_gate.weight`, without adding a layer-4 FFN gate matvec or payload
+read yet.

@@ -3250,3 +3250,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   slices against the oracle, and emitted no `token0_layer4_ffn_norm*_f32_hex`
   labels. A 24-byte zero-count GGUF kept the new status at `0` together with
   dependent layer-4 statuses and emitted no guarded layer-4 exact-hex labels.
+
+## 2026-05-12T00:10:52+02:00
+
+- Published the first guarded layer-4 FFN RMSNorm exact-hex slice from the
+  focused FFN module. The first four words are `0x423a3384`, `0xc014dd2f`,
+  `0xc0183cf3`, and `0xbf63db6c`.
+- Added a focused external oracle that rebuilds the full layer-4
+  single-token attention output and post-attention residual before applying
+  `blk.4.ffn_norm.weight`, because the RMSNorm scale depends on all 3072
+  residual words.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  public layer-3 post-FFN residual, layer-4 attention output, layer-4
+  post-attention residual, and layer-4 FFN RMSNorm slices. The 24-byte
+  zero-count GGUF kept the layer-4 output/residual/FFN-norm statuses at `0` and
+  emitted no guarded layer-4 exact-hex labels.
