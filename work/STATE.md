@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish a guarded first-four-word layer-3 attention query output slice from the
-private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
+Add descriptor-only retained lookup/summary coverage for
+`blk.3.attn_k.weight` in focused layer-3 entry fragments, with no key matvec or
+payload reads.
 
 ## Completed Work
 
@@ -37,18 +38,22 @@ private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
   with no layer-3 query payload reads. On the real target it reports found `1`,
   dimensions `2`, dim0 `3072`, dim1 `4096`, type `8`, and relative offset
   `815628288`.
-- Status-only layer-3 attention query matvec coverage now consumes the retained
+- Layer-3 attention query matvec coverage consumes the retained
   `blk.3.attn_q.weight` descriptor and `token0_layer3_attn_norm` activation.
-  It bounds the full row-major Q8_0 [3072 x 4096] payload, fills private
-  `token0_layer3_attn_q_output` storage, and publishes only
+  It bounds the full row-major Q8_0 [3072 x 4096] payload and fills private
+  `token0_layer3_attn_q_output` storage before setting
   `token0_layer3_attn_q_matvec`.
+- The layer-3 attention query smoke now publishes a guarded first-four-word
+  exact-hex output slice only after `token0_layer3_attn_q_matvec: 1`. On the
+  real target it prints `0x3de458d2`, `0x3eae6d55`, `0x3d06883d`, and
+  `0xbe14568c`, matching the focused external oracle.
 - Operator guidance to keep new feature work out of catch-all entry files is
   durable. New runtime logic should continue to use focused modules or
   Makefile-tracked include fragments.
 
 ## Known Blockers
 
-- No current blocker to the layer-3 attention query output-slice step.
+- No current blocker to the layer-3 attention key descriptor step.
 - `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new code
   to it before splitting or moving work into a focused module.
 - `src/infer/token0_layer2_ffn.s` is 943 lines. Do not add substantial new code
@@ -77,12 +82,14 @@ private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
 - `src/infer/token0_layer2_ffn_down.s`
 - `work/oracle/token0_layer3_attn_norm_oracle.py`
 - `work/oracle/token0-layer3-attn-norm.md`
+- `work/oracle/token0_layer3_attn_q_oracle.py`
+- `work/oracle/token0-layer3-attn-q-output.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-3 attention query matvec status-only verification passed:
+Layer-3 attention query output-slice verification passed:
 
 - `make`
 - `make check`
@@ -93,25 +100,29 @@ Layer-3 attention query matvec status-only verification passed:
   dim1 `4096`, type `8`, and offset `815628288`; it also preserved
   `token0_layer2_post_ffn_residual: 1`, `token0_layer3_attn_norm: 1`, the
   known guarded exact-hex words, and printed `token0_layer3_attn_q_matvec: 1`
-- real-target runtime/oracle diff was empty for the layer-2 post-FFN residual
-  and layer-3 attention RMSNorm public exact-hex labels
+  followed by guarded layer-3 query output words `0x3de458d2`, `0x3eae6d55`,
+  `0x3d06883d`, and `0xbe14568c`
+- real-target runtime/oracle diff was empty for the layer-2 post-FFN residual,
+  layer-3 attention RMSNorm, and layer-3 attention query output public
+  exact-hex labels
 - temporary 24-byte empty valid GGUF kept the layer-3 descriptor fields at `0`,
   including the new query descriptor slot, kept `token0_layer2_post_ffn_residual`
   and `token0_layer3_attn_norm` at `0`, printed
   `token0_layer3_attn_q_matvec: 0`, and emitted no guarded layer-2 post-FFN
-  residual or layer-3 attention RMSNorm exact-hex output labels
+  residual, layer-3 attention RMSNorm, or layer-3 attention query exact-hex
+  output labels
 - `python3 -m py_compile work/oracle/*.py`
 - `git diff --check`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
-- real-target scan found no `token0_layer3_attn_q_output*_f32_hex` labels
 - static-link/no-dynamic-section/file check
 - undefined-symbol check
 - local/exported symbol inspection for the layer-3 query matvec runner, status,
-  internal smoke helper, and private output storage
+  internal smoke helper, guarded slice printer, and private output storage
 - tracked artifact and tracked large-file scans
 
 ## Next Exact Step
 
-Publish a guarded first-four-word layer-3 attention query output slice from the
-private `token0_layer3_attn_q_output` buffer, backed by an external oracle.
+Add descriptor-only retained lookup/summary coverage for
+`blk.3.attn_k.weight` in focused layer-3 entry fragments, with no key matvec or
+payload reads.

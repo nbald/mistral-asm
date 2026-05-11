@@ -2441,3 +2441,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime source extension, include dependency, static-link, undefined-symbol,
   symbol, no-layer3-query-output-label, tracked-artifact, and tracked large-file
   scans passed.
+
+## 2026-05-11T17:41:46+02:00
+
+- Published the first guarded layer-3 attention query output slice from the
+  focused layer-3 module. The labels are emitted only after
+  `token0_layer3_attn_q_matvec: 1`, and the help text now describes layer-3
+  query as an output slice rather than a status-only smoke.
+- Verification evidence: the real-target runtime/oracle diff was empty for the
+  layer-2 post-FFN residual, layer-3 attention RMSNorm, and layer-3 attention
+  query public labels. The new query words are `0x3de458d2`, `0x3eae6d55`,
+  `0x3d06883d`, and `0xbe14568c`; the 24-byte empty valid GGUF kept the
+  layer-3 descriptor fields and dependent statuses at `0` and emitted no
+  guarded layer-3 query output words. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  static-link, undefined-symbol, symbol, tracked-artifact, and tracked
+  large-file scans passed.
