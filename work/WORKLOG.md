@@ -2850,3 +2850,22 @@ redundant entries. Do not treat it as the primary continuation source; use
   existing layer-3 FFN public slices still matched the external SwiGLU oracle
   exactly; the 24-byte header-only GGUF kept the down descriptor and dependent
   status at `0` with no guarded layer-3 FFN down output labels.
+
+## 2026-05-11T20:48:36+02:00
+
+- Published the first guarded layer-3 FFN down projection slice from the
+  focused down module. The matvec still fills the private 3072-word output
+  buffer after the existing descriptor and payload-span checks; stdout now
+  emits only the first four exact-hex words when
+  `token0_layer3_ffn_down_matvec: 1`.
+- Added an external layer-3 FFN down oracle and note. The oracle recomputes the
+  full layer-3 FFN RMSNorm chain, all 9216 gate/up rows, the complete SwiGLU
+  activation, and the first four rows of `blk.3.ffn_down.weight`.
+- Verification evidence: the real-target runtime/oracle diff was empty for
+  layer-3 FFN RMSNorm, gate, up, SwiGLU, and new down public labels. The new
+  down words are `0x3def4ab2`, `0x3e0b094a`, `0xbf222273`, and `0xbc2b9ed5`;
+  the 24-byte header-only GGUF kept layer-3 FFN statuses at `0` and emitted no
+  guarded layer-3 FFN output labels. Build, harnesses, help, oracle
+  py-compile, whitespace, runtime source extension, include dependency,
+  static-link, undefined-symbol, symbol, line-count, tracked-artifact, and
+  tracked large-file scans passed.

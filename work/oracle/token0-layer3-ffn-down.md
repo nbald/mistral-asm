@@ -1,0 +1,97 @@
+# Token 0 Layer-3 FFN Down Oracle
+
+Purpose: independently check the first four f32 words printed by the assembly
+`token0_layer3_ffn_down_output*_f32_hex` smoke path for the local target GGUF.
+
+This oracle is external verification tooling only. It is not linked by the
+runtime build. The script reuses the full layer-3 FFN RMSNorm oracle path,
+then dots the 3072-word activation with all 9216 rows of
+`blk.3.ffn_gate.weight` and `blk.3.ffn_up.weight`, computes the full
+9216-word SwiGLU activation as `silu(gate[i]) * up[i]`, and dots that
+activation with the first four rows of `blk.3.ffn_down.weight`.
+
+The arithmetic chain checked here extends
+`work/oracle/token0-layer3-ffn-swiglu.md`:
+
+1. Compute the complete token-0 layer-3 FFN RMSNorm activation.
+2. Dot that activation with every row of `blk.3.ffn_gate.weight`.
+3. Dot that activation with every row of `blk.3.ffn_up.weight`.
+4. Compute the complete layer-3 FFN SwiGLU activation with the same scalar
+   helper used by the earlier FFN oracles.
+5. Dot the SwiGLU activation with the first four rows of
+   `blk.3.ffn_down.weight`.
+
+Command:
+
+```sh
+python3 work/oracle/token0_layer3_ffn_down_oracle.py \
+  models/unsloth-Ministral-3-3B-Instruct-2512-GGUF/Ministral-3-3B-Instruct-2512-Q8_0.gguf
+```
+
+External tool versions used:
+
+```text
+Python 3.12.3
+numpy 1.26.4
+```
+
+Oracle output:
+
+```text
+tensor_data_offset: 7882016
+attn_norm_rms_epsilon_f32_hex: 0x3727c5ac
+token_embd.weight: type 8 dims 3072x131072 offset 12288
+blk.0.attn_norm.weight: type 0 dims 3072 offset 431173632
+blk.0.attn_v.weight: type 8 dims 3072x1024 offset 457924608
+blk.0.attn_output.weight: type 8 dims 4096x3072 offset 431185920
+blk.0.ffn_norm.weight: type 0 dims 3072 offset 521428992
+blk.0.ffn_gate.weight: type 8 dims 3072x9216 offset 491347968
+blk.0.ffn_up.weight: type 8 dims 3072x9216 offset 521441280
+blk.0.ffn_down.weight: type 8 dims 9216x3072 offset 461266944
+blk.1.attn_norm.weight: type 0 dims 3072 offset 554864640
+blk.1.attn_v.weight: type 8 dims 3072x1024 offset 581615616
+blk.1.attn_output.weight: type 8 dims 4096x3072 offset 554876928
+blk.1.ffn_norm.weight: type 0 dims 3072 offset 645120000
+blk.1.ffn_gate.weight: type 8 dims 3072x9216 offset 615038976
+blk.1.ffn_up.weight: type 8 dims 3072x9216 offset 645132288
+blk.1.ffn_down.weight: type 8 dims 9216x3072 offset 584957952
+blk.2.attn_norm.weight: type 0 dims 3072 offset 678555648
+blk.2.attn_v.weight: type 8 dims 3072x1024 offset 705306624
+blk.2.attn_output.weight: type 8 dims 4096x3072 offset 678567936
+blk.2.ffn_norm.weight: type 0 dims 3072 offset 768811008
+blk.2.ffn_gate.weight: type 8 dims 3072x9216 offset 738729984
+blk.2.ffn_up.weight: type 8 dims 3072x9216 offset 768823296
+blk.2.ffn_down.weight: type 8 dims 9216x3072 offset 708648960
+blk.3.attn_norm.weight: type 0 dims 3072 offset 802246656
+blk.3.attn_v.weight: type 8 dims 3072x1024 offset 828997632
+blk.3.attn_output.weight: type 8 dims 4096x3072 offset 802258944
+blk.3.ffn_norm.weight: type 0 dims 3072 offset 892502016
+blk.3.ffn_gate.weight: type 8 dims 3072x9216 offset 862420992
+blk.3.ffn_up.weight: type 8 dims 3072x9216 offset 892514304
+blk.3.ffn_down.weight: type 8 dims 9216x3072 offset 832339968
+oracle_token0_layer3_ffn_norm0_f32_hex: 0x422e5251
+oracle_token0_layer3_ffn_norm1_f32_hex: 0xc01a339f
+oracle_token0_layer3_ffn_norm2_f32_hex: 0xbffb06aa
+oracle_token0_layer3_ffn_norm3_f32_hex: 0xbf19ba93
+oracle_token0_layer3_ffn_gate_output0_f32_hex: 0xbfb2e5c3
+oracle_token0_layer3_ffn_gate_output1_f32_hex: 0xbec7c2ba
+oracle_token0_layer3_ffn_gate_output2_f32_hex: 0xbe4be710
+oracle_token0_layer3_ffn_gate_output3_f32_hex: 0x3d08c33e
+oracle_token0_layer3_ffn_up_output0_f32_hex: 0x3fd71f53
+oracle_token0_layer3_ffn_up_output1_f32_hex: 0xbd86d8f4
+oracle_token0_layer3_ffn_up_output2_f32_hex: 0xbef486a9
+oracle_token0_layer3_ffn_up_output3_f32_hex: 0xc026c494
+oracle_token0_layer3_ffn_swiglu_output0_f32_hex: 0xbeee5aef
+oracle_token0_layer3_ffn_swiglu_output1_f32_hex: 0x3c29e800
+oracle_token0_layer3_ffn_swiglu_output2_f32_hex: 0x3d2f6fb9
+oracle_token0_layer3_ffn_swiglu_output3_f32_hex: 0xbd3528b3
+oracle_token0_layer3_ffn_down_output0_f32_hex: 0x3def4ab2
+oracle_token0_layer3_ffn_down_output1_f32_hex: 0x3e0b094a
+oracle_token0_layer3_ffn_down_output2_f32_hex: 0xbf222273
+oracle_token0_layer3_ffn_down_output3_f32_hex: 0xbc2b9ed5
+```
+
+Comparison result: these four layer-3 FFN down output words match the current
+assembly runtime output for `token0_layer3_ffn_down_output0_f32_hex` through
+`token0_layer3_ffn_down_output3_f32_hex` exactly. The prerequisite layer-3 FFN
+RMSNorm, gate, up, and SwiGLU public slices also still match exactly.

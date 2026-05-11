@@ -51,7 +51,7 @@
 # activation outputs are consumed only by guarded focused smokes after their
 # prerequisite activations exist, including the layer-3 query/key/value,
 # attention output, post-attention residual, FFN RMSNorm, and FFN gate/up
-# matvec output slice smokes plus the status-only FFN down matvec smoke.
+# matvec, SwiGLU, and FFN down output slice smokes.
 # The mapping is released explicitly with gguf_release_mapping before exit. The
 # GGUF summary buffer is process-owned
 # static storage passed to the loader for scalar header counts, bounded metadata
