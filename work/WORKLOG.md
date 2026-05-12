@@ -4085,3 +4085,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   descriptor fields and dependent statuses at `0` with no layer-6 exact-hex
   labels; static linkage, symbol visibility, source/include-dependency,
   artifact, large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T08:35:18+02:00
+
+- Added status-only token-0 layer-6 attention query projection coverage for
+  `blk.6.attn_q.weight`. The smoke consumes the private layer-6 attention
+  RMSNorm activation, proves the retained Q8_0 `[3072 x 4096]` payload span,
+  fills a private query output buffer, and publishes only
+  `token0_layer6_attn_q_matvec`.
+- Verification evidence: clean build/check and oracle py-compile passed; help
+  text mentions the new layer-6 query status smoke; the real target reported
+  `token0_layer6_attn_q_matvec: 1` and emitted no layer-6 query output labels;
+  the existing layer-6 RMSNorm oracle comparison still matched all 89 covered
+  exact values including epsilon; a packed 24-byte zero-count GGUF kept the
+  layer-6 query status at `0` with no guarded layer-6 labels; static linkage,
+  undefined-symbol, symbol visibility, source/include-dependency, artifact,
+  large-file, line-count, and whitespace scans passed.

@@ -6,8 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-6 attention query projection smoke for
-`blk.6.attn_q.weight`.
+Publish the guarded token-0 layer-6 attention query projection exact-hex slice
+and add a focused oracle for `blk.6.attn_q.weight`.
 
 ## Completed Work
 
@@ -31,26 +31,31 @@ Add status-only token-0 layer-6 attention query projection smoke for
   payload span, keeps the activation buffer private, and publishes
   `token0_layer6_attn_norm` plus the first four exact-hex words. Those words are
   `0x422d70ce`, `0xc0840f20`, `0xc140459b`, and `0xc00a013e`. The layer-6 query
-  projection descriptor for `blk.6.attn_q.weight` is retained and printed as
-  descriptor-only metadata; its Q8_0 payload is not read yet.
+  projection descriptor for `blk.6.attn_q.weight` is retained, printed as
+  descriptor metadata, and consumed by a guarded status-only matvec smoke after
+  the layer-6 RMSNorm activation exists. The query output buffer remains private
+  and no layer-6 query exact-hex labels are emitted yet.
 - The two-pass review gates for the completed layer-4 FFN chain, layer-5
   attention residual handoff chain, and layer-5 FFN chain completed cleanly under
   `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for layer-6 attention query descriptor setup:
+- Latest verification for layer-6 attention query status smoke:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; help text mentions the layer-6 query descriptor lookup; the
+  passed; help text mentions the layer-6 query status matvec smoke; the
   real target reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`,
   ggml type `0`, offset `1173319680`, and `layer6_attn_q_tensor_found: 1`,
-  dimensions `3072 x 4096`, ggml type `8`, offset `1186701312`; the focused
-  layer-6 attention RMSNorm oracle still matched 89 exact values including
-  epsilon and the layer-6 RMSNorm slice; a packed 24-byte zero-count GGUF kept
-  the layer-6 descriptor fields, `token0_layer5_post_ffn_residual`, and
-  `token0_layer6_attn_norm` at `0` and emitted no layer-6 exact-hex labels;
-  static-link, no-dynamic-section/no-interpreter, undefined-symbol, runtime
-  source extension, include-dependency, tracked artifact, tracked large-file,
+  dimensions `3072 x 4096`, ggml type `8`, offset `1186701312`; the real target
+  reports `token0_layer6_attn_norm: 1` and `token0_layer6_attn_q_matvec: 1`;
+  no `token0_layer6_attn_q_output` labels are emitted; the focused layer-6
+  attention RMSNorm oracle still matched 89 exact values including epsilon and
+  the layer-6 RMSNorm slice; a packed 24-byte zero-count GGUF kept the layer-6
+  descriptor fields, `token0_layer5_post_ffn_residual`,
+  `token0_layer6_attn_norm`, and `token0_layer6_attn_q_matvec` at `0` and
+  emitted no guarded layer-6 labels; static-link,
+  no-dynamic-section/no-interpreter, undefined-symbol, runtime source
+  extension, include-dependency, tracked artifact, tracked large-file,
   exported/local symbol, line-count, and whitespace scans passed.
 
 ## Known Blockers
@@ -105,22 +110,25 @@ Add status-only token-0 layer-6 attention query projection smoke for
 
 ## Last Verification
 
-Layer-6 attention query descriptor setup verification passed:
+Layer-6 attention query status smoke verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
 - `./mistral-asm --help`
 - real target reported `blk.6.attn_norm.weight` as f32 `[3072]` at relative
   offset `1173319680`, plus `blk.6.attn_q.weight` as Q8_0 `[3072 x 4096]` at
-  relative offset `1186701312`; `token0_layer6_attn_norm: 1` remains true
+  relative offset `1186701312`; `token0_layer6_attn_norm: 1` and
+  `token0_layer6_attn_q_matvec: 1`
 - real-target runtime/oracle comparison still matched 89 exact values against
   `work/oracle/token0_layer6_attn_norm_oracle.py`, including
   `token0_layer6_attn_norm0..3_f32_hex`
+- real-target output emitted no `token0_layer6_attn_q_output` labels
 - packed 24-byte zero-count GGUF kept layer-6 norm/query descriptor fields,
-  `token0_layer5_post_ffn_residual`, and `token0_layer6_attn_norm` at `0` and
-  emitted no layer-6 exact-hex labels
+  `token0_layer5_post_ffn_residual`, `token0_layer6_attn_norm`, and
+  `token0_layer6_attn_q_matvec` at `0` and emitted no guarded layer-6 labels
 - static scan kept private layer-6 q slot/name/dim2/dim3 symbols and
-  `token0_layer6_attn_norm_activation` unexported
+  `token0_layer6_attn_norm_activation` plus `token0_layer6_attn_q_output`
+  unexported
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter,
   undefined-symbol, runtime source extension, include dependency, tracked
   artifact, tracked large-file, exported/local symbol, and line-count scans
@@ -128,5 +136,5 @@ Layer-6 attention query descriptor setup verification passed:
 
 ## Next Exact Step
 
-Add status-only token-0 layer-6 attention query projection smoke for
-`blk.6.attn_q.weight`.
+Publish the guarded token-0 layer-6 attention query projection exact-hex slice
+and add a focused oracle for `blk.6.attn_q.weight`.

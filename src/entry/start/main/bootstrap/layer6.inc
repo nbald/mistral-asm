@@ -1,7 +1,7 @@
 .Llookup_layer6_attn_norm_tensor:
-	# Start layer-6 attention coverage with descriptor publication only. The
-	# eventual RMSNorm smoke must first consume the layer-5 post-FFN residual
-	# handoff, then prove this f32 payload span before reading weight bytes.
+	# Start layer-6 attention coverage with descriptor publication first. The
+	# RMSNorm smoke later consumes the layer-5 post-FFN residual handoff, then
+	# proves this f32 payload span before reading weight bytes.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
@@ -21,9 +21,9 @@
 
 .Llookup_layer6_attn_q_tensor:
 	# Retain the layer-6 query projection descriptor after the RMSNorm
-	# descriptor. This publishes shape, type, and relative offset metadata only;
-	# the Q8_0 payload remains unread until a later guarded matvec consumes the
-	# private layer-6 attention-normalized activation.
+	# descriptor. Runtime summary still publishes only shape, type, and relative
+	# offset metadata; the guarded matvec smoke below reads payload bytes only
+	# after the private layer-6 attention-normalized activation exists.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]

@@ -55,7 +55,7 @@ help_text:
 	.ascii "SwiGLU activation slice and FFN down descriptor lookup/down "
 	.ascii "matvec output slice plus post-FFN residual output slice "
 	.ascii "plus layer-6 attention RMSNorm descriptor lookup/output slice "
-	.ascii "and query descriptor lookup.\n"
+	.ascii "and query descriptor lookup/status matvec smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
