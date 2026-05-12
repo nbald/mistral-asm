@@ -70,6 +70,7 @@ token0_layer4_ffn_down_output:
 token0_layer4_post_ffn_residual_status:
 	.skip 8
 
+.global token0_layer4_post_ffn_residual
 .balign 4
 token0_layer4_post_ffn_residual:
 	.skip TOKEN0_LAYER4_POST_FFN_RESIDUAL_BYTES

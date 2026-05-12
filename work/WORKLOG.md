@@ -3466,3 +3466,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   printed only descriptor fields for layer 5, the existing layer-4 post-FFN
   exact-hex labels still matched the oracle subset, and a 24-byte zero-count
   GGUF kept the new descriptor zeroed with no `token0_layer5*` output.
+
+## 2026-05-12T02:07:41+02:00
+
+- Added status-only layer-5 attention RMSNorm coverage in a focused module.
+  This is the first deliberate consumer of the layer-4 post-FFN residual
+  handoff, so that buffer is now exported from the layer-4 down/residual module
+  and consumed only after its status is 1.
+- Verification evidence: the real target reported `token0_layer5_attn_norm: 1`
+  after proving the retained f32 `[3072]` weight payload, while the existing
+  public exact-hex labels through layer-4 post-FFN residual still diffed cleanly
+  against the oracle subset. Both the real target and a 24-byte zero-count GGUF
+  emitted no layer-5 exact-hex labels; the zero-count fixture kept the new
+  layer-5 status at `0`.
