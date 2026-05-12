@@ -3793,3 +3793,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   norm status at `0`; no `token0_layer5_ffn_norm*_f32_hex` labels were emitted;
   static, symbol, source extension, artifact, large-file, and line-count scans
   passed.
+
+## 2026-05-12T05:57:57+02:00
+
+- Published the first guarded layer-5 FFN RMSNorm exact-hex slice. The first
+  four words are `0x42131508`, `0xc00d191f`, `0xc029d085`, and `0xbf74c920`.
+- Added a focused external oracle that recomputes the full layer-5 attention
+  output and post-attention residual before applying `blk.5.ffn_norm.weight`,
+  so the RMSNorm denominator is checked against the full 3072-wide activation
+  rather than the public four-word residual slice.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched all 65 covered exact-hex
+  labels; the packed zero-count GGUF kept the layer-5 dependent statuses at
+  `0` and emitted no layer-5 FFN norm exact-hex labels; static linkage,
+  undefined-symbol, symbol visibility, source/fragment, include dependency,
+  artifact, large-file, and line-count scans passed.

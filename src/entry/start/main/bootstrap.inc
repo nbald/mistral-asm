@@ -65,9 +65,9 @@
 # layer-5 context smoke borrows the exported value projection buffer only after
 # the Q/K/V handoff status is 1, and the layer-5 output-projection smoke reads
 # the retained Q8_0 output matrix only after proving its full mapped span. The
-# layer-5 FFN RMSNorm descriptor is retained and printed only; no FFN RMSNorm
-# smoke reads layer-5 post-attention residual data or f32 FFN weight bytes in
-# this descriptor setup step.
+# layer-5 FFN RMSNorm smoke consumes the deliberately exported layer-5
+# post-attention residual handoff after proving the f32 weight span and emits a
+# guarded exact-hex slice for the first four normalized activation words.
 # The layer-1 FFN,
 # layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
@@ -102,7 +102,9 @@
 # printed, used as a shape guard by the context smoke, and then consumed by the
 # focused output-projection matvec status smoke after the single-token context
 # exists and the full Q8_0 payload span is proven inside the live mapping. The
-# layer-5 FFN RMSNorm descriptor is not consumed yet.
+# layer-5 FFN RMSNorm descriptor is consumed after the layer-5 post-attention
+# residual handoff exists and the f32 payload span is proven inside the live
+# mapping.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-5 FFN RMSNorm exact-hex slice with a
-focused external oracle. It should print only when `token0_layer5_ffn_norm` is
-1 and the first four activation words match the oracle.
+Add descriptor-only layer-5 FFN gate setup for `blk.5.ffn_gate.weight`. This
+should retain and print the descriptor summary only; it must not read gate
+Q8_0 payload bytes or publish a gate matvec status yet.
 
 ## Completed Work
 
@@ -221,27 +221,29 @@ focused external oracle. It should print only when `token0_layer5_ffn_norm` is
   `token0_layer5_post_attn_residual_status`, proves the retained
   `blk.5.ffn_norm.weight` f32 `[3072]` payload span, writes exported
   `token0_layer5_ffn_norm_status` and a 3072-f32
-  `token0_layer5_ffn_norm_activation` handoff for later FFN work, prints only
-  `token0_layer5_ffn_norm`, and deliberately emits no layer-5 FFN norm
-  exact-hex labels yet.
+  `token0_layer5_ffn_norm_activation` handoff for later FFN work, and prints
+  `token0_layer5_ffn_norm`.
+- The first guarded token-0 layer-5 FFN RMSNorm exact-hex slice is published.
+  It prints only when `token0_layer5_ffn_norm` is 1, and the first four
+  published activation words match the focused external oracle:
+  `0x42131508`, `0xc00d191f`, `0xc029d085`, and `0xbf74c920`.
 
 ## Verification Status
 
-- Latest verification for token-0 layer-5 FFN RMSNorm compute/status:
-  `make clean all check` passed before the help edit and `make all check`
-  passed after it; `python3 -m py_compile work/oracle/*.py` passed; `--help`
-  mentions the layer-5 FFN RMSNorm descriptor/status smoke; the real target
-  reported `token0_layer5_ffn_norm: 1` while existing layer-5
-  handoff/context/output/residual statuses stayed at `1`; comparison against
-  `work/oracle/token0_layer5_attn_output_oracle.py` matched all 61 existing
-  oracle-covered `_f32_hex` labels; no `token0_layer5_ffn_norm*_f32_hex`
-  labels were emitted; a 24-byte zero-count GGUF kept
-  `layer5_ffn_norm_tensor_found`, handoff, context, output-matvec,
-  post-attention residual, and FFN norm statuses at `0`; `git diff --check`,
-  runtime source/fragment extension, static-link/no-dynamic-section/
-  no-interpreter/file, undefined-symbol, exported/local symbol,
-  no-output-slice, tracked artifact, tracked large-file, and line-count scans
-  passed.
+- Latest verification for token-0 layer-5 FFN RMSNorm exact-hex slice:
+  `make all check` and final `make clean all check` passed;
+  `python3 -m py_compile work/oracle/*.py` passed; `--help` mentions the
+  layer-5 FFN RMSNorm descriptor/output slice; the real-target comparison
+  against `work/oracle/token0_layer5_ffn_norm_oracle.py` matched all 65
+  oracle-covered `_f32_hex` labels, including the new FFN norm words
+  `0x42131508`, `0xc00d191f`, `0xc029d085`, and `0xbf74c920`; a 24-byte
+  zero-count GGUF kept `layer5_ffn_norm_tensor_found`, layer-5 handoff,
+  context, output-matvec, post-attention residual, and FFN norm statuses at
+  `0` and emitted no `token0_layer5_ffn_norm*_f32_hex` labels;
+  `git diff --check`, runtime source/fragment extension, include dependency,
+  static-link/no-dynamic-section/no-interpreter/file, undefined-symbol,
+  exported/local symbol, tracked artifact, tracked large-file, and line-count
+  scans passed.
 
 ## Known Blockers
 
@@ -305,6 +307,7 @@ focused external oracle. It should print only when `token0_layer5_ffn_norm` is
 - `work/oracle/token0_layer5_attn_k_oracle.py`
 - `work/oracle/token0_layer5_attn_v_oracle.py`
 - `work/oracle/token0_layer5_attn_output_oracle.py`
+- `work/oracle/token0_layer5_ffn_norm_oracle.py`
 - `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`
 - `work/reviews/2026-05-12-layer5-attn-qkv-review-2.md`
 - `work/reviews/2026-05-12-layer5-attn-output-chain-review-1.md`
@@ -318,27 +321,28 @@ focused external oracle. It should print only when `token0_layer5_ffn_norm` is
 
 ## Last Verification
 
-Token-0 layer-5 FFN RMSNorm compute/status verification passed:
+Token-0 layer-5 FFN RMSNorm exact-hex slice verification passed:
 
-- `make clean all check` before the help edit; `make all check` after it
+- `make all check`; final `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 FFN RMSNorm descriptor/status
-  smoke
-- real-target runtime reported `token0_layer5_ffn_norm: 1`
-- real-target runtime/oracle comparison matched all 61 existing exact-hex
-  labels covered by `work/oracle/token0_layer5_attn_output_oracle.py`
-- no `token0_layer5_ffn_norm*_f32_hex` labels were emitted
+- `./mistral-asm --help` mentions the layer-5 FFN RMSNorm descriptor/output
+  slice
+- real-target runtime/oracle comparison against
+  `work/oracle/token0_layer5_ffn_norm_oracle.py` matched 65 labels
+- new layer-5 FFN RMSNorm words matched exactly: `0x42131508`, `0xc00d191f`,
+  `0xc029d085`, and `0xbf74c920`
 - a 24-byte zero-count GGUF kept `layer5_ffn_norm_tensor_found`,
   `token0_layer5_attn_qkv_handoff`, `token0_layer5_attn_context`,
   `token0_layer5_attn_output_matvec`, `token0_layer5_post_attn_residual`, and
-  `token0_layer5_ffn_norm` at `0`
+  `token0_layer5_ffn_norm` at `0`, with no
+  `token0_layer5_ffn_norm*_f32_hex` labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, runtime source/fragment extension scan, include
-  dependency scan, exported/local symbol check, no-output-slice scan, tracked
-  artifact scan, tracked large-file scan, and line-count review passed
+  dependency scan, exported/local symbol check, tracked artifact scan, tracked
+  large-file scan, and line-count review passed
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-5 FFN RMSNorm exact-hex slice with a
-focused external oracle. It should print only when `token0_layer5_ffn_norm` is
-1 and the first four activation words match the oracle.
+Add descriptor-only layer-5 FFN gate setup for `blk.5.ffn_gate.weight`. This
+should retain and print the descriptor summary only; it must not read gate
+Q8_0 payload bytes or publish a gate matvec status yet.
