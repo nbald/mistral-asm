@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only layer-5 attention output-projection setup for
-`blk.5.attn_output.weight`: retain and print its tensor descriptor, update help
-text, and do not read output-projection payload bytes or add context/math yet.
+Add an explicit layer-5 Q/K/V projection handoff for future focused context
+work: keep context math and `blk.5.attn_output.weight` payload reads out of the
+step, and do not grow `src/infer/token0_layer5_attn.s` with substantial new
+feature code.
 
 ## Completed Work
 
@@ -139,6 +140,12 @@ text, and do not read output-projection payload bytes or add context/math yet.
   findings were recorded. The next feature step can resume, but should start
   with descriptor-only layer-5 attention output setup and keep context work out
   of `src/infer/token0_layer5_attn.s`.
+- Descriptor-only layer-5 attention output-projection setup is complete for
+  `blk.5.attn_output.weight`. The retained real-target descriptor is Q8_0
+  `[4096 x 3072]` at relative offset `1049640960`. This step added only lookup,
+  retained summary fields, summary printing, and help text; it does not read
+  output-projection Q8_0 payload bytes or publish context/output-projection
+  status labels.
 
 ## Known Blockers
 
@@ -148,12 +155,12 @@ text, and do not read output-projection payload bytes or add context/math yet.
   focused module for down-matvec or residual work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
-- `src/infer/token0_layer5_attn.s` is 989 lines after the layer-5 value slice.
-  Do not add context or output-projection feature code there before splitting
-  or moving the new work into focused Makefile-tracked modules/fragments.
-  Future layer-5 context work must also introduce an explicit Q/K/V output
-  handoff before another object consumes the currently private projection
-  buffers.
+- `src/infer/token0_layer5_attn.s` is 989 lines after the layer-5 value slice
+  and was not touched by descriptor-only output setup. Do not add context or
+  output-projection feature code there before splitting or moving the new work
+  into focused Makefile-tracked modules/fragments. Future layer-5 context work
+  must first introduce an explicit Q/K/V output handoff before another object
+  consumes the currently private projection buffers.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -206,17 +213,19 @@ text, and do not read output-projection payload bytes or add context/math yet.
 
 ## Last Verification
 
-Layer-5 attention norm/query/key/value review pass 2 verification passed:
+Layer-5 attention output-projection descriptor verification passed:
 
 - `make clean all check`
-- post-documentation `make all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions layer-5 attention RMSNorm, query, key, and
-  value descriptor/matvec output-slice coverage
-- real-target covered-label runtime/oracle comparison matched all 53 labels
-  covered by `work/oracle/token0_layer5_attn_v_oracle.py`
-- a corrected 24-byte zero-count GGUF kept the 27 reviewed layer-5 descriptor
-  and status labels at `0`, and emitted no layer-5 exact-hex labels
+- `./mistral-asm --help` mentions layer-5 output projection descriptor lookup
+- real-target descriptor output reported `layer5_attn_output_tensor_found: 1`,
+  dimensions `4096 x 3072`, ggml type `8`, and relative offset `1049640960`
+- real-target covered-label runtime/oracle comparison still matched all 53
+  labels covered by `work/oracle/token0_layer5_attn_v_oracle.py`, including the
+  non-oracle-prefixed epsilon line
+- a corrected 24-byte zero-count GGUF kept all 33 layer-5 descriptor and status
+  labels at `0`, including the new output-projection descriptor fields, and
+  emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
   scan, exported-symbol inspection, tracked artifact scan, tracked large-file
@@ -226,6 +235,7 @@ Layer-5 attention norm/query/key/value review pass 2 verification passed:
 
 ## Next Exact Step
 
-Add descriptor-only layer-5 attention output-projection setup for
-`blk.5.attn_output.weight`: retain and print its tensor descriptor, update help
-text, and do not read output-projection payload bytes or add context/math yet.
+Add an explicit layer-5 Q/K/V projection handoff for future focused context
+work: keep context math and `blk.5.attn_output.weight` payload reads out of the
+step, and do not grow `src/infer/token0_layer5_attn.s` with substantial new
+feature code.

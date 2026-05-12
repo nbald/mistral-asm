@@ -45,7 +45,8 @@ help_text:
 	.ascii "and post-FFN residual output slice plus layer-5 attention "
 	.ascii "RMSNorm descriptor lookup/output slice plus query descriptor "
 	.ascii "lookup/matvec output slice plus key descriptor lookup/matvec "
-	.ascii "output slice plus value descriptor lookup/matvec output slice.\n"
+	.ascii "output slice plus value descriptor lookup/matvec output slice "
+	.ascii "and output projection descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:

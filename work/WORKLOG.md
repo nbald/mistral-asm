@@ -3629,3 +3629,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   comparison matched all 53 labels through layer-5 value, the 24-byte zero-count
   GGUF kept the reviewed layer-5 descriptors/statuses at `0` with no layer-5
   exact-hex labels, and static/source/include/artifact/line scans passed.
+
+## 2026-05-12T03:33:45+02:00
+
+- Added descriptor-only layer-5 attention output projection coverage. The
+  runtime now retains and prints `blk.5.attn_output.weight` as Q8_0
+  `[4096 x 3072]` at relative offset `1049640960` on the local target GGUF.
+- Verification evidence: clean rebuild/check passed; help text mentions the
+  new output projection descriptor lookup; the existing layer-5 value oracle
+  comparison still matched all 53 covered labels; the 24-byte zero-count GGUF
+  kept all layer-5 descriptor and status labels at `0` and emitted no layer-5
+  exact-hex labels.
