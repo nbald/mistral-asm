@@ -3503,3 +3503,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-5 RMSNorm oracle subset still matched, and the 24-byte zero-count GGUF
   kept the new query descriptor fields plus dependent layer-5 status fields at
   `0` with no guarded layer-5 exact-hex labels.
+
+## 2026-05-12T02:27:47+02:00
+
+- Added status-only layer-5 attention query matvec coverage. The smoke consumes
+  the private layer-5 RMSNorm activation only after its status is `1`, proves
+  the retained `blk.5.attn_q.weight` Q8_0 `[3072 x 4096]` payload span, writes
+  a private 4096-f32 query output buffer, and intentionally publishes no query
+  exact-hex labels yet.
+- Verification evidence: the real target reported
+  `token0_layer5_attn_q_matvec: 1`, the existing 40 public exact-hex labels
+  still matched the layer-5 RMSNorm oracle subset, and a 24-byte zero-count GGUF
+  kept the new query status at `0` with no layer-5 exact-hex labels.
