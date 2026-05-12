@@ -57,9 +57,10 @@
 # query/key/value matvec statuses and output slices plus an explicit Q/K/V
 # projection handoff, status-only single-token context smoke, guarded
 # output-projection matvec status, post-attention residual handoff, and
-# FFN RMSNorm setup for `blk.5.ffn_norm.weight`, guarded FFN gate matvec
-# coverage through `blk.5.ffn_gate.weight`, and status-only FFN up matvec
-# coverage through `blk.5.ffn_up.weight`.
+# FFN RMSNorm setup for `blk.5.ffn_norm.weight`, guarded FFN gate/up matvec
+# coverage through `blk.5.ffn_gate.weight` and `blk.5.ffn_up.weight`,
+# guarded FFN SwiGLU coverage, and descriptor-only FFN down setup for
+# `blk.5.ffn_down.weight`.
 # The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
 # post-FFN residual handoff after proving the f32 weight span and emits a
 # guarded exact-hex slice; the layer-5 query/key/value smokes consume that
@@ -91,7 +92,7 @@
 # attention/FFN, layer-3 attention/FFN, layer-4 attention
 # RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
 # RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention
-# RMSNorm/query/key/value/output descriptors and layer-5 FFN RMSNorm/gate/up
+# RMSNorm/query/key/value/output descriptors and layer-5 FFN RMSNorm/gate/up/down
 # descriptors.
 # The layer-5 attention RMSNorm descriptor is
 # consumed by a guarded status smoke after the layer-4 post-FFN residual handoff
@@ -109,8 +110,9 @@
 # residual handoff exists and the f32 payload span is proven inside the live
 # mapping. The layer-5 FFN gate descriptor is consumed only after that FFN
 # RMSNorm activation exists and its full Q8_0 payload span is proven; the
-# layer-5 FFN up descriptor is consumed by the analogous status-only matvec
-# smoke after proving its full Q8_0 payload span.
+# layer-5 FFN up descriptor is consumed by the analogous matvec smoke after
+# proving its full Q8_0 payload span. The layer-5 FFN down descriptor is only
+# retained and printed in this step; no down Q8_0 payload bytes are read yet.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

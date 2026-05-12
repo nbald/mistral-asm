@@ -3926,3 +3926,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   fail-closed and emitted no layer-5 FFN up/SwiGLU output labels; static
   linkage, symbol visibility, include dependency, artifact, large-file,
   line-count, and whitespace scans passed.
+
+## 2026-05-12T07:06:31+02:00
+
+- Added descriptor-only layer-5 FFN down setup for `blk.5.ffn_down.weight`.
+  The real target reports it as Q8_0 `[9216 x 3072]` at relative offset
+  `1079721984`. This step intentionally stops at lookup, retained summary
+  fields, summary printing, and help/contract text; it does not read down
+  payload bytes or publish any layer-5 down matvec status or output labels.
+- Verification evidence: clean build/check and oracle compile passed; help text
+  mentions the layer-5 FFN down descriptor lookup; the existing layer-5 FFN
+  SwiGLU oracle comparison still matched all 77 covered exact-hex labels; the
+  24-byte zero-count GGUF kept the new down descriptor fields and dependent
+  layer-5 FFN statuses fail-closed; static, symbol, source/fragment,
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.
