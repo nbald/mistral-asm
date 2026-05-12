@@ -133,6 +133,7 @@ token0_layer5_ffn_up_output:
 token0_layer5_ffn_swiglu_status:
 	.skip 8
 
+.global token0_layer5_ffn_swiglu_output
 .balign 4
 token0_layer5_ffn_swiglu_output:
 	.skip TOKEN0_LAYER5_FFN_SWIGLU_BYTES
@@ -791,15 +792,16 @@ token0_layer5_ffn_up_matvec_smoke:
 # token0_layer5_ffn_up_matvec_status, token0_layer5_ffn_gate_output, and
 # token0_layer5_ffn_up_output.
 # Outputs: writes token0_layer5_ffn_swiglu_status and, on success, fills the
-# private token0_layer5_ffn_swiglu_output buffer with 9216 f32 values. Always
-# prints exactly one status label/value/newline sequence to stdout and prints
-# the first four exact-hex output words only when the status is 1. The return
-# register is unspecified.
+# exported token0_layer5_ffn_swiglu_output handoff buffer with 9216 f32 values.
+# Always prints exactly one status label/value/newline sequence to stdout and
+# prints the first four exact-hex output words only when the status is 1. The
+# return register is unspecified.
 # Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags
 # through the shared scalar SwiGLU helper and summary writers.
 # Ownership/lifetime: reads only this module's private gate and up projection
-# buffers and writes only this module's private SwiGLU output storage. The
-# model mmap is not read by this pure activation step.
+# buffers and writes the exported SwiGLU handoff storage for the focused
+# layer-5 FFN down-projection module. The model mmap is not read by this pure
+# activation step.
 # Error behavior: status is 1 only after both prerequisite projection statuses
 # are available and the shared SwiGLU helper completes; otherwise status is 0
 # and no SwiGLU output bytes are written. Exact-hex SwiGLU output labels remain
@@ -837,7 +839,7 @@ run_token0_layer5_ffn_swiglu_status:
 # token0_layer5_ffn_swiglu_status is 1; writes nothing otherwise.
 # Clobbers: caller-saved registers and flags through sys_write and
 # write_u32_hex.
-# Ownership/lifetime: reads private module-owned layer-5 FFN SwiGLU activation
+# Ownership/lifetime: reads module-owned exported layer-5 FFN SwiGLU handoff
 # storage only during this call and does not retain pointers.
 # Error behavior: this is summary output for oracle comparison; write failures
 # are intentionally not surfaced separately.
@@ -919,8 +921,9 @@ print_token0_layer5_ffn_swiglu_output_slice:
 # otherwise rax = 0 and no activation bytes are written.
 # Clobbers: caller-saved registers, x87 stack registers, x87 status, and flags.
 # Ownership/lifetime: reads only private module-owned gate and up projection
-# outputs and writes only private module-owned activation storage. This function
-# reads no mapped tensor payload bytes.
+# outputs and writes the exported module-owned activation handoff storage for
+# the focused down-projection module. This function reads no mapped tensor
+# payload bytes.
 # Error behavior: this is a smoke gate for the layer-5 FFN activation, not final
 # graph setup. Missing prerequisite projection statuses are skipped with status
 # 0.

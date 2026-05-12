@@ -6,11 +6,11 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Create focused layer-5 FFN down-projection module wiring for a status-only
-`token0_layer5_ffn_down_matvec` smoke. Keep the existing layer-5 FFN source
-from becoming a catch-all module by moving/exporting only the handoff data
-needed for the new module, prove the retained `blk.5.ffn_down.weight` Q8_0
-payload span, and do not publish layer-5 down exact-hex output labels yet.
+Publish the guarded token-0 layer-5 FFN down exact-hex output slice. Keep the
+down projection code in `src/infer/token0_layer5_ffn_down.s`, print the first
+four private down-output words only when `token0_layer5_ffn_down_matvec_status`
+is 1, add a focused external oracle for `blk.5.ffn_down.weight`, and do not add
+the layer-5 post-FFN residual yet.
 
 ## Completed Work
 
@@ -65,35 +65,44 @@ payload span, and do not publish layer-5 down exact-hex output labels yet.
 - Status-only token-0 layer-5 FFN SwiGLU coverage is complete in
   `src/infer/token0_layer5_ffn.s`. It consumes the private layer-5 FFN gate/up
   output buffers only when `token0_layer5_ffn_gate_matvec_status` and
-  `token0_layer5_ffn_up_matvec_status` are both 1, fills a private 9216-f32
-  SwiGLU buffer, and publishes only `token0_layer5_ffn_swiglu` with no SwiGLU
-  exact-hex labels yet.
+  `token0_layer5_ffn_up_matvec_status` are both 1, fills the 9216-f32 SwiGLU
+  buffer, and publishes only `token0_layer5_ffn_swiglu` with no SwiGLU
+  exact-hex labels at the status-only step.
 - Token-0 layer-5 FFN SwiGLU exact-hex slice coverage is complete in
-  `src/infer/token0_layer5_ffn.s`. It keeps the 9216-f32 SwiGLU buffer private
-  and publishes the first four output words only when
-  `token0_layer5_ffn_swiglu_status` is 1: `0x3c0c71e4`, `0xb9ce2012`,
-  `0x3d09a7d5`, and `0xbbec92a7`.
+  `src/infer/token0_layer5_ffn.s`. The 9216-f32 SwiGLU buffer is now exported
+  only as the handoff to the focused down-projection module, and the first four
+  output words are printed only when `token0_layer5_ffn_swiglu_status` is 1:
+  `0x3c0c71e4`, `0xb9ce2012`, `0x3d09a7d5`, and `0xbbec92a7`.
 - Descriptor-only layer-5 FFN down setup is complete for
   `blk.5.ffn_down.weight`. The retained real-target descriptor is Q8_0
   `[9216 x 3072]` at relative offset `1079721984`. This step added only
   lookup, retained summary fields, summary printing, and help/contract text; it
   does not read down Q8_0 payload bytes or publish a layer-5 down matvec status.
+- Status-only token-0 layer-5 FFN down matvec coverage is complete in the
+  focused `src/infer/token0_layer5_ffn_down.s` module. The existing layer-5 FFN
+  source now exports only the `token0_layer5_ffn_swiglu_output` handoff buffer
+  needed by that module. The new smoke consumes
+  `token0_layer5_ffn_swiglu_status` and the exported 9216-f32 SwiGLU buffer,
+  requires retained `blk.5.ffn_down.weight` as Q8_0 `[9216 x 3072]`, proves the
+  full mapped matrix span, fills a private 3072-f32 down output buffer, and
+  publishes only `token0_layer5_ffn_down_matvec` with no down exact-hex labels.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for descriptor-only layer-5 FFN down setup:
+- Latest verification for status-only layer-5 FFN down matvec:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; help text mentions the layer-5 FFN down descriptor lookup; the real
-  target reports `layer5_ffn_down_tensor_found: 1`, dimensions `9216 x 3072`,
-  type `8`, and relative offset `1079721984`; the existing layer-5 FFN SwiGLU
-  oracle comparison matched all 77 oracle-covered exact-hex labels; a 24-byte
+  passed; the real target reports `layer5_ffn_down_tensor_found: 1`, dimensions
+  `9216 x 3072`, type `8`, relative offset `1079721984`, and
+  `token0_layer5_ffn_down_matvec: 1`; the existing layer-5 FFN SwiGLU oracle
+  comparison matched all 77 oracle-covered exact-hex labels; real-target output
+  emitted no `token0_layer5_ffn_down_output*_f32_hex` labels; a 24-byte
   zero-count GGUF kept `layer5_ffn_down_tensor_found`,
   `layer5_ffn_gate_tensor_found`, `layer5_ffn_up_tensor_found`,
-  `token0_layer5_ffn_gate_matvec`, `token0_layer5_ffn_up_matvec`, and
-  `token0_layer5_ffn_swiglu` at `0`; real-target and zero-count outputs emitted
-  no `token0_layer5_ffn_down*` or `layer5_ffn_down_output*` labels;
+  `token0_layer5_ffn_gate_matvec`, `token0_layer5_ffn_up_matvec`,
+  `token0_layer5_ffn_swiglu`, and `token0_layer5_ffn_down_matvec` at `0` and
+  emitted no layer-5 down exact-hex labels;
   `git diff --check`, static-link/no-dynamic-section/no-interpreter/file,
   undefined-symbol, exported/local symbol, runtime source/fragment extension,
   include dependency, tracked artifact, tracked large-file, and line-count scans
@@ -106,7 +115,7 @@ payload span, and do not publish layer-5 down exact-hex output labels yet.
   above 1000 lines before splitting or moving work into a focused module. Current
   watch list: `src/infer/token0_layer2_attn.s` is 997 lines,
   `src/infer/token0_layer5_attn.s` is 996 lines,
-  `src/infer/token0_layer5_ffn.s` is 949 lines,
+  `src/infer/token0_layer5_ffn.s` is 952 lines,
   `src/infer/token0_layer4_attn.s` is 945 lines,
   `src/infer/token0_layer4_ffn.s` is 945 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines,
@@ -132,28 +141,30 @@ payload span, and do not publish layer-5 down exact-hex output labels yet.
 - `src/entry/start/main/summary_header.inc`
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer5_ffn.s`
-- `src/infer/token0_layer5_ffn_down.s` (next)
+- `src/infer/token0_layer5_ffn_down.s`
 - `work/oracle/token0_layer5_ffn_norm_oracle.py`
 - `work/oracle/token0_layer5_ffn_gate_oracle.py`
 - `work/oracle/token0_layer5_ffn_up_oracle.py`
 - `work/oracle/token0_layer5_ffn_swiglu_oracle.py`
+- `work/oracle/token0_layer5_ffn_down_oracle.py` (next)
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Descriptor-only layer-5 FFN down setup verification passed:
+Status-only layer-5 FFN down matvec verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- help text mentions the layer-5 FFN down descriptor lookup
 - real-target runtime output reports `layer5_ffn_down_tensor_found: 1`,
   dimensions `9216 x 3072`, type `8`, and offset `1079721984`
-- real-target runtime/oracle comparison matched all 77 covered exact-hex labels
+- real-target runtime output reports `token0_layer5_ffn_down_matvec: 1`
+- real-target runtime/oracle comparison still matched all 77 covered exact-hex
+  labels
+- real-target output emitted no `token0_layer5_ffn_down_output*_f32_hex` labels
 - 24-byte zero-count GGUF kept the layer-5 FFN down descriptor and dependent
-  layer-5 FFN gate/up/SwiGLU statuses fail-closed
-- real-target and zero-count outputs emitted no `token0_layer5_ffn_down*` or
-  `layer5_ffn_down_output*` labels
+  layer-5 FFN gate/up/SwiGLU/down statuses fail-closed
+- zero-count output emitted no layer-5 down exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, exported/local symbol check, runtime source/fragment
   extension scan, include dependency scan, tracked artifact scan, tracked
@@ -161,8 +172,8 @@ Descriptor-only layer-5 FFN down setup verification passed:
 
 ## Next Exact Step
 
-Create focused layer-5 FFN down-projection module wiring for a status-only
-`token0_layer5_ffn_down_matvec` smoke. Keep the existing layer-5 FFN source
-from becoming a catch-all module by moving/exporting only the handoff data
-needed for the new module, prove the retained `blk.5.ffn_down.weight` Q8_0
-payload span, and do not publish layer-5 down exact-hex output labels yet.
+Publish the guarded token-0 layer-5 FFN down exact-hex output slice. Keep the
+down projection code in `src/infer/token0_layer5_ffn_down.s`, print the first
+four private down-output words only when `token0_layer5_ffn_down_matvec_status`
+is 1, add a focused external oracle for `blk.5.ffn_down.weight`, and do not add
+the layer-5 post-FFN residual yet.

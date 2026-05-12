@@ -3941,3 +3941,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-5 FFN statuses fail-closed; static, symbol, source/fragment,
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T07:14:10+02:00
+
+- Added status-only token-0 layer-5 FFN down matvec coverage in a focused module
+  rather than expanding the existing layer-5 FFN source. The only new handoff
+  exported from the existing module is the 9216-f32 SwiGLU activation buffer;
+  the new down module owns its status and private 3072-f32 output buffer.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported `token0_layer5_ffn_down_matvec: 1` for the retained
+  `blk.5.ffn_down.weight` Q8_0 `[9216 x 3072]` descriptor; existing
+  oracle-covered exact-hex labels still matched all 77 labels; no layer-5 down
+  exact-hex labels were emitted; the 24-byte zero-count GGUF kept the new down
+  status at `0`; static linkage, symbol visibility, include dependency,
+  artifact, large-file, line-count, and whitespace scans passed.
