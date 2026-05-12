@@ -3588,3 +3588,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer5_attn_v_matvec: 1`, the existing public exact-hex labels still
   matched the layer-5 key oracle subset, and a corrected 24-byte zero-count
   GGUF kept the new value status at `0` with no layer-5 exact-hex labels.
+
+## 2026-05-12T03:14:04+02:00
+
+- Published the first guarded layer-5 attention value exact-hex slice from the
+  private value projection buffer. The first four words are `0x3c308045`,
+  `0x3af0e7ba`, `0xbc4405eb`, and `0xbb67db55`.
+- Added a focused external oracle that reuses the full layer-5 key oracle path,
+  then dots the same RMSNorm activation against the first four rows of
+  `blk.5.attn_v.weight`. This preserves existing query/key coverage while
+  adding value rows.
+- Verification evidence: the real-target runtime/oracle comparison matched the
+  52 public exact-hex labels covered by the new oracle, plus the epsilon
+  `_f32_hex` line. The corrected 24-byte zero-count GGUF kept layer-5
+  descriptors and dependent statuses at `0` and emitted no guarded layer-5
+  exact-hex labels.

@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-5 attention value exact-hex slice from
-the private value projection buffer, add a focused external oracle for the
-first four `blk.5.attn_v.weight` rows, and keep the 24-byte zero-count GGUF
-silent.
+Run review gate pass 1 for the completed layer-5 attention
+norm/query/key/value chain before adding context or output-projection scope.
 
 ## Completed Work
 
@@ -126,6 +124,10 @@ silent.
   inside the live mapping before reading value bytes. It writes a private
   1024-f32 value output buffer and publishes `token0_layer5_attn_v_matvec`,
   without adding value exact-hex output labels.
+- The first guarded token-0 layer-5 attention value exact-hex slice is
+  published. It prints only when `token0_layer5_attn_v_matvec` is 1 and the
+  first four value output words match the focused external oracle:
+  `0x3c308045`, `0x3af0e7ba`, `0xbc4405eb`, and `0xbb67db55`.
 
 ## Known Blockers
 
@@ -135,10 +137,9 @@ silent.
   focused module for down-matvec or residual work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
-- `src/infer/token0_layer5_attn.s` is 899 lines after the layer-5 value
-  status step. The next value-slice step can fit if kept narrow, but context or
-  output-projection work after that should split or move into focused modules
-  before adding substantial code.
+- `src/infer/token0_layer5_attn.s` is 989 lines after the layer-5 value slice.
+  Do not add context or output-projection feature code there before splitting
+  or moving the new work into focused Makefile-tracked modules/fragments.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -181,6 +182,7 @@ silent.
 - `work/oracle/token0_layer5_attn_norm_oracle.py`
 - `work/oracle/token0_layer5_attn_q_oracle.py`
 - `work/oracle/token0_layer5_attn_k_oracle.py`
+- `work/oracle/token0_layer5_attn_v_oracle.py`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -188,19 +190,20 @@ silent.
 
 ## Last Verification
 
-Layer-5 attention value matvec status verification passed:
+Layer-5 attention value exact-hex slice verification passed:
 
 - `make clean all check`
 - `make all check`
 - `python3 -m py_compile work/oracle/*.py`
 - `./mistral-asm --help` mentions layer-5 attention value descriptor
-  lookup/matvec status
+  lookup/matvec output slice
 - real-target output reported `layer5_attn_v_tensor_found: 1`, dimensions
   `3072` and `1024`, ggml type `8`, relative offset `1076379648`, and
   `token0_layer5_attn_v_matvec: 1`
-- real-target output emitted no `token0_layer5_attn_v_*_f32_hex` labels
-- the filtered real-target runtime/oracle diff was empty for the `_f32_hex`
-  labels covered by `work/oracle/token0_layer5_attn_k_oracle.py`
+- real-target output emitted `token0_layer5_attn_v_output0..3_f32_hex` as
+  `0x3c308045`, `0x3af0e7ba`, `0xbc4405eb`, and `0xbb67db55`
+- the filtered real-target runtime/oracle diff was empty for all 53 `_f32_hex`
+  labels covered by `work/oracle/token0_layer5_attn_v_oracle.py`
 - a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key/value
   descriptor fields and `token0_layer5_attn_norm`,
   `token0_layer5_attn_q_matvec`, `token0_layer5_attn_k_matvec`, and
@@ -208,11 +211,10 @@ Layer-5 attention value matvec status verification passed:
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
   scan, tracked artifact scan, tracked large-file scan, and line-count review
-  passed; edited files remain below the 1000-line split threshold
+  passed; `src/infer/token0_layer5_attn.s` is 989 lines and must be split or
+  avoided before further layer-5 attention feature expansion
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-5 attention value exact-hex slice from
-the private value projection buffer, add a focused external oracle for the
-first four `blk.5.attn_v.weight` rows, and keep the 24-byte zero-count GGUF
-silent.
+Run review gate pass 1 for the completed layer-5 attention
+norm/query/key/value chain before adding context or output-projection scope.
