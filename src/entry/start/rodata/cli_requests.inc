@@ -47,7 +47,8 @@ help_text:
 	.ascii "lookup/matvec output slice plus key descriptor lookup/matvec "
 	.ascii "output slice plus value descriptor lookup/matvec output slice "
 	.ascii "plus Q/K/V projection handoff status, context status smoke, "
-	.ascii "and output projection descriptor lookup.\n"
+	.ascii "output projection descriptor lookup, and output-projection "
+	.ascii "matvec status.\n"
 help_text_end:
 
 lookup_tensor_request:

@@ -55,12 +55,14 @@
 # `blk.5.attn_q.weight`, `blk.5.attn_k.weight`, and
 # `blk.5.attn_v.weight`, with guarded layer-5 query/key/value matvec statuses
 # and output slices plus an explicit Q/K/V projection handoff and status-only
-# single-token context smoke before output-projection work. The first layer-5
-# RMSNorm smoke consumes the deliberately exported layer-4 post-FFN residual
-# handoff after proving the f32 weight span and emits a guarded exact-hex slice;
-# the layer-5 query/key/value smokes consume that private RMSNorm activation
-# only after proving their Q8_0 matrix spans; the layer-5 context smoke borrows
-# the exported value projection buffer only after the Q/K/V handoff status is 1.
+# single-token context smoke before a guarded output-projection matvec status.
+# The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
+# post-FFN residual handoff after proving the f32 weight span and emits a
+# guarded exact-hex slice; the layer-5 query/key/value smokes consume that
+# private RMSNorm activation only after proving their Q8_0 matrix spans; the
+# layer-5 context smoke borrows the exported value projection buffer only after
+# the Q/K/V handoff status is 1, and the layer-5 output-projection smoke reads
+# the retained Q8_0 output matrix only after proving its full mapped span.
 # The layer-1 FFN,
 # layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
@@ -90,9 +92,10 @@
 # key descriptor is consumed by the analogous matvec smoke after proving the
 # retained Q8_0 [3072 x 1024] payload span and publishes the guarded
 # first-four-word exact-hex slice. The layer-5 value descriptor is consumed by
-# the analogous value matvec smoke; the layer-5 output descriptor is retained
-# and printed, then used only as a shape guard by the context smoke, with no
-# output-projection payload bytes read in this setup, handoff, and context step.
+# the analogous value matvec smoke; the layer-5 output descriptor is retained,
+# printed, used as a shape guard by the context smoke, and then consumed by the
+# focused output-projection matvec status smoke after the single-token context
+# exists and the full Q8_0 payload span is proven inside the live mapping.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

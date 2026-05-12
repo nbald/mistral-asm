@@ -3669,3 +3669,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   exact-hex labels still matched; the 24-byte zero-count GGUF kept both statuses
   at `0` and emitted no layer-5 exact-hex labels; static linkage, artifact,
   runtime-source extension, tracked large-file, and line-count scans passed.
+
+## 2026-05-12T03:58:19+02:00
+
+- Added a focused layer-5 attention output-projection status smoke. It consumes
+  the exported layer-5 context only after `token0_layer5_attn_context_status`
+  is `1`, proves the retained `blk.5.attn_output.weight` Q8_0 `[4096 x 3072]`
+  payload span inside the live mapping, and writes a private 3072-f32 output
+  buffer without publishing exact-hex output labels yet.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported handoff, context, and output-matvec statuses as `1`; all 53
+  existing oracle-covered exact-hex labels still matched; the corrected 24-byte
+  zero-count GGUF kept the new status at `0`; no layer-5 output exact-hex labels
+  were emitted; static linkage, include, artifact, large-file, and line-count
+  scans passed.
