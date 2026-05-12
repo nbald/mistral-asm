@@ -51,12 +51,13 @@
 # `blk.4.attn_output.weight`, plus FFN RMSNorm setup for
 # `blk.4.ffn_norm.weight`, `blk.4.ffn_gate.weight`, and
 # `blk.4.ffn_up.weight`, and `blk.4.ffn_down.weight`, and layer-5 attention
-# RMSNorm setup for `blk.5.attn_norm.weight`, with
+# RMSNorm/query setup for `blk.5.attn_norm.weight` and
+# `blk.5.attn_q.weight`, with
 # query/key/value matvec output slices for the layer-4 query, key, and value
 # descriptors, into separate process-owned scratch slots before the token-0
 # math path. The first layer-5 RMSNorm smoke consumes the deliberately exported
 # layer-4 post-FFN residual handoff after proving the f32 weight span and emits
-# status only. The layer-1 FFN, layer-2
+# a guarded exact-hex slice. The layer-1 FFN, layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
 # outputs are consumed only by guarded focused smokes after their prerequisite
 # activations exist, including the layer-3 query/key/value, attention output,
@@ -75,11 +76,13 @@
 # weights, FFN gate, FFN up, FFN down projections, and the current layer-2
 # attention/FFN, layer-3 attention/FFN, layer-4 attention
 # RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
-# RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention RMSNorm
-# descriptor. The layer-5 descriptor is consumed by a guarded status smoke
-# after the layer-4 post-FFN residual handoff exists and the f32 payload span is
-# proven inside the live mapping. The layer-4 attention RMSNorm descriptor is
-# consumed by a guarded status smoke after the layer-3 post-FFN residual exists;
+# RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention
+# RMSNorm/query descriptors. The layer-5 RMSNorm descriptor is consumed by a
+# guarded status smoke after the layer-4 post-FFN residual handoff exists and
+# the f32 payload span is proven inside the live mapping; the layer-5 query
+# descriptor is retained as metadata only until a later guarded matvec step.
+# The layer-4 attention RMSNorm descriptor is consumed by a guarded status
+# smoke after the layer-3 post-FFN residual exists;
 # the query,
 # key, and value descriptors are consumed only after that RMSNorm smoke succeeds
 # and the full Q8_0 matrix spans are proven inside the live mapping. The layer-4

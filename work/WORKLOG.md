@@ -3493,3 +3493,13 @@ redundant entries. Do not treat it as the primary continuation source; use
   40 public exact-hex labels covered by the new oracle. The 24-byte zero-count
   GGUF kept the layer-5 descriptor and RMSNorm status at `0` and emitted no
   guarded layer-5 RMSNorm labels.
+
+## 2026-05-12T02:21:51+02:00
+
+- Added descriptor-only layer-5 attention query coverage. The runtime now
+  retains and prints `blk.5.attn_q.weight` as Q8_0 `[3072 x 4096]` at relative
+  offset `1063010304` on the local target GGUF.
+- Verification evidence: clean rebuild/check passed, the existing 40-label
+  layer-5 RMSNorm oracle subset still matched, and the 24-byte zero-count GGUF
+  kept the new query descriptor fields plus dependent layer-5 status fields at
+  `0` with no guarded layer-5 exact-hex labels.

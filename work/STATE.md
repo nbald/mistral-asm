@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only layer-5 attention query setup for `blk.5.attn_q.weight`,
-with retained lookup/summary wiring only and no Q8_0 payload read.
+Add guarded status-only token-0 layer-5 attention query matvec coverage using
+the retained `blk.5.attn_q.weight` descriptor and private
+`token0_layer5_attn_norm_activation`, with no query exact-hex labels yet.
 
 ## Completed Work
 
@@ -82,6 +83,11 @@ with retained lookup/summary wiring only and no Q8_0 payload read.
   published. It prints only when `token0_layer5_attn_norm` is 1 and the first
   four activation words match the focused external oracle:
   `0x42218b53`, `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`.
+- Descriptor-only layer-5 attention query setup is complete for
+  `blk.5.attn_q.weight`. The retained real-target descriptor is Q8_0
+  `[3072 x 4096]` at relative offset `1063010304`. This step added only
+  lookup and summary wiring in existing focused layer-5 include fragments; it
+  does not read query Q8_0 payload bytes or add a query matvec status.
 
 ## Known Blockers
 
@@ -138,35 +144,32 @@ with retained lookup/summary wiring only and no Q8_0 payload read.
 
 ## Last Verification
 
-Layer-5 attention RMSNorm exact-slice verification passed:
+Layer-5 attention query descriptor verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/token0_layer5_attn_norm_oracle.py`
-- after help text update, `make all check` and `git diff --check`
-- `./mistral-asm --help` mentions the layer-5 attention RMSNorm descriptor
-  lookup/output slice
-- real-target output reported `layer5_attn_norm_tensor_found: 1`,
-  `layer5_attn_norm_tensor_n_dimensions: 1`,
-  `layer5_attn_norm_tensor_dim0: 3072`,
-  `layer5_attn_norm_tensor_ggml_type: 0`,
-  `layer5_attn_norm_tensor_offset: 1049628672`, and
-  `token0_layer5_attn_norm: 1`
-- real-target layer-5 attention RMSNorm words were `0x42218b53`,
+- `./mistral-asm --help` mentions the layer-5 attention query descriptor
+  lookup
+- real-target output reported `layer5_attn_q_tensor_found: 1`,
+  `layer5_attn_q_tensor_n_dimensions: 2`, `layer5_attn_q_tensor_dim0: 3072`,
+  `layer5_attn_q_tensor_dim1: 4096`,
+  `layer5_attn_q_tensor_ggml_type: 8`, and
+  `layer5_attn_q_tensor_offset: 1063010304`
+- the existing layer-5 RMSNorm exact-hex words remained `0x42218b53`,
   `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`
 - the filtered real-target runtime/oracle diff was empty for all 40 exact-hex
   labels covered by `work/oracle/token0_layer5_attn_norm_oracle.py`
-- a 24-byte zero-count GGUF kept the layer-5 descriptor fields,
+- a 24-byte zero-count GGUF kept both layer-5 descriptor groups,
   `token0_layer4_post_ffn_residual`, and `token0_layer5_attn_norm` at `0`,
   and emitted no `token0_layer5_attn_norm*_f32_hex` labels
-- static-link/no-dynamic-section/file check and undefined-symbol check
-- runtime source extension scan allowing `.s` and `.inc`
-- include dependency scan covering `.include` fragments in `Makefile`
-- tracked artifact and tracked large-file scans
-- line-count check; `src/infer/token0_layer5_attn.s` is 252 lines and the
-  known near-limit files remain under the same constraints as the previous
-  state
+- `git diff --check`, static-link/no-dynamic-section/file check,
+  undefined-symbol check, runtime source extension scan, include dependency
+  scan, tracked artifact scan, tracked large-file scan, and line-count check
+  passed
 
 ## Next Exact Step
 
-Add descriptor-only layer-5 attention query setup for `blk.5.attn_q.weight`,
-with retained lookup/summary wiring only and no Q8_0 payload read.
+Add guarded status-only token-0 layer-5 attention query matvec coverage using
+the retained `blk.5.attn_q.weight` descriptor and private
+`token0_layer5_attn_norm_activation`, with real-target status `1`,
+zero-count GGUF status `0`, and no query exact-hex labels yet.

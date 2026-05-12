@@ -3,3 +3,7 @@
 layer5_attn_norm_tensor_request:
 	.ascii "blk.5.attn_norm.weight"
 layer5_attn_norm_tensor_request_end:
+
+layer5_attn_q_tensor_request:
+	.ascii "blk.5.attn_q.weight"
+layer5_attn_q_tensor_request_end:
