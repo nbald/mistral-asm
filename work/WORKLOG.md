@@ -3479,3 +3479,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   against the oracle subset. Both the real target and a 24-byte zero-count GGUF
   emitted no layer-5 exact-hex labels; the zero-count fixture kept the new
   layer-5 status at `0`.
+
+## 2026-05-12T02:15:35+02:00
+
+- Published the first guarded layer-5 attention RMSNorm exact-hex slice from
+  the private activation buffer. The first four words are `0x42218b53`,
+  `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`.
+- Added a focused external oracle that recomputes the full layer-4 post-FFN
+  residual, then applies `blk.5.attn_norm.weight` with the shared RMSNorm
+  helper semantics. The full-width residual is required because RMSNorm depends
+  on the complete 3072-word denominator.
+- Verification evidence: the real-target runtime/oracle comparison matched all
+  40 public exact-hex labels covered by the new oracle. The 24-byte zero-count
+  GGUF kept the layer-5 descriptor and RMSNorm status at `0` and emitted no
+  guarded layer-5 RMSNorm labels.

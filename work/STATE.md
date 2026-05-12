@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded exact-hex slice for the token-0 layer-5 attention
-RMSNorm activation by adding a focused external oracle and printing the first
-four activation words only when the existing layer-5 RMSNorm status is 1.
+Add descriptor-only layer-5 attention query setup for `blk.5.attn_q.weight`,
+with retained lookup/summary wiring only and no Q8_0 payload read.
 
 ## Completed Work
 
@@ -74,12 +73,15 @@ four activation words only when the existing layer-5 RMSNorm status is 1.
   `[3072]` at relative offset `1049628672`. This step added only lookup and
   summary wiring in focused layer-5 include fragments; it does not read the
   layer-4 post-FFN residual buffer or any layer-5 f32 payload bytes.
-- Status-only token-0 layer-5 attention RMSNorm coverage is complete in the
+- Token-0 layer-5 attention RMSNorm compute coverage is complete in the
   focused `src/infer/token0_layer5_attn.s` module. The smoke deliberately
   exports and consumes the layer-4 post-FFN residual handoff, proves the
   retained `blk.5.attn_norm.weight` f32 `[3072]` payload span, writes a private
-  3072-f32 activation buffer, and publishes only `token0_layer5_attn_norm`.
-  No layer-5 activation exact-hex labels are emitted yet.
+  3072-f32 activation buffer, and publishes `token0_layer5_attn_norm`.
+- The first guarded token-0 layer-5 attention RMSNorm exact-hex slice is
+  published. It prints only when `token0_layer5_attn_norm` is 1 and the first
+  four activation words match the focused external oracle:
+  `0x42218b53`, `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`.
 
 ## Known Blockers
 
@@ -128,6 +130,7 @@ four activation words only when the existing layer-5 RMSNorm status is 1.
 - `work/oracle/token0_layer4_ffn_swiglu_oracle.py`
 - `work/oracle/token0_layer4_ffn_down_oracle.py`
 - `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
+- `work/oracle/token0_layer5_attn_norm_oracle.py`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -135,37 +138,35 @@ four activation words only when the existing layer-5 RMSNorm status is 1.
 
 ## Last Verification
 
-Layer-5 attention RMSNorm status-only verification passed:
+Layer-5 attention RMSNorm exact-slice verification passed:
 
 - `make clean all check`
-- after help/comment updates, `make all check`
+- `python3 -m py_compile work/oracle/token0_layer5_attn_norm_oracle.py`
+- after help text update, `make all check` and `git diff --check`
 - `./mistral-asm --help` mentions the layer-5 attention RMSNorm descriptor
-  lookup/status smoke
+  lookup/output slice
 - real-target output reported `layer5_attn_norm_tensor_found: 1`,
   `layer5_attn_norm_tensor_n_dimensions: 1`,
   `layer5_attn_norm_tensor_dim0: 3072`,
-  `layer5_attn_norm_tensor_ggml_type: 0`, and
-  `layer5_attn_norm_tensor_offset: 1049628672`, then
+  `layer5_attn_norm_tensor_ggml_type: 0`,
+  `layer5_attn_norm_tensor_offset: 1049628672`, and
   `token0_layer5_attn_norm: 1`
-- the filtered real-target runtime/oracle diff was empty for the exact-hex
-  labels covered by `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
-- both the real target and a 24-byte zero-count GGUF emitted no
-  `token0_layer5*_f32_hex` labels
-- the 24-byte zero-count GGUF kept the layer-5 descriptor fields,
-  `token0_layer4_post_ffn_residual`, and `token0_layer5_attn_norm` at `0`
-- `git diff --check`
+- real-target layer-5 attention RMSNorm words were `0x42218b53`,
+  `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`
+- the filtered real-target runtime/oracle diff was empty for all 40 exact-hex
+  labels covered by `work/oracle/token0_layer5_attn_norm_oracle.py`
+- a 24-byte zero-count GGUF kept the layer-5 descriptor fields,
+  `token0_layer4_post_ffn_residual`, and `token0_layer5_attn_norm` at `0`,
+  and emitted no `token0_layer5_attn_norm*_f32_hex` labels
 - static-link/no-dynamic-section/file check and undefined-symbol check
-- exported-symbol inspection confirmed `token0_layer4_post_ffn_residual`,
-  `token0_layer4_post_ffn_residual_status`, and
-  `token0_layer5_attn_norm_status`
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - tracked artifact and tracked large-file scans
-- line-count check; the new layer-5 source module is small and the known
-  near-limit files remain under the same constraints as the previous state
+- line-count check; `src/infer/token0_layer5_attn.s` is 252 lines and the
+  known near-limit files remain under the same constraints as the previous
+  state
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-5 attention RMSNorm exact-hex slice by
-adding a focused oracle for the retained activation and printing the first four
-activation words only when `token0_layer5_attn_norm` is 1.
+Add descriptor-only layer-5 attention query setup for `blk.5.attn_q.weight`,
+with retained lookup/summary wiring only and no Q8_0 payload read.

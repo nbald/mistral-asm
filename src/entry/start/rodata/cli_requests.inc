@@ -43,7 +43,7 @@ help_text:
 	.ascii "matvec output slice plus FFN up matvec output slice and "
 	.ascii "FFN SwiGLU activation slice plus FFN down matvec output slice "
 	.ascii "and post-FFN residual output slice plus layer-5 attention "
-	.ascii "RMSNorm descriptor lookup/status smoke.\n"
+	.ascii "RMSNorm descriptor lookup/output slice.\n"
 help_text_end:
 
 lookup_tensor_request:
