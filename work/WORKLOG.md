@@ -4101,3 +4101,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-6 query status at `0` with no guarded layer-6 labels; static linkage,
   undefined-symbol, symbol visibility, source/include-dependency, artifact,
   large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T08:43:29+02:00
+
+- Published the guarded token-0 layer-6 attention query projection slice while
+  keeping the 4096-f32 output buffer private. The first four words are
+  `0x3e8d9665`, `0xbe348404`, `0x3ee92db2`, and `0x3d3c55ea`.
+- Added a focused layer-6 attention query oracle that reuses the full layer-6
+  attention RMSNorm oracle chain and dots that activation with the first four
+  rows of `blk.6.attn_q.weight` using the assembly scalar f32 Q8_0 accumulation
+  order.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched 92 exact values including the
+  new query slice; the 24-byte zero-count GGUF kept the layer-6 query status at
+  `0` and emitted no guarded layer-6 exact-hex labels; static linkage, symbol
+  visibility, source/include-dependency, artifact, large-file, line-count, and
+  whitespace scans passed.

@@ -6,8 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the guarded token-0 layer-6 attention query projection exact-hex slice
-and add a focused oracle for `blk.6.attn_q.weight`.
+Add descriptor-only layer-6 attention key setup for `blk.6.attn_k.weight`.
 
 ## Completed Work
 
@@ -32,31 +31,31 @@ and add a focused oracle for `blk.6.attn_q.weight`.
   `token0_layer6_attn_norm` plus the first four exact-hex words. Those words are
   `0x422d70ce`, `0xc0840f20`, `0xc140459b`, and `0xc00a013e`. The layer-6 query
   projection descriptor for `blk.6.attn_q.weight` is retained, printed as
-  descriptor metadata, and consumed by a guarded status-only matvec smoke after
-  the layer-6 RMSNorm activation exists. The query output buffer remains private
-  and no layer-6 query exact-hex labels are emitted yet.
+  descriptor metadata, and consumed by a guarded matvec smoke after the layer-6
+  RMSNorm activation exists. The query output buffer remains private and
+  publishes only a guarded status plus the first four exact-hex words:
+  `0x3e8d9665`, `0xbe348404`, `0x3ee92db2`, and `0x3d3c55ea`.
 - The two-pass review gates for the completed layer-4 FFN chain, layer-5
   attention residual handoff chain, and layer-5 FFN chain completed cleanly under
   `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for layer-6 attention query status smoke:
+- Latest verification for layer-6 attention query output slice:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; help text mentions the layer-6 query status matvec smoke; the
-  real target reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`,
+  passed; help text mentions the layer-6 query matvec output slice; the real
+  target reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`,
   ggml type `0`, offset `1173319680`, and `layer6_attn_q_tensor_found: 1`,
   dimensions `3072 x 4096`, ggml type `8`, offset `1186701312`; the real target
   reports `token0_layer6_attn_norm: 1` and `token0_layer6_attn_q_matvec: 1`;
-  no `token0_layer6_attn_q_output` labels are emitted; the focused layer-6
-  attention RMSNorm oracle still matched 89 exact values including epsilon and
-  the layer-6 RMSNorm slice; a packed 24-byte zero-count GGUF kept the layer-6
-  descriptor fields, `token0_layer5_post_ffn_residual`,
-  `token0_layer6_attn_norm`, and `token0_layer6_attn_q_matvec` at `0` and
-  emitted no guarded layer-6 labels; static-link,
-  no-dynamic-section/no-interpreter, undefined-symbol, runtime source
-  extension, include-dependency, tracked artifact, tracked large-file,
-  exported/local symbol, line-count, and whitespace scans passed.
+  runtime/oracle comparison against `work/oracle/token0_layer6_attn_q_oracle.py`
+  matched 92 exact labels including the four query output words; a packed
+  24-byte zero-count GGUF kept the layer-6 descriptor fields,
+  `token0_layer5_post_ffn_residual`, `token0_layer6_attn_norm`, and
+  `token0_layer6_attn_q_matvec` at `0` and emitted no guarded layer-6 exact-hex
+  labels; static-link, no-dynamic-section/no-interpreter, undefined-symbol,
+  runtime source extension, include-dependency, tracked artifact, tracked
+  large-file, exported/local symbol, line-count, and whitespace scans passed.
 
 ## Known Blockers
 
@@ -105,12 +104,13 @@ and add a focused oracle for `blk.6.attn_q.weight`.
 - `src/infer/token0_layer6_attn.s`
 - `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
 - `work/oracle/token0_layer6_attn_norm_oracle.py`
+- `work/oracle/token0_layer6_attn_q_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-6 attention query status smoke verification passed:
+Layer-6 attention query output slice verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
@@ -119,13 +119,16 @@ Layer-6 attention query status smoke verification passed:
   offset `1173319680`, plus `blk.6.attn_q.weight` as Q8_0 `[3072 x 4096]` at
   relative offset `1186701312`; `token0_layer6_attn_norm: 1` and
   `token0_layer6_attn_q_matvec: 1`
-- real-target runtime/oracle comparison still matched 89 exact values against
-  `work/oracle/token0_layer6_attn_norm_oracle.py`, including
-  `token0_layer6_attn_norm0..3_f32_hex`
-- real-target output emitted no `token0_layer6_attn_q_output` labels
+- real-target runtime/oracle comparison matched 92 exact values against
+  `work/oracle/token0_layer6_attn_q_oracle.py`, including
+  `token0_layer6_attn_norm0..3_f32_hex` and
+  `token0_layer6_attn_q_output0..3_f32_hex`
+- real-target output emitted `token0_layer6_attn_q_output0..3_f32_hex` only
+  after `token0_layer6_attn_q_matvec: 1`
 - packed 24-byte zero-count GGUF kept layer-6 norm/query descriptor fields,
   `token0_layer5_post_ffn_residual`, `token0_layer6_attn_norm`, and
-  `token0_layer6_attn_q_matvec` at `0` and emitted no guarded layer-6 labels
+  `token0_layer6_attn_q_matvec` at `0` and emitted no guarded layer-6 exact-hex
+  labels
 - static scan kept private layer-6 q slot/name/dim2/dim3 symbols and
   `token0_layer6_attn_norm_activation` plus `token0_layer6_attn_q_output`
   unexported
@@ -136,5 +139,4 @@ Layer-6 attention query status smoke verification passed:
 
 ## Next Exact Step
 
-Publish the guarded token-0 layer-6 attention query projection exact-hex slice
-and add a focused oracle for `blk.6.attn_q.weight`.
+Add descriptor-only layer-6 attention key setup for `blk.6.attn_k.weight`.
