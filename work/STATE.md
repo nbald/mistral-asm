@@ -6,11 +6,12 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add a focused token-0 layer-5 single-token attention context status smoke in a
-new Makefile-tracked module: consume the explicit layer-5 Q/K/V projection
-handoff and exported layer-5 value projection buffer, use retained Q/K/V and
-output-projection descriptors only as shape guards, keep
-`blk.5.attn_output.weight` payload reads out of the step, and do not touch
+Add a focused status-only token-0 layer-5 attention output-projection matvec
+smoke in a new Makefile-tracked module: consume
+`token0_layer5_attn_context_status` and `token0_layer5_attn_context`, prove the
+retained `blk.5.attn_output.weight` Q8_0 `[4096 x 3072]` payload span inside
+the live mapping before reading matrix bytes, write a private 3072-f32 output
+buffer, publish an output matvec status line only, and do not touch
 `src/infer/token0_layer5_attn.s`.
 
 ## Completed Work
@@ -157,6 +158,26 @@ output-projection descriptors only as shape guards, keep
   `token0_layer5_attn_qkv_handoff`, and deliberately does not read projection
   buffer bytes, derive context values, or read `blk.5.attn_output.weight`
   payload bytes.
+- Status-only token-0 layer-5 single-token attention context coverage is
+  complete in the focused `src/infer/token0_layer5_attn_context.s` module. It
+  consumes the explicit Q/K/V projection handoff, borrows the exported layer-5
+  value projection buffer, uses retained Q/K/V and output-projection
+  descriptors only as shape guards, writes an exported 4096-f32
+  `token0_layer5_attn_context` buffer, prints `token0_layer5_attn_context`,
+  and deliberately does not read `blk.5.attn_output.weight` payload bytes or
+  emit context exact-hex labels.
+
+## Verification Status
+
+- Latest verification for the layer-5 context step: `make all check` passed;
+  `python3 -m py_compile work/oracle/*.py` passed; real-target runtime/oracle
+  comparison matched all 53 exact-hex labels covered by
+  `work/oracle/token0_layer5_attn_v_oracle.py`; the real target reported
+  `token0_layer5_attn_qkv_handoff: 1` and `token0_layer5_attn_context: 1`;
+  a temporary 24-byte zero-count GGUF kept both statuses at `0` with no
+  layer-5 exact-hex output; help, `git diff --check`, static linkage, runtime
+  source extension, tracked artifact, tracked large-file, and line-count scans
+  passed.
 
 ## Known Blockers
 
@@ -169,9 +190,10 @@ output-projection descriptors only as shape guards, keep
 - `src/infer/token0_layer5_attn.s` is 996 lines after the minimal Q/K/V buffer
   export and handoff-comment updates. Do not add further layer-5 attention
   feature code there before splitting or moving work into focused
-  Makefile-tracked modules/fragments. The explicit Q/K/V handoff now exists;
-  future layer-5 context work should consume its status instead of reading the
-  exported projection buffers directly.
+  Makefile-tracked modules/fragments. The explicit Q/K/V handoff and context
+  status now exist; future layer-5 output-projection work should consume
+  `token0_layer5_attn_context_status` instead of reading value projection
+  buffers directly.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -205,6 +227,7 @@ output-projection descriptors only as shape guards, keep
 - `src/infer/token0_layer4_ffn_down.s`
 - `src/infer/token0_layer5_attn.s`
 - `src/infer/token0_layer5_attn_qkv_handoff.s`
+- `src/infer/token0_layer5_attn_context.s`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
 - `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/oracle/token0_layer4_ffn_gate_oracle.py`

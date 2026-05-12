@@ -3655,3 +3655,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   handoff at `0` with no layer-5 exact-hex output; static purity/linkage/symbol
   scans passed. `src/infer/token0_layer5_attn.s` is now 996 lines, so further
   layer-5 attention feature work should stay in focused modules.
+
+## 2026-05-12T03:51:50+02:00
+
+- Added a focused layer-5 single-token attention context status smoke. It
+  consumes the explicit Q/K/V handoff, copies from the exported layer-5 value
+  projection buffer into a 4096-f32 context buffer by grouped-query head
+  expansion, and uses the retained Q/K/V/output-projection descriptors only as
+  shape guards. The step intentionally emits only `token0_layer5_attn_context`
+  status and still does not read `blk.5.attn_output.weight` payload bytes.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported handoff and context statuses as `1` while all 53 oracle-covered
+  exact-hex labels still matched; the 24-byte zero-count GGUF kept both statuses
+  at `0` and emitted no layer-5 exact-hex labels; static linkage, artifact,
+  runtime-source extension, tracked large-file, and line-count scans passed.

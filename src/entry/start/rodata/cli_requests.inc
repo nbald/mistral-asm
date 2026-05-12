@@ -46,8 +46,8 @@ help_text:
 	.ascii "RMSNorm descriptor lookup/output slice plus query descriptor "
 	.ascii "lookup/matvec output slice plus key descriptor lookup/matvec "
 	.ascii "output slice plus value descriptor lookup/matvec output slice "
-	.ascii "plus Q/K/V projection handoff status and output projection "
-	.ascii "descriptor lookup.\n"
+	.ascii "plus Q/K/V projection handoff status, context status smoke, "
+	.ascii "and output projection descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:
