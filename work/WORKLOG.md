@@ -3515,3 +3515,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `token0_layer5_attn_q_matvec: 1`, the existing 40 public exact-hex labels
   still matched the layer-5 RMSNorm oracle subset, and a 24-byte zero-count GGUF
   kept the new query status at `0` with no layer-5 exact-hex labels.
+
+## 2026-05-12T02:35:29+02:00
+
+- Published the first guarded layer-5 attention query exact-hex slice from the
+  private query projection buffer. The first four words are `0xbe8aee1e`,
+  `0x3e5db4f8`, `0xbee5a1db`, and `0x3be44a75`.
+- Added a focused external oracle that reuses the full layer-5 RMSNorm
+  activation, then dots the first four rows of `blk.5.attn_q.weight` using the
+  same ordered f32 Q8_0 accumulation contract as the runtime.
+- Verification evidence: the real-target runtime/oracle comparison matched all
+  44 public exact-hex labels covered by the new oracle. The 24-byte zero-count
+  GGUF kept both layer-5 descriptor groups and dependent statuses at `0` and
+  emitted no layer-5 exact-hex labels.

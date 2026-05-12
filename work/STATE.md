@@ -6,9 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-5 attention query exact-hex output
-slice, backed by a focused external oracle that reuses the layer-5 RMSNorm
-activation and computes the first rows of `blk.5.attn_q.weight`.
+Add descriptor-only layer-5 attention key setup for `blk.5.attn_k.weight`,
+with retained summary fields and help text, without reading key payload bytes.
 
 ## Completed Work
 
@@ -93,8 +92,11 @@ activation and computes the first rows of `blk.5.attn_q.weight`.
   `token0_layer5_attn_norm` status, the retained `blk.5.attn_q.weight`
   descriptor as Q8_0 `[3072 x 4096]`, and a proven full matrix payload span
   inside the live mapping before reading query bytes. It writes a private
-  4096-f32 output buffer and publishes `token0_layer5_attn_q_matvec`, but no
-  query exact-hex labels are published yet.
+  4096-f32 output buffer and publishes `token0_layer5_attn_q_matvec`.
+- The first guarded token-0 layer-5 attention query exact-hex slice is
+  published. It prints only when `token0_layer5_attn_q_matvec` is 1 and the
+  first four query output words match the focused external oracle:
+  `0xbe8aee1e`, `0x3e5db4f8`, `0xbee5a1db`, and `0x3be44a75`.
 
 ## Known Blockers
 
@@ -144,6 +146,7 @@ activation and computes the first rows of `blk.5.attn_q.weight`.
 - `work/oracle/token0_layer4_ffn_down_oracle.py`
 - `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
 - `work/oracle/token0_layer5_attn_norm_oracle.py`
+- `work/oracle/token0_layer5_attn_q_oracle.py`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -151,23 +154,17 @@ activation and computes the first rows of `blk.5.attn_q.weight`.
 
 ## Last Verification
 
-Layer-5 attention query matvec status verification passed:
+Layer-5 attention query exact-hex slice verification passed:
 
 - `make clean all check`
-- `python3 -m py_compile work/oracle/token0_layer5_attn_norm_oracle.py`
+- `python3 -m py_compile work/oracle/token0_layer5_attn_q_oracle.py`
 - `./mistral-asm --help` mentions the layer-5 attention query descriptor
-  lookup/matvec status smoke
-- real-target output reported `layer5_attn_q_tensor_found: 1`,
-  `layer5_attn_q_tensor_n_dimensions: 2`, `layer5_attn_q_tensor_dim0: 3072`,
-  `layer5_attn_q_tensor_dim1: 4096`,
-  `layer5_attn_q_tensor_ggml_type: 8`,
-  `layer5_attn_q_tensor_offset: 1063010304`, and
-  `token0_layer5_attn_q_matvec: 1`
-- the existing layer-5 RMSNorm exact-hex words remained `0x42218b53`,
-  `0xc076c4e6`, `0xc1466897`, and `0xc0005a54`
-- the filtered real-target runtime/oracle diff was empty for all 40 exact-hex
-  labels covered by `work/oracle/token0_layer5_attn_norm_oracle.py`, and no
-  layer-5 query exact-hex labels were emitted
+  lookup/matvec output slice
+- real-target output reported `token0_layer5_attn_q_matvec: 1` and emitted
+  query output words `0xbe8aee1e`, `0x3e5db4f8`, `0xbee5a1db`, and
+  `0x3be44a75`
+- the filtered real-target runtime/oracle diff was empty for all 44 exact-hex
+  labels covered by `work/oracle/token0_layer5_attn_q_oracle.py`
 - a 24-byte zero-count GGUF kept both layer-5 descriptor groups,
   `token0_layer4_post_ffn_residual`, `token0_layer5_attn_norm`, and
   `token0_layer5_attn_q_matvec` at `0`, and emitted no layer-5 exact-hex labels
@@ -178,6 +175,5 @@ Layer-5 attention query matvec status verification passed:
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-5 attention query exact-hex output
-slice, backed by a focused external oracle that reuses the layer-5 RMSNorm
-activation and computes the first rows of `blk.5.attn_q.weight`.
+Add descriptor-only layer-5 attention key setup for `blk.5.attn_k.weight`,
+with retained summary fields and help text, without reading key payload bytes.
