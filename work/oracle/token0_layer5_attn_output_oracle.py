@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""External oracle for the token-0 layer-5 attention output projection smoke.
+"""External oracle for the token-0 layer-5 attention output/residual smokes.
 
 This file is verification tooling, not runtime source. It reuses the external
 layer-5 attention value oracle path to preserve all earlier public slice
 coverage, recomputes the full layer-5 value projection, expands the
 single-token grouped-query context, then dots that context with the first four
 rows of blk.5.attn_output.weight using the same scalar f32 Q8_0 accumulation
-order as the assembly smoke path.
+order as the assembly smoke path. It then adds the layer-4 post-FFN residual
+to the layer-5 attention output with scalar f32 rounding for the public words.
 """
 
 import argparse
@@ -23,6 +24,7 @@ from token0_attn_output_oracle import (
 )
 from token0_attn_q_oracle import (
     GGML_TYPE_Q8_0,
+    f32,
     f32_bits,
     parse_gguf,
     q8_0_row_bytes,
@@ -155,6 +157,14 @@ def run_oracle(path):
     )
 
     result.update(output)
+
+    residuals = np.empty(PUBLIC_OUTPUT_WORDS, dtype=np.float32)
+    for index in range(PUBLIC_OUTPUT_WORDS):
+        residuals[index] = f32(
+            result["layer4_post_ffn_residuals"][index] +
+            result["layer5_attn_output_outputs"][index])
+
+    result["layer5_post_attn_residuals"] = residuals
     return result
 
 
@@ -235,6 +245,9 @@ def main():
               f"0x{f32_bits(value):08x}")
     for index, value in enumerate(result["layer5_attn_output_outputs"]):
         print(f"oracle_token0_layer5_attn_output{index}_f32_hex: "
+              f"0x{f32_bits(value):08x}")
+    for index, value in enumerate(result["layer5_post_attn_residuals"]):
+        print(f"oracle_token0_layer5_post_attn_residual{index}_f32_hex: "
               f"0x{f32_bits(value):08x}")
 
 

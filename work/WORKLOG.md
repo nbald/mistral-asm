@@ -3730,3 +3730,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   fail-closed guard, static/no-interpreter/no-undefined checks, symbol
   visibility check, include dependency scan, source extension scan, artifact
   scans, and line-count review passed.
+
+## 2026-05-12T04:29:44+02:00
+
+- Added the layer-5 post-attention residual handoff beside the private
+  output-projection buffer. The new status requires the layer-4 post-FFN
+  residual and layer-5 output matvec statuses, exports only the residual
+  buffer/status for later FFN work, and leaves the raw output-projection buffer
+  local to the output module.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target comparison matched all 61 labels covered by the focused layer-5
+  output oracle, including residual words `0x440c34df`, `0xc1fcec34`,
+  `0xc2a9b98b`, and `0xc1618569`; the zero-count GGUF kept the new status at
+  `0` and emitted no guarded layer-5 output/residual exact-hex labels; static,
+  symbol, include, artifact, large-file, and line-count scans passed.

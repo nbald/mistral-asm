@@ -6,12 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add token-0 layer-5 post-attention residual coverage in
-`src/infer/token0_layer5_attn_output.s`, keeping the residual add beside the
-private layer-5 attention output-projection buffer. Require the layer-4
-post-FFN residual handoff and `token0_layer5_attn_output_matvec_status`, write
-and export a layer-5 post-attention residual status/buffer for later FFN work,
-and publish the first four exact-hex residual words with oracle coverage.
+Run review gate pass 1 for the completed layer-5 attention
+Q/K/V-handoff/context/output-projection/post-attention-residual chain before
+starting layer-5 FFN work.
 
 ## Completed Work
 
@@ -193,24 +190,32 @@ and publish the first four exact-hex residual words with oracle coverage.
   the post-attention residual add in `src/infer/token0_layer5_attn_output.s`,
   publish a new layer-5 post-attention residual status/buffer from that module,
   and keep the raw output-projection buffer private.
+- Layer-5 post-attention residual output-slice coverage is complete in the
+  focused `src/infer/token0_layer5_attn_output.s` module. It requires
+  `token0_layer4_post_ffn_residual_status` and
+  `token0_layer5_attn_output_matvec_status`, repeats the 3072-wide
+  `blk.5.attn_output.weight` output guard, writes an exported 3072-f32
+  `token0_layer5_post_attn_residual` buffer for later FFN work, and keeps the
+  raw layer-5 output-projection buffer private. The first four residual words
+  are `0x440c34df`, `0xc1fcec34`, `0xc2a9b98b`, and `0xc1618569`.
 
 ## Verification Status
 
-- Latest verification for layer-5 attention output-chain review pass 2:
+- Latest verification for layer-5 post-attention residual coverage:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py` passed;
-  `./mistral-asm --help` mentions Q/K/V handoff, context status, output
-  descriptor lookup, and output-projection matvec slice coverage; real-target
-  runtime/oracle comparison matched 57 oracle-covered labels including epsilon
-  plus 56 exact-hex labels from `work/oracle/token0_layer5_attn_output_oracle.py`;
-  the real target reported `token0_layer5_attn_qkv_handoff: 1`,
-  `token0_layer5_attn_context: 1`, `token0_layer5_attn_output_matvec: 1`, and
-  output words `0x3d443070`, `0x3e31a0d5`, `0xbddb87ff`, `0xbdc80eb7`; a
-  temporary 24-byte zero-count GGUF kept `layer5_attn_output_tensor_found`,
-  handoff, context, and output-matvec statuses at `0` and emitted no layer-5
-  output exact-hex labels; `git diff --check`, static/no-interpreter,
-  undefined-symbol, runtime source/fragment extension, include dependency,
-  exported/local symbol, tracked artifact, tracked large-file, and line-count
-  scans passed.
+  `./mistral-asm --help` mentions the layer-5 post-attention residual slice;
+  real-target runtime/oracle comparison matched 61 covered labels including
+  epsilon plus 60 exact-hex labels from
+  `work/oracle/token0_layer5_attn_output_oracle.py`; the real target reported
+  `token0_layer5_attn_qkv_handoff: 1`, `token0_layer5_attn_context: 1`,
+  `token0_layer5_attn_output_matvec: 1`, and
+  `token0_layer5_post_attn_residual: 1`; a temporary 24-byte zero-count GGUF
+  kept `layer5_attn_output_tensor_found`, handoff, context, output-matvec, and
+  post-attention residual statuses at `0` and emitted no guarded layer-5
+  output/residual exact-hex labels; `git diff --check`,
+  static-link/no-dynamic-section/no-interpreter, undefined-symbol,
+  runtime source/fragment extension, include dependency, exported/local symbol,
+  tracked artifact, tracked large-file, and line-count scans passed.
 
 ## Known Blockers
 
@@ -224,9 +229,8 @@ and publish the first four exact-hex residual words with oracle coverage.
   export and handoff-comment updates. Do not add further layer-5 attention
   feature code there before splitting or moving work into focused
   Makefile-tracked modules/fragments. The explicit Q/K/V handoff and context
-  status now exist, and the output-projection matvec/slice path lives in a
-  focused module; future layer-5 post-attention residual work must deliberately
-  expose or hand off the private output buffer before another module consumes it.
+  status now exist, and the output-projection matvec/slice plus
+  post-attention residual handoff live in a focused module.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -285,36 +289,31 @@ and publish the first four exact-hex residual words with oracle coverage.
 
 ## Last Verification
 
-Layer-5 attention output-chain review pass 2 verification passed:
+Layer-5 post-attention residual coverage verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 Q/K/V handoff, context status,
-  output projection descriptor lookup, and output-projection matvec slice
+- `./mistral-asm --help` mentions the layer-5 post-attention residual slice
 - real-target runtime output reported `token0_layer5_attn_qkv_handoff: 1`,
-  `token0_layer5_attn_context: 1`, and
-  `token0_layer5_attn_output_matvec: 1`; retained layer-5 output-projection
-  descriptor remained Q8_0 `[4096 x 3072]` at relative offset `1049640960`
-- real-target covered-label runtime/oracle comparison matched 57 covered labels:
-  epsilon plus 56 exact-hex labels covered by
+  `token0_layer5_attn_context: 1`,
+  `token0_layer5_attn_output_matvec: 1`, and
+  `token0_layer5_post_attn_residual: 1`
+- real-target covered-label runtime/oracle comparison matched 61 labels: epsilon
+  plus 60 exact-hex labels covered by
   `work/oracle/token0_layer5_attn_output_oracle.py`
-- the first four layer-5 attention output-projection words are `0x3d443070`,
-  `0x3e31a0d5`, `0xbddb87ff`, and `0xbdc80eb7`
+- the first four layer-5 post-attention residual words are `0x440c34df`,
+  `0xc1fcec34`, `0xc2a9b98b`, and `0xc1618569`
 - a corrected 24-byte zero-count GGUF kept `layer5_attn_output_tensor_found`,
-  handoff, context, and output-matvec statuses at `0` and emitted no
-  `token0_layer5_attn_output*_f32_hex` labels
+  handoff, context, output-matvec, and post-attention residual statuses at `0`
+  and emitted no `token0_layer5_attn_output*_f32_hex` or
+  `token0_layer5_post_attn_residual*_f32_hex` labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, runtime source/fragment extension scan, include
   dependency scan, exported/local symbol check, tracked artifact scan, tracked
-  large-file scan, and line-count review passed; `src/infer/token0_layer5_attn.s`
-  is unchanged at 996 lines and must be avoided before further layer-5 attention
-  feature expansion
+  large-file scan, and line-count review passed
 
 ## Next Exact Step
 
-Add token-0 layer-5 post-attention residual coverage in
-`src/infer/token0_layer5_attn_output.s`, keeping the residual add beside the
-private layer-5 attention output-projection buffer. Require the layer-4
-post-FFN residual handoff and `token0_layer5_attn_output_matvec_status`, write
-and export a layer-5 post-attention residual status/buffer for later FFN work,
-and publish the first four exact-hex residual words with oracle coverage.
+Run review gate pass 1 for the completed layer-5 attention
+Q/K/V-handoff/context/output-projection/post-attention-residual chain before
+starting layer-5 FFN work.
