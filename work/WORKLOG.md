@@ -3866,3 +3866,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   the new up descriptor fields and dependent layer-5 FFN statuses fail-closed;
   static, symbol, source/fragment, include-dependency, artifact, large-file,
   line-count, and whitespace scans passed.
+
+## 2026-05-12T06:38:20+02:00
+
+- Added status-only token-0 layer-5 FFN up matvec coverage. The smoke consumes
+  the exported layer-5 FFN RMSNorm activation, proves the retained
+  `blk.5.ffn_up.weight` Q8_0 `[3072 x 9216]` payload span, writes a private
+  9216-f32 up output buffer, and deliberately publishes only
+  `token0_layer5_ffn_up_matvec`.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported `token0_layer5_ffn_up_matvec: 1`; the existing layer-5 FFN
+  gate oracle comparison still matched all 69 covered exact-hex labels; no
+  `token0_layer5_ffn_up*_f32_hex` labels were emitted; the 24-byte zero-count
+  GGUF kept the new up matvec status at `0`; static, symbol, source/fragment,
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.

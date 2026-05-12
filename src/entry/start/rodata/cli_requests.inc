@@ -51,7 +51,7 @@ help_text:
 	.ascii "matvec slice plus post-attention residual slice and FFN "
 	.ascii "RMSNorm descriptor lookup/output slice plus FFN gate "
 	.ascii "descriptor lookup/gate matvec output slice plus "
-	.ascii "descriptor-only FFN up lookup.\n"
+	.ascii "FFN up descriptor lookup/up matvec status.\n"
 help_text_end:
 
 lookup_tensor_request:

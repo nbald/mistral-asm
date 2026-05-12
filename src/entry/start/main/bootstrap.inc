@@ -58,8 +58,8 @@
 # projection handoff, status-only single-token context smoke, guarded
 # output-projection matvec status, post-attention residual handoff, and
 # FFN RMSNorm setup for `blk.5.ffn_norm.weight`, guarded FFN gate matvec
-# coverage through `blk.5.ffn_gate.weight`, and descriptor-only FFN up setup for
-# `blk.5.ffn_up.weight`.
+# coverage through `blk.5.ffn_gate.weight`, and status-only FFN up matvec
+# coverage through `blk.5.ffn_up.weight`.
 # The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
 # post-FFN residual handoff after proving the f32 weight span and emits a
 # guarded exact-hex slice; the layer-5 query/key/value smokes consume that
@@ -109,7 +109,8 @@
 # residual handoff exists and the f32 payload span is proven inside the live
 # mapping. The layer-5 FFN gate descriptor is consumed only after that FFN
 # RMSNorm activation exists and its full Q8_0 payload span is proven; the
-# layer-5 FFN up descriptor is retained and printed only in this milestone.
+# layer-5 FFN up descriptor is consumed by the analogous status-only matvec
+# smoke after proving its full Q8_0 payload span.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,
