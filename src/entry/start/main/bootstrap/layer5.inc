@@ -100,6 +100,29 @@
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
+	jz .Llookup_layer5_ffn_norm_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer5_ffn_norm_tensor:
+	# Capture the layer-5 FFN RMSNorm descriptor for later use after the
+	# post-attention residual handoff exists. This is deliberately
+	# descriptor-only: later FFN RMSNorm work must first consume
+	# token0_layer5_post_attn_residual through an explicit status guard and
+	# prove this f32 payload span before reading weight bytes.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer5_ffn_norm_tensor_request]
+	mov r9, layer5_ffn_norm_tensor_request_end - layer5_ffn_norm_tensor_request
+	lea r10, [rip + layer5_ffn_norm_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
 	jz .Lsummary_print
 	cmp rax, 12
 	je .Llookup_tensor_alignment_error

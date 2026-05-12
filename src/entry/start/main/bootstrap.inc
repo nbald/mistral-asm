@@ -52,17 +52,22 @@
 # `blk.4.ffn_norm.weight`, `blk.4.ffn_gate.weight`, and
 # `blk.4.ffn_up.weight`, and `blk.4.ffn_down.weight`, and layer-5 attention
 # RMSNorm/query/key/value setup for `blk.5.attn_norm.weight`,
-# `blk.5.attn_q.weight`, `blk.5.attn_k.weight`, and
-# `blk.5.attn_v.weight`, with guarded layer-5 query/key/value matvec statuses
-# and output slices plus an explicit Q/K/V projection handoff and status-only
-# single-token context smoke before a guarded output-projection matvec status.
+# `blk.5.attn_q.weight`, `blk.5.attn_k.weight`,
+# `blk.5.attn_v.weight`, and `blk.5.attn_output.weight`, with guarded layer-5
+# query/key/value matvec statuses and output slices plus an explicit Q/K/V
+# projection handoff, status-only single-token context smoke, guarded
+# output-projection matvec status, post-attention residual handoff, and
+# descriptor-only FFN RMSNorm setup for `blk.5.ffn_norm.weight`.
 # The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
 # post-FFN residual handoff after proving the f32 weight span and emits a
 # guarded exact-hex slice; the layer-5 query/key/value smokes consume that
 # private RMSNorm activation only after proving their Q8_0 matrix spans; the
 # layer-5 context smoke borrows the exported value projection buffer only after
 # the Q/K/V handoff status is 1, and the layer-5 output-projection smoke reads
-# the retained Q8_0 output matrix only after proving its full mapped span.
+# the retained Q8_0 output matrix only after proving its full mapped span. The
+# layer-5 FFN RMSNorm descriptor is retained and printed only; no FFN RMSNorm
+# smoke reads layer-5 post-attention residual data or f32 FFN weight bytes in
+# this descriptor setup step.
 # The layer-1 FFN,
 # layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
@@ -84,7 +89,8 @@
 # attention/FFN, layer-3 attention/FFN, layer-4 attention
 # RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
 # RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention
-# RMSNorm/query/key/value/output descriptors. The layer-5 RMSNorm descriptor is
+# RMSNorm/query/key/value/output descriptors and layer-5 FFN RMSNorm descriptor.
+# The layer-5 attention RMSNorm descriptor is
 # consumed by a guarded status smoke after the layer-4 post-FFN residual handoff
 # exists and the f32 payload span is proven inside the live mapping; the
 # layer-5 query descriptor is consumed only after that RMSNorm activation exists
@@ -95,7 +101,8 @@
 # the analogous value matvec smoke; the layer-5 output descriptor is retained,
 # printed, used as a shape guard by the context smoke, and then consumed by the
 # focused output-projection matvec status smoke after the single-token context
-# exists and the full Q8_0 payload span is proven inside the live mapping.
+# exists and the full Q8_0 payload span is proven inside the live mapping. The
+# layer-5 FFN RMSNorm descriptor is not consumed yet.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

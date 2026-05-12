@@ -3766,3 +3766,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   GGUF kept the layer-5 handoff/context/output/residual statuses fail-closed;
   static, symbol, include, artifact, large-file, and line-count scans passed.
   Feature work can resume with descriptor-only `blk.5.ffn_norm.weight` setup.
+
+## 2026-05-12T05:38:49+02:00
+
+- Added descriptor-only layer-5 FFN RMSNorm setup for
+  `blk.5.ffn_norm.weight`. The real target reports it as f32 `[3072]` at
+  relative offset `1139884032`. This step intentionally stops at lookup,
+  retained summary fields, summary printing, and help/contract text; it does
+  not read the layer-5 post-attention residual handoff or any FFN RMSNorm
+  weight bytes.
+- Verification evidence: clean build/check, oracle compile, help text, the
+  60-label real-target runtime/oracle comparison, packed zero-count fail-closed
+  guard, static linkage, symbol, include dependency, artifact, large-file, and
+  line-count scans passed.
