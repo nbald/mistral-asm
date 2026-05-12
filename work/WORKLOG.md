@@ -3970,3 +3970,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   emitted no down output exact-hex labels; static linkage, symbol visibility,
   include dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T07:30:30+02:00
+
+- Added status-only token-0 layer-5 post-FFN residual coverage in the focused
+  layer-5 FFN down module. The residual add consumes the exported layer-5
+  post-attention residual and the private layer-5 FFN down output, rechecks the
+  down descriptor output width, fills the exported next-layer handoff buffer,
+  and deliberately publishes only `token0_layer5_post_ffn_residual`.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported the new status as `1`; the existing layer-5 FFN down oracle
+  comparison still matched all 81 covered exact-hex labels including epsilon;
+  no layer-5 post-FFN exact-hex labels were emitted; the 24-byte zero-count
+  GGUF kept the new status at `0` and emitted no layer-5 down or post-FFN
+  exact-hex labels; static, symbol, source/fragment, include-dependency,
+  artifact, large-file, line-count, and whitespace scans passed.

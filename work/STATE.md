@@ -6,13 +6,12 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-5 post-FFN residual coverage in
-`src/infer/token0_layer5_ffn_down.s`. Consume
-`token0_layer5_post_attn_residual_status`,
-`token0_layer5_ffn_down_matvec_status`, the retained layer-5 post-attention
-residual, and the private layer-5 FFN down output buffer; publish only
-`token0_layer5_post_ffn_residual` status and an exported 3072-f32 residual
-handoff buffer for the next layer, with no layer-5 post-FFN exact-hex labels yet.
+Publish the token-0 layer-5 post-FFN residual exact-hex slice and add a focused
+external oracle for it. Consume the status-only
+`token0_layer5_post_ffn_residual` handoff buffer from
+`src/infer/token0_layer5_ffn_down.s`, print only the first four guarded
+`token0_layer5_post_ffn_residual*_f32_hex` words when the status is 1, and keep
+the exported 3072-f32 buffer as the next-layer handoff.
 
 ## Completed Work
 
@@ -88,24 +87,34 @@ handoff buffer for the next layer, with no layer-5 post-FFN exact-hex labels yet
   publishes the first four output words only when
   `token0_layer5_ffn_down_matvec_status` is 1: `0x3e0063f9`, `0xbd3afd80`,
   `0x3d82966f`, and `0x3c0f583e`.
+- Status-only token-0 layer-5 post-FFN residual coverage is complete in
+  `src/infer/token0_layer5_ffn_down.s`. It consumes
+  `token0_layer5_post_attn_residual_status`,
+  `token0_layer5_ffn_down_matvec_status`, the exported layer-5 post-attention
+  residual, and the private layer-5 FFN down output buffer; rechecks the retained
+  down descriptor output width as 3072; fills exported
+  `token0_layer5_post_ffn_residual`; and publishes only
+  `token0_layer5_post_ffn_residual` status, with no layer-5 post-FFN exact-hex
+  labels yet.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for layer-5 FFN down exact-hex slice:
+- Latest verification for layer-5 post-FFN residual status-only handoff:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
   passed; the real target reports `layer5_ffn_down_tensor_found: 1`, dimensions
-  `9216 x 3072`, type `8`, relative offset `1079721984`, and
-  `token0_layer5_ffn_down_matvec: 1`; the new layer-5 FFN down oracle comparison
-  matched all 81 oracle-covered exact-hex labels, including
-  `token0_layer5_ffn_down_output0..3_f32_hex` as `0x3e0063f9`, `0xbd3afd80`,
-  `0x3d82966f`, and `0x3c0f583e`; a 24-byte zero-count GGUF kept
-  `layer5_ffn_down_tensor_found`,
-  `layer5_ffn_gate_tensor_found`, `layer5_ffn_up_tensor_found`,
-  `token0_layer5_ffn_gate_matvec`, `token0_layer5_ffn_up_matvec`,
-  `token0_layer5_ffn_swiglu`, and `token0_layer5_ffn_down_matvec` at `0` and
-  emitted no layer-5 down exact-hex labels;
+  `9216 x 3072`, type `8`, relative offset `1079721984`,
+  `token0_layer5_post_attn_residual: 1`,
+  `token0_layer5_ffn_down_matvec: 1`, and
+  `token0_layer5_post_ffn_residual: 1`; the existing layer-5 FFN down oracle
+  comparison matched all 81 oracle-covered exact-hex labels including epsilon;
+  the status-only step emitted no `token0_layer5_post_ffn_residual*_f32_hex`
+  labels; a 24-byte zero-count GGUF kept `layer5_ffn_down_tensor_found`,
+  `token0_layer5_post_attn_residual`, `token0_layer5_ffn_gate_matvec`,
+  `token0_layer5_ffn_up_matvec`, `token0_layer5_ffn_swiglu`,
+  `token0_layer5_ffn_down_matvec`, and `token0_layer5_post_ffn_residual` at `0`
+  and emitted no layer-5 down or post-FFN exact-hex labels;
   `git diff --check`, static-link/no-dynamic-section/no-interpreter/file,
   undefined-symbol, exported/local symbol, runtime source/fragment extension,
   include dependency, tracked artifact, tracked large-file, and line-count scans
@@ -155,19 +164,22 @@ handoff buffer for the next layer, with no layer-5 post-FFN exact-hex labels yet
 
 ## Last Verification
 
-Layer-5 FFN down exact-hex slice verification passed:
+Layer-5 post-FFN residual status-only verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
 - real-target runtime output reports `layer5_ffn_down_tensor_found: 1`,
   dimensions `9216 x 3072`, type `8`, and offset `1079721984`
-- real-target runtime output reports `token0_layer5_ffn_down_matvec: 1`
-- real-target runtime/oracle comparison matched all 81 covered exact-hex labels
-- first four layer-5 FFN down output words are `0x3e0063f9`, `0xbd3afd80`,
-  `0x3d82966f`, and `0x3c0f583e`
-- 24-byte zero-count GGUF kept the layer-5 FFN down descriptor and dependent
-  layer-5 FFN gate/up/SwiGLU/down statuses fail-closed
-- zero-count output emitted no layer-5 down exact-hex labels
+- real-target runtime output reports `token0_layer5_post_attn_residual: 1`,
+  `token0_layer5_ffn_down_matvec: 1`, and
+  `token0_layer5_post_ffn_residual: 1`
+- existing layer-5 FFN down runtime/oracle comparison matched all 81 covered
+  exact-hex labels including epsilon
+- status-only output emitted no `token0_layer5_post_ffn_residual*_f32_hex`
+  labels
+- 24-byte zero-count GGUF kept the layer-5 post-attention, FFN
+  gate/up/SwiGLU/down, and post-FFN residual statuses fail-closed
+- zero-count output emitted no layer-5 down or post-FFN exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, exported/local symbol check, runtime source/fragment
   extension scan, include dependency scan, tracked artifact scan, tracked
@@ -175,10 +187,8 @@ Layer-5 FFN down exact-hex slice verification passed:
 
 ## Next Exact Step
 
-Add status-only token-0 layer-5 post-FFN residual coverage in
-`src/infer/token0_layer5_ffn_down.s`. Consume
-`token0_layer5_post_attn_residual_status`,
-`token0_layer5_ffn_down_matvec_status`, the retained layer-5 post-attention
-residual, and the private layer-5 FFN down output buffer; publish only
-`token0_layer5_post_ffn_residual` status and an exported 3072-f32 residual
-handoff buffer for the next layer, with no layer-5 post-FFN exact-hex labels yet.
+Publish the token-0 layer-5 post-FFN residual exact-hex slice and add a focused
+oracle for it. Print `token0_layer5_post_ffn_residual0..3_f32_hex` only when
+`token0_layer5_post_ffn_residual_status` is 1, compare against the external
+oracle, and verify zero-count output still emits no layer-5 post-FFN exact-hex
+labels.

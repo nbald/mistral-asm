@@ -52,7 +52,8 @@ help_text:
 	.ascii "RMSNorm descriptor lookup/output slice plus FFN gate "
 	.ascii "descriptor lookup/gate matvec output slice plus "
 	.ascii "FFN up descriptor lookup/up matvec output slice plus "
-	.ascii "SwiGLU activation slice and FFN down descriptor lookup.\n"
+	.ascii "SwiGLU activation slice and FFN down descriptor lookup/down "
+	.ascii "matvec output slice plus post-FFN residual status smoke.\n"
 help_text_end:
 
 lookup_tensor_request:
