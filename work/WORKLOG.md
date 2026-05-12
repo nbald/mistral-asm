@@ -3896,3 +3896,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   and emitted no up output exact-hex labels; static linkage, symbol visibility,
   include dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T06:51:11+02:00
+
+- Added status-only token-0 layer-5 FFN SwiGLU coverage. The smoke now combines
+  the private gate and up projection buffers through the shared scalar
+  `swiglu_f32` helper only after both projection statuses are 1, fills a private
+  9216-f32 activation buffer, and deliberately publishes only
+  `token0_layer5_ffn_swiglu`.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported `token0_layer5_ffn_swiglu: 1` while emitting no layer-5
+  SwiGLU exact-hex labels; the existing layer-5 FFN up oracle comparison still
+  matched all 72 covered labels; the 24-byte zero-count GGUF kept the new status
+  at `0` and emitted no layer-5 FFN up/SwiGLU output labels; static linkage,
+  symbol visibility, include dependency, artifact, large-file, line-count, and
+  whitespace scans passed.
