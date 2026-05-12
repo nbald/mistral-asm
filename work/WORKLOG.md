@@ -3808,3 +3808,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0` and emitted no layer-5 FFN norm exact-hex labels; static linkage,
   undefined-symbol, symbol visibility, source/fragment, include dependency,
   artifact, large-file, and line-count scans passed.
+
+## 2026-05-12T06:07:24+02:00
+
+- Added descriptor-only layer-5 FFN gate setup for `blk.5.ffn_gate.weight`. The
+  real target reports it as Q8_0 `[3072 x 9216]` at relative offset
+  `1109803008`. This step intentionally stops at lookup, retained summary
+  fields, summary printing, and help text; it does not read gate payload bytes
+  or publish any `token0_layer5_ffn_gate*` runtime labels.
+- Verification evidence: clean build/check and oracle compile passed; the
+  layer-5 FFN norm oracle subset still matched the runtime for all 64 covered
+  labels; the 24-byte zero-count GGUF kept the new descriptor fields and
+  dependent layer-5 statuses at `0`; static, symbol, source/fragment,
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.

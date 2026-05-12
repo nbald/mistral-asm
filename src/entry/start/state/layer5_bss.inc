@@ -123,3 +123,24 @@ layer5_ffn_norm_tensor_ggml_type:
 	.skip 8
 layer5_ffn_norm_tensor_offset:
 	.skip 8
+
+.balign 8
+layer5_ffn_gate_tensor_slot:
+layer5_ffn_gate_tensor_found:
+	.skip 8
+layer5_ffn_gate_tensor_name:
+	.skip LAYER5_FFN_GATE_TENSOR_NAME_CAP
+layer5_ffn_gate_tensor_n_dimensions:
+	.skip 8
+layer5_ffn_gate_tensor_dim0:
+	.skip 8
+layer5_ffn_gate_tensor_dim1:
+	.skip 8
+layer5_ffn_gate_tensor_dim2:
+	.skip 8
+layer5_ffn_gate_tensor_dim3:
+	.skip 8
+layer5_ffn_gate_tensor_ggml_type:
+	.skip 8
+layer5_ffn_gate_tensor_offset:
+	.skip 8

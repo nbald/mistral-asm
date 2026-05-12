@@ -49,7 +49,8 @@ help_text:
 	.ascii "plus Q/K/V projection handoff status, context status smoke, "
 	.ascii "output projection descriptor lookup, and output-projection "
 	.ascii "matvec slice plus post-attention residual slice and FFN "
-	.ascii "RMSNorm descriptor lookup/output slice.\n"
+	.ascii "RMSNorm descriptor lookup/output slice plus FFN gate "
+	.ascii "descriptor lookup.\n"
 help_text_end:
 
 lookup_tensor_request:
