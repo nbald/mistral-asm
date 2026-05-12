@@ -3701,3 +3701,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   line-count scans passed. The next step is a review gate because layer-5
   attention now has handoff, context, and output-projection coverage before
   residual work expands the chain.
+
+## 2026-05-12T04:14:26+02:00
+
+- Review gate pass 1 over the completed layer-5 attention Q/K/V handoff,
+  single-token context, and output-projection matvec/slice chain found no
+  blocking runtime issues.
+- Ownership note: `token0_layer5_attn_output` is still private local storage in
+  the focused output-projection module. The later post-attention residual step
+  must either stay in that module or introduce an explicit output-buffer
+  export/handoff before another object reads it.
+- Verification evidence: clean build/check, oracle compile, help text, the
+  57-label covered runtime/oracle comparison, zero-count fail-closed guard,
+  static/no-interpreter/no-undefined checks, symbol visibility check, include
+  dependency scan, source extension scan, artifact scans, and line-count review
+  passed.
