@@ -4056,3 +4056,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   zero-count GGUF kept the new status at `0`; static linkage, source/fragment,
   include-dependency, artifact, large-file, symbol-visibility, line-count, and
   whitespace scans passed.
+
+## 2026-05-12T08:17:48+02:00
+
+- Published the guarded token-0 layer-6 attention RMSNorm slice while keeping
+  the 3072-f32 activation buffer private. The first four words are
+  `0x422d70ce`, `0xc0840f20`, `0xc140459b`, and `0xc00a013e`.
+- Added a focused layer-6 attention RMSNorm oracle that recomputes the full
+  layer-5 post-FFN residual before applying `blk.6.attn_norm.weight`, because
+  RMSNorm depends on all 3072 input words.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched 89 exact values including
+  epsilon and the new layer-6 slice; the 24-byte zero-count GGUF kept the
+  layer-6 path fail-closed and emitted no layer-6 exact-hex labels; static
+  linkage, symbol visibility, source/include-dependency, artifact, large-file,
+  line-count, and whitespace scans passed.

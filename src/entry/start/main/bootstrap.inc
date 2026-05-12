@@ -60,7 +60,7 @@
 # FFN RMSNorm setup for `blk.5.ffn_norm.weight`, guarded FFN gate/up matvec
 # coverage through `blk.5.ffn_gate.weight` and `blk.5.ffn_up.weight`,
 # guarded FFN SwiGLU coverage, FFN down matvec output slice, post-FFN residual
-# handoff, and status-only layer-6 attention RMSNorm setup for
+# handoff, and guarded layer-6 attention RMSNorm output slice for
 # `blk.6.attn_norm.weight`.
 # The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
 # post-FFN residual handoff after proving the f32 weight span and emits a
@@ -116,9 +116,10 @@
 # consumed only after the private SwiGLU activation exists and the full Q8_0
 # payload span is proven, then the post-FFN residual smoke adds that down output
 # to the layer-5 post-attention residual handoff. The layer-6 attention RMSNorm
-# descriptor is consumed by a guarded status smoke after the layer-5 post-FFN
+# descriptor is consumed by a guarded RMSNorm smoke after the layer-5 post-FFN
 # residual handoff exists and the f32 payload span is proven inside the live
-# mapping; no layer-6 exact-hex slice is emitted yet.
+# mapping, then the first four normalized words are emitted as an exact-hex
+# oracle slice.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,
