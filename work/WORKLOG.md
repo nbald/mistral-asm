@@ -3755,3 +3755,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   post-attention residual words; the packed zero-count GGUF kept the layer-5
   handoff/context/output/residual statuses fail-closed; static, symbol, include,
   artifact, large-file, and line-count scans passed.
+
+## 2026-05-12T05:24:06+02:00
+
+- Review gate pass 2 over the completed layer-5 attention Q/K/V handoff,
+  single-token context, output-projection matvec/slice, and post-attention
+  residual handoff chain found no blocking runtime issues.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target comparison matched all 61 covered labels; the packed zero-count
+  GGUF kept the layer-5 handoff/context/output/residual statuses fail-closed;
+  static, symbol, include, artifact, large-file, and line-count scans passed.
+  Feature work can resume with descriptor-only `blk.5.ffn_norm.weight` setup.

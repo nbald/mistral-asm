@@ -6,9 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 for the completed layer-5 attention
-Q/K/V-handoff/context/output-projection/post-attention-residual chain before
-starting layer-5 FFN work.
+Add descriptor-only layer-5 FFN RMSNorm setup for `blk.5.ffn_norm.weight`.
+This should add lookup/summary/help wiring only; it must not read
+`token0_layer5_post_attn_residual` or any layer-5 FFN RMSNorm payload bytes.
 
 ## Completed Work
 
@@ -204,10 +204,16 @@ starting layer-5 FFN work.
   `work/reviews/2026-05-12-layer5-attn-residual-chain-review-1.md`. No blocking
   runtime findings were recorded. A second review-gate pass is still required
   before layer-5 FFN feature work resumes.
+- Review gate pass 2 for the completed layer-5 attention Q/K/V handoff,
+  single-token context, output-projection matvec/slice, and post-attention
+  residual handoff chain completed cleanly under
+  `work/reviews/2026-05-12-layer5-attn-residual-chain-review-2.md`. No blocking
+  runtime findings were recorded. Layer-5 FFN work can resume with
+  descriptor-only `blk.5.ffn_norm.weight` setup.
 
 ## Verification Status
 
-- Latest verification for layer-5 attention residual-chain review pass 1:
+- Latest verification for layer-5 attention residual-chain review pass 2:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py` passed;
   `./mistral-asm --help` mentions the layer-5 post-attention residual slice;
   real-target runtime/oracle comparison matched 61 covered labels including
@@ -289,6 +295,7 @@ starting layer-5 FFN work.
 - `work/reviews/2026-05-12-layer5-attn-output-chain-review-1.md`
 - `work/reviews/2026-05-12-layer5-attn-output-chain-review-2.md`
 - `work/reviews/2026-05-12-layer5-attn-residual-chain-review-1.md`
+- `work/reviews/2026-05-12-layer5-attn-residual-chain-review-2.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -296,7 +303,7 @@ starting layer-5 FFN work.
 
 ## Last Verification
 
-Layer-5 attention residual-chain review pass 1 verification passed:
+Layer-5 attention residual-chain review pass 2 verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
@@ -321,6 +328,6 @@ Layer-5 attention residual-chain review pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the completed layer-5 attention
-Q/K/V-handoff/context/output-projection/post-attention-residual chain before
-starting layer-5 FFN work.
+Add descriptor-only layer-5 FFN RMSNorm setup for `blk.5.ffn_norm.weight`.
+This should add lookup/summary/help wiring only; it must not read
+`token0_layer5_post_attn_residual` or any layer-5 FFN RMSNorm payload bytes.
