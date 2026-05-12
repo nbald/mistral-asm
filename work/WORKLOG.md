@@ -3716,3 +3716,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   static/no-interpreter/no-undefined checks, symbol visibility check, include
   dependency scan, source extension scan, artifact scans, and line-count review
   passed.
+
+## 2026-05-12T04:29:44+02:00
+
+- Review gate pass 2 over the completed layer-5 attention Q/K/V handoff,
+  single-token context, and output-projection matvec/slice chain found no
+  blocking runtime issues.
+- Handoff decision: keep the next layer-5 post-attention residual add in the
+  existing output-projection module, publish the residual status/buffer from
+  there for later FFN work, and keep the raw output-projection buffer private.
+- Verification evidence: clean build/check, oracle compile, help text, the
+  57-label real-target runtime/oracle comparison, explicitly packed zero-count
+  fail-closed guard, static/no-interpreter/no-undefined checks, symbol
+  visibility check, include dependency scan, source extension scan, artifact
+  scans, and line-count review passed.

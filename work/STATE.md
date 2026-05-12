@@ -6,10 +6,12 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 for the completed layer-5 attention Q/K/V handoff,
-single-token context, and output-projection matvec/slice chain before adding
-layer-5 post-attention residual work. Focus on ownership boundaries, guard
-coverage, oracle comparison quality, and the next output-buffer handoff choice.
+Add token-0 layer-5 post-attention residual coverage in
+`src/infer/token0_layer5_attn_output.s`, keeping the residual add beside the
+private layer-5 attention output-projection buffer. Require the layer-4
+post-FFN residual handoff and `token0_layer5_attn_output_matvec_status`, write
+and export a layer-5 post-attention residual status/buffer for later FFN work,
+and publish the first four exact-hex residual words with oracle coverage.
 
 ## Completed Work
 
@@ -183,10 +185,18 @@ coverage, oracle comparison quality, and the next output-buffer handoff choice.
   keep the residual add in `src/infer/token0_layer5_attn_output.s` or introduce
   an explicit output-buffer export/handoff before another module consumes the
   private output-projection buffer.
+- Review gate pass 2 for the completed layer-5 attention Q/K/V handoff,
+  single-token context, and output-projection matvec/slice chain completed
+  cleanly under
+  `work/reviews/2026-05-12-layer5-attn-output-chain-review-2.md`. No blocking
+  runtime findings were recorded. The selected next handoff choice is to keep
+  the post-attention residual add in `src/infer/token0_layer5_attn_output.s`,
+  publish a new layer-5 post-attention residual status/buffer from that module,
+  and keep the raw output-projection buffer private.
 
 ## Verification Status
 
-- Latest verification for layer-5 attention output-chain review pass 1:
+- Latest verification for layer-5 attention output-chain review pass 2:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py` passed;
   `./mistral-asm --help` mentions Q/K/V handoff, context status, output
   descriptor lookup, and output-projection matvec slice coverage; real-target
@@ -267,6 +277,7 @@ coverage, oracle comparison quality, and the next output-buffer handoff choice.
 - `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`
 - `work/reviews/2026-05-12-layer5-attn-qkv-review-2.md`
 - `work/reviews/2026-05-12-layer5-attn-output-chain-review-1.md`
+- `work/reviews/2026-05-12-layer5-attn-output-chain-review-2.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -274,7 +285,7 @@ coverage, oracle comparison quality, and the next output-buffer handoff choice.
 
 ## Last Verification
 
-Layer-5 attention output-chain review pass 1 verification passed:
+Layer-5 attention output-chain review pass 2 verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
@@ -301,6 +312,9 @@ Layer-5 attention output-chain review pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the completed layer-5 attention Q/K/V handoff,
-single-token context, and output-projection matvec/slice chain before adding
-layer-5 post-attention residual work.
+Add token-0 layer-5 post-attention residual coverage in
+`src/infer/token0_layer5_attn_output.s`, keeping the residual add beside the
+private layer-5 attention output-projection buffer. Require the layer-4
+post-FFN residual handoff and `token0_layer5_attn_output_matvec_status`, write
+and export a layer-5 post-attention residual status/buffer for later FFN work,
+and publish the first four exact-hex residual words with oracle coverage.
