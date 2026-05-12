@@ -3683,3 +3683,21 @@ redundant entries. Do not treat it as the primary continuation source; use
   zero-count GGUF kept the new status at `0`; no layer-5 output exact-hex labels
   were emitted; static linkage, include, artifact, large-file, and line-count
   scans passed.
+
+## 2026-05-12T04:06:29+02:00
+
+- Published the first guarded layer-5 attention output-projection exact-hex
+  slice from the private output buffer. The first four words are `0x3d443070`,
+  `0x3e31a0d5`, `0xbddb87ff`, and `0xbdc80eb7`.
+- Added a focused external oracle that extends the layer-5 value oracle by
+  recomputing the full value projection, expanding the single-token
+  grouped-query context, and dotting that context against the first four rows
+  of `blk.5.attn_output.weight`.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched 56 exact-hex labels including
+  the new output-projection words; the 24-byte zero-count GGUF kept the output
+  descriptor and dependent statuses at `0` and emitted no layer-5 output
+  exact-hex labels; static linkage, include, artifact, large-file, and
+  line-count scans passed. The next step is a review gate because layer-5
+  attention now has handoff, context, and output-projection coverage before
+  residual work expands the chain.
