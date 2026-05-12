@@ -1,0 +1,20 @@
+.Llookup_layer5_attn_norm_tensor:
+	# Start layer-5 attention coverage with descriptor publication only. The
+	# eventual RMSNorm smoke must first export and consume the layer-4 post-FFN
+	# residual handoff, then prove this f32 payload span before reading weights.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer5_attn_norm_tensor_request]
+	mov r9, layer5_attn_norm_tensor_request_end - layer5_attn_norm_tensor_request
+	lea r10, [rip + layer5_attn_norm_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
+	jz .Lsummary_print
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error

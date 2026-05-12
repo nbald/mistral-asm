@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Start focused layer-5 attention descriptor-only coverage by adding retained
-lookup/summary wiring for `blk.5.attn_norm.weight` without consuming layer-4
-post-FFN residual bytes yet.
+Add status-only token-0 layer-5 attention RMSNorm coverage by deliberately
+exporting/consuming the layer-4 post-FFN residual handoff, proving the retained
+`blk.5.attn_norm.weight` f32 payload span, and publishing only a status/private
+activation buffer before any exact-hex slice.
 
 ## Completed Work
 
@@ -69,6 +70,11 @@ post-FFN residual bytes yet.
   findings were recorded. Layer-5 work can resume, but must export the
   layer-4 post-FFN residual handoff deliberately when it first consumes that
   private buffer.
+- Descriptor-only layer-5 attention RMSNorm setup is complete for
+  `blk.5.attn_norm.weight`. The retained real-target descriptor is f32
+  `[3072]` at relative offset `1049628672`. This step added only lookup and
+  summary wiring in focused layer-5 include fragments; it does not read the
+  layer-4 post-FFN residual buffer or any layer-5 f32 payload bytes.
 
 ## Known Blockers
 
@@ -91,12 +97,18 @@ post-FFN residual bytes yet.
 - `src/entry/start/constants.inc`
 - `src/entry/start/rodata/cli_requests.inc`
 - `src/entry/start/rodata/layer4_cli_requests.inc`
+- `src/entry/start/rodata/layer5_cli_requests.inc`
 - `src/entry/start/rodata/layer4_summary_labels.inc`
+- `src/entry/start/rodata/layer5_summary_labels.inc`
 - `src/entry/start/state/layer4_globals.inc`
+- `src/entry/start/state/layer5_globals.inc`
 - `src/entry/start/state/layer4_bss.inc`
+- `src/entry/start/state/layer5_bss.inc`
 - `src/entry/start/lookup_summary/layer4.inc`
+- `src/entry/start/lookup_summary/layer5.inc`
 - `src/entry/start/main/bootstrap.inc`
 - `src/entry/start/main/bootstrap/layer4.inc`
+- `src/entry/start/main/bootstrap/layer5.inc`
 - `src/entry/start/main/summary_header.inc`
 - `src/entry/start/main/smoke_orchestration.inc`
 - `src/infer/token0_layer4_attn.s`
@@ -117,43 +129,33 @@ post-FFN residual bytes yet.
 
 ## Last Verification
 
-Layer-4 FFN/down/post-FFN residual review gate pass 2 verification passed:
+Layer-5 attention RMSNorm descriptor-only verification passed:
 
 - `make clean all check`
+- `./mistral-asm --help` mentions the layer-5 attention RMSNorm descriptor
+  lookup
+- real-target output reported `layer5_attn_norm_tensor_found: 1`,
+  `layer5_attn_norm_tensor_n_dimensions: 1`,
+  `layer5_attn_norm_tensor_dim0: 3072`,
+  `layer5_attn_norm_tensor_ggml_type: 0`, and
+  `layer5_attn_norm_tensor_offset: 1049628672`
+- the filtered real-target runtime/oracle diff was empty for the exact-hex
+  labels covered by `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
+- a 24-byte zero-count GGUF kept the layer-5 descriptor fields and
+  `token0_layer4_post_ffn_residual` status at `0` and emitted no
+  `token0_layer5*` labels
 - post-documentation `make all check`
-- `./mistral-asm --help` mentions the layer-4 post-FFN residual output slice
-- `python3 -m py_compile work/oracle/*.py`
-- real-target output reported `token0_layer4_post_attn_residual: 1`,
-  `token0_layer4_ffn_norm: 1`, `token0_layer4_ffn_gate_matvec: 1`,
-  `token0_layer4_ffn_up_matvec: 1`, `token0_layer4_ffn_swiglu: 1`,
-  `token0_layer4_ffn_down_matvec: 1`, and
-  `token0_layer4_post_ffn_residual: 1`
-- the real-target runtime/oracle diff was empty for the 37 exact-hex labels
-  covered by `work/oracle/token0_layer4_post_ffn_residual_oracle.py`
-- a 24-byte zero-count GGUF kept the reviewed layer-4 FFN descriptor found
-  flags and dependent statuses at `0` and emitted no guarded
-  `token0_layer4_*_f32_hex` labels
 - `git diff --check`
 - static-link/no-dynamic-section/file check and undefined-symbol check
 - runtime source extension scan allowing `.s` and `.inc`
 - include dependency scan covering `.include` fragments in `Makefile`
 - tracked artifact and tracked large-file scans
-- exported-symbol inspection for the reviewed layer-4 FFN runner entry points,
-  descriptor slots, statuses, and retained activation handoff buffers
-- line-count check; `src/infer/token0_layer4_ffn_down.s` is 471 lines,
-  `src/entry/start/main/smoke_orchestration.inc` is 452 lines,
-  `src/entry/start/rodata/cli_requests.inc` is 122 lines,
-  `src/infer/token0_layer4_ffn.s` is 945 lines,
-  `src/infer/token0_layer4_attn.s` is 945 lines,
-  `src/infer/token0_layer3_ffn.s` is 942 lines,
-  `src/infer/token0_layer2_ffn.s` is 943 lines,
-  `src/infer/token0_layer2_attn.s` is 997 lines, and
-  `src/gguf/load_header/tensor_infos.inc` remains the known 1172-line
-  tensor-directory walker
+- line-count check; new layer-5 include fragments are small and the known
+  near-limit files remain under the same constraints as the previous state
 
 ## Next Exact Step
 
-Add descriptor-only layer-5 attention RMSNorm lookup/summary coverage for
-`blk.5.attn_norm.weight`, keeping payload reads out of the step and recording
-the new focused files or Makefile-tracked fragments before any substantial
-layer-5 smoke code is added.
+Add status-only token-0 layer-5 attention RMSNorm smoke by exporting/consuming
+the layer-4 post-FFN residual handoff, proving the retained
+`blk.5.attn_norm.weight` f32 payload bounds, writing a private 3072-f32
+activation/status, and emitting no exact-hex activation slice yet.

@@ -3455,3 +3455,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   runtime/oracle exact-hex diff for 37 labels through layer-4 post-FFN residual,
   zero-count GGUF guard silence, static/no-undefined checks, exported-symbol
   inspection, source/include/artifact scans, and line-count review all passed.
+
+## 2026-05-12T01:58:31+02:00
+
+- Added descriptor-only layer-5 attention RMSNorm coverage. The runtime now
+  retains and prints the `blk.5.attn_norm.weight` descriptor as f32 `[3072]`
+  at relative offset `1049628672` on the local target GGUF, using focused
+  layer-5 include fragments tracked by the Makefile.
+- Verification evidence: clean rebuild/check passed; the real-target run
+  printed only descriptor fields for layer 5, the existing layer-4 post-FFN
+  exact-hex labels still matched the oracle subset, and a 24-byte zero-count
+  GGUF kept the new descriptor zeroed with no `token0_layer5*` output.

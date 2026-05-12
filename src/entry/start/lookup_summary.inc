@@ -900,3 +900,4 @@ print_layer1_ffn_down_lookup_summary:
 .include "src/entry/start/lookup_summary/layer2.inc"
 .include "src/entry/start/lookup_summary/layer3.inc"
 .include "src/entry/start/lookup_summary/layer4.inc"
+.include "src/entry/start/lookup_summary/layer5.inc"
