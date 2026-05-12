@@ -3603,3 +3603,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   `_f32_hex` line. The corrected 24-byte zero-count GGUF kept layer-5
   descriptors and dependent statuses at `0` and emitted no guarded layer-5
   exact-hex labels.
+
+## 2026-05-12T03:19:58+02:00
+
+- Review gate pass 1 over the completed layer-5 attention norm/query/key/value
+  chain found no blocking runtime issues. The main residual risk is scope
+  pressure: `src/infer/token0_layer5_attn.s` is already 989 lines, so the later
+  context/output-projection work should split into focused modules or tracked
+  fragments rather than extending that file.
+- Verification evidence: clean build/check passed, oracle scripts compiled, the
+  real-target covered-label diff matched all 53 labels through layer-5 value,
+  the 24-byte zero-count GGUF kept layer-5 descriptors/statuses at `0` with no
+  guarded layer-5 exact-hex labels, and static/source/include/artifact/line
+  scans passed.

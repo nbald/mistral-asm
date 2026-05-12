@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 1 for the completed layer-5 attention
+Run review gate pass 2 for the completed layer-5 attention
 norm/query/key/value chain before adding context or output-projection scope.
 
 ## Completed Work
@@ -128,6 +128,11 @@ norm/query/key/value chain before adding context or output-projection scope.
   published. It prints only when `token0_layer5_attn_v_matvec` is 1 and the
   first four value output words match the focused external oracle:
   `0x3c308045`, `0x3af0e7ba`, `0xbc4405eb`, and `0xbb67db55`.
+- Review gate pass 1 for the completed layer-5 attention norm/query/key/value
+  chain completed cleanly under
+  `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`. No blocking runtime
+  findings were recorded. The second review pass is still required before
+  feature work resumes.
 
 ## Known Blockers
 
@@ -183,6 +188,7 @@ norm/query/key/value chain before adding context or output-projection scope.
 - `work/oracle/token0_layer5_attn_q_oracle.py`
 - `work/oracle/token0_layer5_attn_k_oracle.py`
 - `work/oracle/token0_layer5_attn_v_oracle.py`
+- `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -190,31 +196,28 @@ norm/query/key/value chain before adding context or output-projection scope.
 
 ## Last Verification
 
-Layer-5 attention value exact-hex slice verification passed:
+Layer-5 attention norm/query/key/value review pass 1 verification passed:
 
 - `make clean all check`
-- `make all check`
+- post-documentation `make all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions layer-5 attention value descriptor
-  lookup/matvec output slice
-- real-target output reported `layer5_attn_v_tensor_found: 1`, dimensions
-  `3072` and `1024`, ggml type `8`, relative offset `1076379648`, and
-  `token0_layer5_attn_v_matvec: 1`
-- real-target output emitted `token0_layer5_attn_v_output0..3_f32_hex` as
-  `0x3c308045`, `0x3af0e7ba`, `0xbc4405eb`, and `0xbb67db55`
-- the filtered real-target runtime/oracle diff was empty for all 53 `_f32_hex`
-  labels covered by `work/oracle/token0_layer5_attn_v_oracle.py`
+- `./mistral-asm --help` mentions layer-5 attention RMSNorm, query, key, and
+  value descriptor/matvec output-slice coverage
+- real-target covered-label runtime/oracle diff was empty for the 53 labels
+  covered by `work/oracle/token0_layer5_attn_v_oracle.py`, including epsilon
+  and all public exact-hex slices through layer-5 attention value
 - a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key/value
   descriptor fields and `token0_layer5_attn_norm`,
   `token0_layer5_attn_q_matvec`, `token0_layer5_attn_k_matvec`, and
   `token0_layer5_attn_v_matvec` at `0`, and emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
-  scan, tracked artifact scan, tracked large-file scan, and line-count review
-  passed; `src/infer/token0_layer5_attn.s` is 989 lines and must be split or
-  avoided before further layer-5 attention feature expansion
+  scan, exported-symbol inspection, tracked artifact scan, tracked large-file
+  scan, and line-count review passed; `src/infer/token0_layer5_attn.s` remains
+  989 lines and must be split or avoided before further layer-5 attention
+  feature expansion
 
 ## Next Exact Step
 
-Run review gate pass 1 for the completed layer-5 attention
+Run review gate pass 2 for the completed layer-5 attention
 norm/query/key/value chain before adding context or output-projection scope.
