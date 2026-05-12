@@ -34,6 +34,28 @@
 	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
 	call gguf_lookup_tensor_info
 	test rax, rax
+	jz .Llookup_layer6_attn_k_tensor
+	cmp rax, 12
+	je .Llookup_tensor_alignment_error
+	cmp rax, 11
+	je .Llookup_tensor_bounds_error
+	jmp .Llookup_unknown_error
+
+.Llookup_layer6_attn_k_tensor:
+	# Retain the layer-6 key projection descriptor after query. This remains a
+	# descriptor-only step: it publishes shape, type, and relative offset
+	# metadata while leaving the Q8_0 key payload untouched for a later guarded
+	# matvec smoke.
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	mov rsi, qword ptr [rip + gguf_mapping_size]
+	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
+	mov rcx, qword ptr [rip + gguf_summary_tensor_count]
+	lea r8, [rip + layer6_attn_k_tensor_request]
+	mov r9, layer6_attn_k_tensor_request_end - layer6_attn_k_tensor_request
+	lea r10, [rip + layer6_attn_k_tensor_slot]
+	mov r11, qword ptr [rip + gguf_summary_tensor_data_offset]
+	call gguf_lookup_tensor_info
+	test rax, rax
 	jz .Lsummary_print
 	cmp rax, 12
 	je .Llookup_tensor_alignment_error

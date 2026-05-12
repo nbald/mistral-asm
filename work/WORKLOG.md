@@ -4117,3 +4117,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   `0` and emitted no guarded layer-6 exact-hex labels; static linkage, symbol
   visibility, source/include-dependency, artifact, large-file, line-count, and
   whitespace scans passed.
+
+## 2026-05-12T08:53:31+02:00
+
+- Added descriptor-only layer-6 attention key setup for
+  `blk.6.attn_k.weight`. The real target reports Q8_0 dimensions
+  `3072 x 1024` at relative offset `1169977344`; this deliberately stops at
+  retained descriptor metadata and leaves key payload reads for a later guarded
+  matvec smoke.
+- Verification evidence: clean build/check, oracle py-compile, and help output
+  passed; the existing layer-6 query oracle comparison still matched the
+  covered runtime values; a 24-byte zero-count GGUF kept the new key descriptor
+  fields and dependent layer-6 statuses at `0` with no guarded layer-6 exact-hex
+  labels; static linkage, symbol visibility, no-layer6-key-runtime-path,
+  source/include-dependency, artifact, large-file, line-count, and whitespace
+  scans passed.
