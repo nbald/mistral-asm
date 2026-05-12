@@ -6,11 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the first guarded token-0 layer-5 FFN SwiGLU exact-hex slice. Keep the
-SwiGLU buffer private, print only `token0_layer5_ffn_swiglu_output0_f32_hex`
-through `token0_layer5_ffn_swiglu_output3_f32_hex` when
-`token0_layer5_ffn_swiglu_status` is 1, add a focused external oracle for
-those four words, and verify real-target equality plus zero-count silence.
+Add descriptor-only layer-5 FFN down setup for `blk.5.ffn_down.weight`. Retain
+the lookup fields, print the summary/help text, and do not read down Q8_0
+payload bytes or publish a layer-5 down matvec status in that step.
 
 ## Completed Work
 
@@ -68,17 +66,22 @@ those four words, and verify real-target equality plus zero-count silence.
   `token0_layer5_ffn_up_matvec_status` are both 1, fills a private 9216-f32
   SwiGLU buffer, and publishes only `token0_layer5_ffn_swiglu` with no SwiGLU
   exact-hex labels yet.
+- Token-0 layer-5 FFN SwiGLU exact-hex slice coverage is complete in
+  `src/infer/token0_layer5_ffn.s`. It keeps the 9216-f32 SwiGLU buffer private
+  and publishes the first four output words only when
+  `token0_layer5_ffn_swiglu_status` is 1: `0x3c0c71e4`, `0xb9ce2012`,
+  `0x3d09a7d5`, and `0xbbec92a7`.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for status-only layer-5 FFN SwiGLU coverage: `make clean
-  all check` passed; `python3 -m py_compile work/oracle/*.py` passed; the real
-  target reports `token0_layer5_ffn_swiglu: 1` and emits no
-  `token0_layer5_ffn_swiglu_output*_f32_hex` labels yet; the existing layer-5
-  FFN up oracle comparison matched all 72 oracle-covered exact-hex labels; a
-  24-byte zero-count GGUF kept `layer5_ffn_gate_tensor_found`,
+- Latest verification for layer-5 FFN SwiGLU exact-hex slice coverage:
+  `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
+  passed; the real target reports `token0_layer5_ffn_swiglu: 1` and the new
+  layer-5 FFN SwiGLU oracle comparison matched all 77 oracle-covered exact-hex
+  labels, including the four new SwiGLU output labels; a 24-byte zero-count GGUF
+  kept `layer5_ffn_gate_tensor_found`,
   `layer5_ffn_up_tensor_found`, `token0_layer5_ffn_norm`,
   `token0_layer5_ffn_gate_matvec`, `token0_layer5_ffn_up_matvec`, and
   `token0_layer5_ffn_swiglu` at `0` and emitted no layer-5 FFN up/SwiGLU output
@@ -92,12 +95,15 @@ those four words, and verify real-target equality plus zero-count silence.
 - No functional blocker is known.
 - Keep new work in focused modules. Do not add substantial code to files near or
   above 1000 lines before splitting or moving work into a focused module. Current
-  watch list: `src/infer/token0_layer5_attn.s` is 996 lines,
-  `src/infer/token0_layer2_attn.s` is 997 lines,
+  watch list: `src/infer/token0_layer2_attn.s` is 997 lines,
+  `src/infer/token0_layer5_attn.s` is 996 lines,
+  `src/infer/token0_layer5_ffn.s` is 949 lines,
   `src/infer/token0_layer4_attn.s` is 945 lines,
   `src/infer/token0_layer4_ffn.s` is 945 lines,
-  `src/infer/token0_layer2_ffn.s` is 943 lines, and
-  `src/infer/token0_layer3_ffn.s` is 942 lines.
+  `src/infer/token0_layer2_ffn.s` is 943 lines,
+  `src/infer/token0_layer3_ffn.s` is 942 lines,
+  `src/infer/token0_layer1_ffn.s` is 929 lines, and
+  `src/entry/start/lookup_summary.inc` is 903 lines.
 - `src/gguf/load_header/tensor_infos.inc` remains over 1000 lines, but it is a
   coherent tensor-directory walker. Reduce it only when changing that logic.
 
@@ -119,20 +125,20 @@ those four words, and verify real-target equality plus zero-count silence.
 - `work/oracle/token0_layer5_ffn_norm_oracle.py`
 - `work/oracle/token0_layer5_ffn_gate_oracle.py`
 - `work/oracle/token0_layer5_ffn_up_oracle.py`
+- `work/oracle/token0_layer5_ffn_swiglu_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Status-only layer-5 FFN SwiGLU verification passed:
+Layer-5 FFN SwiGLU exact-hex slice verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
 - real-target runtime output reports `token0_layer5_ffn_swiglu: 1`
-- real-target runtime output emits no
-  `token0_layer5_ffn_swiglu_output*_f32_hex` labels yet
-- existing layer-5 FFN up oracle comparison matched all 72 covered exact-hex
-  labels
+- real-target runtime/oracle comparison matched all 77 covered exact-hex labels
+- new SwiGLU words are `0x3c0c71e4`, `0xb9ce2012`, `0x3d09a7d5`, and
+  `0xbbec92a7`
 - 24-byte zero-count GGUF kept the layer-5 FFN SwiGLU path fail-closed and
   emitted no layer-5 FFN up/SwiGLU output exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
@@ -142,8 +148,6 @@ Status-only layer-5 FFN SwiGLU verification passed:
 
 ## Next Exact Step
 
-Publish the first guarded token-0 layer-5 FFN SwiGLU exact-hex slice. Keep the
-SwiGLU buffer private, print only `token0_layer5_ffn_swiglu_output0_f32_hex`
-through `token0_layer5_ffn_swiglu_output3_f32_hex` when
-`token0_layer5_ffn_swiglu_status` is 1, add a focused external oracle for
-those four words, and verify real-target equality plus zero-count silence.
+Add descriptor-only layer-5 FFN down setup for `blk.5.ffn_down.weight`. Retain
+the lookup fields, print the summary/help text, and do not read down Q8_0
+payload bytes or publish a layer-5 down matvec status in that step.

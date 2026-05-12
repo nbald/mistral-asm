@@ -3911,3 +3911,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   at `0` and emitted no layer-5 FFN up/SwiGLU output labels; static linkage,
   symbol visibility, include dependency, artifact, large-file, line-count, and
   whitespace scans passed.
+
+## 2026-05-12T06:58:15+02:00
+
+- Published the guarded token-0 layer-5 FFN SwiGLU output slice while keeping
+  the 9216-f32 activation buffer private. The first four words are
+  `0x3c0c71e4`, `0xb9ce2012`, `0x3d09a7d5`, and `0xbbec92a7`.
+- Added a focused layer-5 FFN SwiGLU oracle that reuses the full layer-5 gate
+  and up projection oracle outputs before applying `silu(gate) * up` to the
+  four public activation words.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched all 77 covered exact-hex
+  labels; the 24-byte zero-count GGUF kept the layer-5 FFN SwiGLU path
+  fail-closed and emitted no layer-5 FFN up/SwiGLU output labels; static
+  linkage, symbol visibility, include dependency, artifact, large-file,
+  line-count, and whitespace scans passed.
