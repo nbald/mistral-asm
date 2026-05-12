@@ -53,13 +53,15 @@
 # `blk.4.ffn_up.weight`, and `blk.4.ffn_down.weight`, and layer-5 attention
 # RMSNorm/query/key setup for `blk.5.attn_norm.weight`,
 # `blk.5.attn_q.weight`, and `blk.5.attn_k.weight`, with guarded layer-5
-# query matvec status and
+# query/key matvec status and
 # query/key/value matvec output slices for the layer-4 query, key, and value
 # descriptors, into separate process-owned scratch slots before the token-0
 # math path. The first layer-5 RMSNorm smoke consumes the deliberately exported
 # layer-4 post-FFN residual handoff after proving the f32 weight span and emits
 # a guarded exact-hex slice; the layer-5 query smoke consumes that private
-# RMSNorm activation only after proving the Q8_0 matrix span. The layer-1 FFN,
+# RMSNorm activation only after proving the Q8_0 matrix span; the layer-5 key
+# smoke consumes the same activation only after proving its Q8_0 matrix span and
+# intentionally publishes only status for now. The layer-1 FFN,
 # layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
 # outputs are consumed only by guarded focused smokes after their prerequisite
@@ -84,9 +86,10 @@
 # guarded status smoke after the layer-4 post-FFN residual handoff exists and
 # the f32 payload span is proven inside the live mapping; the layer-5 query
 # descriptor is consumed only after that RMSNorm activation exists and the full
-# Q8_0 matrix span is proven inside the live mapping. The layer-5 key
-# descriptor remains descriptor-only in this milestone and no key payload bytes
-# are read.
+# Q8_0 matrix span is proven inside the live mapping. The layer-5 key descriptor
+# is consumed by the analogous status-only matvec smoke after proving the
+# retained Q8_0 [3072 x 1024] payload span; no key exact-hex labels are
+# published in this milestone.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

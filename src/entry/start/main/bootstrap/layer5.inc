@@ -42,9 +42,10 @@
 	jmp .Llookup_unknown_error
 
 .Llookup_layer5_attn_k_tensor:
-	# Retain the layer-5 key projection descriptor after query. This mirrors
-	# the descriptor-only boundary: it publishes shape, type, and relative offset
-	# metadata without reading Q8_0 payload bytes.
+	# Retain the layer-5 key projection descriptor after query. This lookup
+	# publishes shape, type, and relative offset metadata without reading Q8_0
+	# payload bytes; the guarded key matvec proves the full span before it
+	# consumes the descriptor.
 	mov rdi, qword ptr [rip + gguf_mapping_base]
 	mov rsi, qword ptr [rip + gguf_mapping_size]
 	mov rdx, qword ptr [rip + gguf_summary_tensor_infos_offset]
