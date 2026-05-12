@@ -4001,3 +4001,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   labels; static linkage, symbol visibility, source/fragment,
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T07:42:57+02:00
+
+- Completed layer-5 FFN chain review gate pass 1 with no blocking findings and
+  no runtime source edits. The pass checked descriptor-only bootstrap,
+  mmap-bounded payload readers, status-gated public exact-hex output, exported
+  handoff ownership, oracle coverage, and source-size pressure.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime matched all 84 oracle-prefixed exact-hex labels plus the
+  shared epsilon value from the layer-5 post-FFN residual oracle; a 24-byte
+  zero-count GGUF kept the reviewed descriptor flags and dependent statuses
+  fail-closed and emitted no guarded layer-5 FFN exact-hex labels; static,
+  symbol, source/fragment, include-dependency, artifact, large-file, line-count,
+  and whitespace scans passed.

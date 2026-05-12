@@ -6,7 +6,7 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run layer-5 FFN chain review gate pass 1 before expanding to the next feature
+Run layer-5 FFN chain review gate pass 2 before expanding to the next feature
 scope. Focus on `src/infer/token0_layer5_ffn.s`,
 `src/infer/token0_layer5_ffn_down.s`, orchestration order, exported handoffs,
 oracle coverage, fail-closed behavior, and assembly comment/contracts.
@@ -96,23 +96,22 @@ oracle coverage, fail-closed behavior, and assembly comment/contracts.
   `0x440c3ce5`, `0xc1fd49b3`, `0xc2a998e5`, and `0xc1616193`.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
+- Layer-5 FFN chain review gate pass 1 completed cleanly under
+  `work/reviews/2026-05-12-layer5-ffn-chain-review-1.md`. It found no blocking
+  issues and made no runtime source changes.
 
 ## Verification Status
 
-- Latest verification for layer-5 post-FFN residual exact-hex slice:
+- Latest verification for layer-5 FFN chain review gate pass 1:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; the real target reports `layer5_ffn_down_tensor_found: 1`, dimensions
-  `9216 x 3072`, type `8`, relative offset `1079721984`,
-  `token0_layer5_post_attn_residual: 1`,
-  `token0_layer5_ffn_down_matvec: 1`, and
-  `token0_layer5_post_ffn_residual: 1`; the focused layer-5 post-FFN residual
-  oracle comparison matched all 85 oracle-covered exact-hex labels including
-  epsilon and the four new residual words; a 24-byte zero-count GGUF kept
-  `layer5_ffn_down_tensor_found`,
-  `token0_layer5_post_attn_residual`, `token0_layer5_ffn_gate_matvec`,
-  `token0_layer5_ffn_up_matvec`, `token0_layer5_ffn_swiglu`,
-  `token0_layer5_ffn_down_matvec`, and `token0_layer5_post_ffn_residual` at `0`
-  and emitted no layer-5 down or post-FFN exact-hex labels;
+  passed; the real target reports the reviewed layer-5 FFN norm/gate/up/down
+  descriptors with target types and dimensions, and all reviewed layer-5
+  post-attention, FFN norm/gate/up/SwiGLU/down, and post-FFN statuses at `1`;
+  the focused layer-5 post-FFN residual oracle comparison matched all 84
+  oracle-prefixed exact-hex labels plus the shared epsilon exact-hex value; a
+  24-byte zero-count GGUF kept the reviewed layer-5 FFN descriptor found flags
+  and dependent statuses at `0` and emitted no guarded layer-5 FFN or post-FFN
+  residual exact-hex labels;
   `git diff --check`, static-link/no-dynamic-section/no-interpreter/file,
   undefined-symbol, exported/local symbol, runtime source/fragment extension,
   include dependency, tracked artifact, tracked large-file, and line-count scans
@@ -158,34 +157,35 @@ oracle coverage, fail-closed behavior, and assembly comment/contracts.
 - `work/oracle/token0_layer5_ffn_swiglu_oracle.py`
 - `work/oracle/token0_layer5_ffn_down_oracle.py`
 - `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
+- `work/reviews/2026-05-12-layer5-ffn-chain-review-1.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-5 post-FFN residual exact-hex verification passed:
+Layer-5 FFN chain review gate pass 1 verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target runtime output reports `layer5_ffn_down_tensor_found: 1`,
-  dimensions `9216 x 3072`, type `8`, and offset `1079721984`
-- real-target runtime output reports `token0_layer5_post_attn_residual: 1`,
-  `token0_layer5_ffn_down_matvec: 1`, and
-  `token0_layer5_post_ffn_residual: 1`
-- focused layer-5 post-FFN residual runtime/oracle comparison matched all 85
-  covered exact-hex labels including epsilon
-- new residual words are `0x440c3ce5`, `0xc1fd49b3`, `0xc2a998e5`, and
-  `0xc1616193`
-- 24-byte zero-count GGUF kept the layer-5 post-attention, FFN
-  gate/up/SwiGLU/down, and post-FFN residual statuses fail-closed
-- zero-count output emitted no layer-5 down or post-FFN exact-hex labels
+- real-target runtime output reports the reviewed layer-5 FFN norm/gate/up/down
+  descriptors with target types and dimensions, and the reviewed layer-5
+  post-attention, FFN norm/gate/up/SwiGLU/down, and post-FFN statuses at `1`
+- focused layer-5 post-FFN residual runtime/oracle comparison matched all 84
+  oracle-prefixed exact-hex labels plus the shared epsilon exact-hex value
+- 24-byte zero-count GGUF kept the reviewed layer-5 FFN descriptor found flags
+  and dependent statuses at `0`
+- zero-count output emitted no guarded layer-5 FFN or post-FFN residual
+  exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, exported/local symbol check, runtime source/fragment
   extension scan, include dependency scan, tracked artifact scan, tracked
   large-file scan, and line-count review passed
+- post-documentation `make all check`, oracle compile, and `git diff --check`
+  passed
 
 ## Next Exact Step
 
-Run layer-5 FFN chain review gate pass 1 under `work/reviews/`, covering the
-FFN norm/gate/up/SwiGLU/down/post-residual chain, public handoff ownership,
-oracle coverage, zero-count fail-closed behavior, and source-size pressure.
+Run layer-5 FFN chain review gate pass 2 under `work/reviews/`, independently
+rechecking the FFN norm/gate/up/SwiGLU/down/post-residual chain, public handoff
+ownership, oracle coverage, zero-count fail-closed behavior, and source-size
+pressure before feature work resumes.
