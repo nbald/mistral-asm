@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only layer-5 attention key setup for `blk.5.attn_k.weight`,
-with retained summary fields and help text, without reading key payload bytes.
+Add status-only token-0 layer-5 attention key matvec coverage, consuming the
+retained `blk.5.attn_k.weight` descriptor only after proving the Q8_0
+`[3072 x 1024]` payload span, without publishing key exact-hex labels yet.
 
 ## Completed Work
 
@@ -97,6 +98,11 @@ with retained summary fields and help text, without reading key payload bytes.
   published. It prints only when `token0_layer5_attn_q_matvec` is 1 and the
   first four query output words match the focused external oracle:
   `0xbe8aee1e`, `0x3e5db4f8`, `0xbee5a1db`, and `0x3be44a75`.
+- Descriptor-only layer-5 attention key setup is complete for
+  `blk.5.attn_k.weight`. The retained real-target descriptor is Q8_0
+  `[3072 x 1024]` at relative offset `1046286336`. This step added only
+  lookup, retained summary fields, summary printing, and help/contract text; it
+  does not read key Q8_0 payload bytes or add a key matvec status.
 
 ## Known Blockers
 
@@ -154,18 +160,18 @@ with retained summary fields and help text, without reading key payload bytes.
 
 ## Last Verification
 
-Layer-5 attention query exact-hex slice verification passed:
+Layer-5 attention key descriptor verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/token0_layer5_attn_q_oracle.py`
-- `./mistral-asm --help` mentions the layer-5 attention query descriptor
-  lookup/matvec output slice
-- real-target output reported `token0_layer5_attn_q_matvec: 1` and emitted
-  query output words `0xbe8aee1e`, `0x3e5db4f8`, `0xbee5a1db`, and
-  `0x3be44a75`
-- the filtered real-target runtime/oracle diff was empty for all 44 exact-hex
+- `./mistral-asm --help` mentions the layer-5 attention key descriptor lookup
+- real-target output reported `layer5_attn_k_tensor_found: 1`, dimensions
+  `3072` and `1024`, ggml type `8`, and relative offset `1046286336`
+- real-target output still reported `token0_layer5_attn_norm: 1` and
+  `token0_layer5_attn_q_matvec: 1`
+- the filtered real-target runtime/oracle diff was empty for the 45 exact-hex
   labels covered by `work/oracle/token0_layer5_attn_q_oracle.py`
-- a 24-byte zero-count GGUF kept both layer-5 descriptor groups,
+- a 24-byte zero-count GGUF kept all layer-5 norm/query/key descriptor fields,
   `token0_layer4_post_ffn_residual`, `token0_layer5_attn_norm`, and
   `token0_layer5_attn_q_matvec` at `0`, and emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
@@ -175,5 +181,6 @@ Layer-5 attention query exact-hex slice verification passed:
 
 ## Next Exact Step
 
-Add descriptor-only layer-5 attention key setup for `blk.5.attn_k.weight`,
-with retained summary fields and help text, without reading key payload bytes.
+Add status-only token-0 layer-5 attention key matvec coverage, consuming the
+retained `blk.5.attn_k.weight` descriptor only after proving the Q8_0
+`[3072 x 1024]` payload span, without publishing key exact-hex labels yet.

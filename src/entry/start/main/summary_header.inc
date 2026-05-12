@@ -188,3 +188,4 @@
 	call print_layer4_ffn_down_lookup_summary
 	call print_layer5_attn_norm_lookup_summary
 	call print_layer5_attn_q_lookup_summary
+	call print_layer5_attn_k_lookup_summary
