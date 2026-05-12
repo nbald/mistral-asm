@@ -6,11 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add token-0 layer-5 FFN RMSNorm compute/status coverage in a focused new
-module. It should require `token0_layer5_post_attn_residual_status`, prove the
-retained `blk.5.ffn_norm.weight` f32 `[3072]` payload span, write a 3072-f32
-activation/status for later FFN work, print only the
-`token0_layer5_ffn_norm` status line, and not emit exact-hex labels yet.
+Publish the first guarded token-0 layer-5 FFN RMSNorm exact-hex slice with a
+focused external oracle. It should print only when `token0_layer5_ffn_norm` is
+1 and the first four activation words match the oracle.
 
 ## Completed Work
 
@@ -218,29 +216,32 @@ activation/status for later FFN work, print only the
   retained summary fields, summary printing, and help/contract text; it does
   not read `token0_layer5_post_attn_residual`, read f32 payload bytes, or
   publish a layer-5 FFN RMSNorm runtime status.
+- Token-0 layer-5 FFN RMSNorm compute/status coverage is complete in the
+  focused `src/infer/token0_layer5_ffn.s` module. It requires
+  `token0_layer5_post_attn_residual_status`, proves the retained
+  `blk.5.ffn_norm.weight` f32 `[3072]` payload span, writes exported
+  `token0_layer5_ffn_norm_status` and a 3072-f32
+  `token0_layer5_ffn_norm_activation` handoff for later FFN work, prints only
+  `token0_layer5_ffn_norm`, and deliberately emits no layer-5 FFN norm
+  exact-hex labels yet.
 
 ## Verification Status
 
-- Latest verification for descriptor-only layer-5 FFN RMSNorm setup:
-  `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; `./mistral-asm --help` mentions the layer-5 FFN RMSNorm descriptor
-  lookup; the real target reported `layer5_ffn_norm_tensor_found: 1`,
-  `layer5_ffn_norm_tensor_n_dimensions: 1`,
-  `layer5_ffn_norm_tensor_dim0: 3072`,
-  `layer5_ffn_norm_tensor_ggml_type: 0`, and
-  `layer5_ffn_norm_tensor_offset: 1139884032`; the real target also kept
-  `token0_layer5_attn_qkv_handoff: 1`, `token0_layer5_attn_context: 1`,
-  `token0_layer5_attn_output_matvec: 1`, and
-  `token0_layer5_post_attn_residual: 1`; runtime/oracle comparison matched all
-  60 exact-hex labels emitted by
-  `work/oracle/token0_layer5_attn_output_oracle.py`; a temporary 24-byte
-  zero-count GGUF kept `layer5_attn_output_tensor_found`,
-  `layer5_ffn_norm_tensor_found`, handoff, context, output-matvec, and
-  post-attention residual statuses at `0` and emitted no guarded layer-5
-  exact-hex labels; `git diff --check`,
-  static-link/no-dynamic-section/no-interpreter, undefined-symbol,
-  runtime source/fragment extension, include dependency, exported/local symbol,
-  tracked artifact, tracked large-file, and line-count scans passed.
+- Latest verification for token-0 layer-5 FFN RMSNorm compute/status:
+  `make clean all check` passed before the help edit and `make all check`
+  passed after it; `python3 -m py_compile work/oracle/*.py` passed; `--help`
+  mentions the layer-5 FFN RMSNorm descriptor/status smoke; the real target
+  reported `token0_layer5_ffn_norm: 1` while existing layer-5
+  handoff/context/output/residual statuses stayed at `1`; comparison against
+  `work/oracle/token0_layer5_attn_output_oracle.py` matched all 61 existing
+  oracle-covered `_f32_hex` labels; no `token0_layer5_ffn_norm*_f32_hex`
+  labels were emitted; a 24-byte zero-count GGUF kept
+  `layer5_ffn_norm_tensor_found`, handoff, context, output-matvec,
+  post-attention residual, and FFN norm statuses at `0`; `git diff --check`,
+  runtime source/fragment extension, static-link/no-dynamic-section/
+  no-interpreter/file, undefined-symbol, exported/local symbol,
+  no-output-slice, tracked artifact, tracked large-file, and line-count scans
+  passed.
 
 ## Known Blockers
 
@@ -291,6 +292,7 @@ activation/status for later FFN work, print only the
 - `src/infer/token0_layer5_attn_qkv_handoff.s`
 - `src/infer/token0_layer5_attn_context.s`
 - `src/infer/token0_layer5_attn_output.s`
+- `src/infer/token0_layer5_ffn.s`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
 - `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/oracle/token0_layer4_ffn_gate_oracle.py`
@@ -316,31 +318,27 @@ activation/status for later FFN work, print only the
 
 ## Last Verification
 
-Descriptor-only layer-5 FFN RMSNorm setup verification passed:
+Token-0 layer-5 FFN RMSNorm compute/status verification passed:
 
-- `make clean all check`
+- `make clean all check` before the help edit; `make all check` after it
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 FFN RMSNorm descriptor lookup
-- real-target runtime reported `blk.5.ffn_norm.weight` as f32 `[3072]` at
-  relative offset `1139884032`
-- real-target runtime kept the existing layer-5 handoff/context/output/residual
-  statuses at `1`, and the existing layer-5 post-attention residual words
-  remained `0x440c34df`, `0xc1fcec34`, `0xc2a9b98b`, and `0xc1618569`
-- real-target runtime/oracle comparison matched all 60 exact-hex labels emitted
-  by `work/oracle/token0_layer5_attn_output_oracle.py`
-- a 24-byte zero-count GGUF kept `layer5_attn_output_tensor_found`,
-  `layer5_ffn_norm_tensor_found`, handoff, context, output-matvec, and
-  post-attention residual statuses at `0` and emitted no guarded layer-5
-  exact-hex labels
+- `./mistral-asm --help` mentions the layer-5 FFN RMSNorm descriptor/status
+  smoke
+- real-target runtime reported `token0_layer5_ffn_norm: 1`
+- real-target runtime/oracle comparison matched all 61 existing exact-hex
+  labels covered by `work/oracle/token0_layer5_attn_output_oracle.py`
+- no `token0_layer5_ffn_norm*_f32_hex` labels were emitted
+- a 24-byte zero-count GGUF kept `layer5_ffn_norm_tensor_found`,
+  `token0_layer5_attn_qkv_handoff`, `token0_layer5_attn_context`,
+  `token0_layer5_attn_output_matvec`, `token0_layer5_post_attn_residual`, and
+  `token0_layer5_ffn_norm` at `0`
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, runtime source/fragment extension scan, include
-  dependency scan, exported/local symbol check, tracked artifact scan, tracked
-  large-file scan, and line-count review passed
+  dependency scan, exported/local symbol check, no-output-slice scan, tracked
+  artifact scan, tracked large-file scan, and line-count review passed
 
 ## Next Exact Step
 
-Add token-0 layer-5 FFN RMSNorm compute/status coverage in a focused new
-module. It should require `token0_layer5_post_attn_residual_status`, prove the
-retained `blk.5.ffn_norm.weight` f32 `[3072]` payload span, write a 3072-f32
-activation/status for later FFN work, print only the
-`token0_layer5_ffn_norm` status line, and not emit exact-hex labels yet.
+Publish the first guarded token-0 layer-5 FFN RMSNorm exact-hex slice with a
+focused external oracle. It should print only when `token0_layer5_ffn_norm` is
+1 and the first four activation words match the oracle.

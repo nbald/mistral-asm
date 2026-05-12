@@ -30,6 +30,7 @@ ASM_SOURCES := \
 	src/infer/token0_layer5_attn_qkv_handoff.s \
 	src/infer/token0_layer5_attn_context.s \
 	src/infer/token0_layer5_attn_output.s \
+	src/infer/token0_layer5_ffn.s \
 	src/infer/token0_layer1_ffn_down.s \
 	src/infer/token0_layer1_ffn.s \
 	src/math/q8_0_dot.s \

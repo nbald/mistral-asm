@@ -3779,3 +3779,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   60-label real-target runtime/oracle comparison, packed zero-count fail-closed
   guard, static linkage, symbol, include dependency, artifact, large-file, and
   line-count scans passed.
+
+## 2026-05-12T05:46:55+02:00
+
+- Added status-only token-0 layer-5 FFN RMSNorm compute coverage in a focused
+  module. The smoke consumes the exported layer-5 post-attention residual only
+  through `token0_layer5_post_attn_residual_status`, proves the retained
+  `blk.5.ffn_norm.weight` f32 `[3072]` payload span, and writes an exported
+  3072-f32 activation handoff without publishing FFN norm exact-hex labels yet.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported `token0_layer5_ffn_norm: 1`; the existing 61 oracle-covered
+  exact-hex labels still matched; the packed zero-count GGUF kept the new FFN
+  norm status at `0`; no `token0_layer5_ffn_norm*_f32_hex` labels were emitted;
+  static, symbol, source extension, artifact, large-file, and line-count scans
+  passed.
