@@ -50,7 +50,7 @@ help_text:
 	.ascii "output projection descriptor lookup, and output-projection "
 	.ascii "matvec slice plus post-attention residual slice and FFN "
 	.ascii "RMSNorm descriptor lookup/output slice plus FFN gate "
-	.ascii "descriptor lookup.\n"
+	.ascii "descriptor lookup/gate matvec status.\n"
 help_text_end:
 
 lookup_tensor_request:

@@ -6,12 +6,11 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-5 FFN gate matvec coverage. It should consume
-`token0_layer5_ffn_norm_status` and `token0_layer5_ffn_norm_activation`, require
-the retained `blk.5.ffn_gate.weight` descriptor as Q8_0 `[3072 x 9216]`, prove
-the full mapped payload span before reading matrix bytes, write a private
-9216-f32 gate output buffer, and print only `token0_layer5_ffn_gate_matvec`.
-Do not publish gate exact-hex output labels yet.
+Publish the guarded token-0 layer-5 FFN gate exact-hex output slice. Reuse the
+private gate output buffer written by `token0_layer5_ffn_gate_matvec_status`,
+print the first four `token0_layer5_ffn_gate_output*_f32_hex` labels only when
+the gate matvec status is 1, and extend or add an external oracle comparison for
+those words.
 
 ## Completed Work
 
@@ -38,24 +37,32 @@ Do not publish gate exact-hex output labels yet.
   `[3072 x 9216]` at relative offset `1109803008`. This step added only lookup,
   retained summary fields, summary printing, and help text; it does not read
   gate Q8_0 payload bytes or publish a gate matvec status.
+- Status-only token-0 layer-5 FFN gate matvec coverage is complete in
+  `src/infer/token0_layer5_ffn.s`. It consumes
+  `token0_layer5_ffn_norm_status` and the exported 3072-f32 FFN norm
+  activation, requires retained `blk.5.ffn_gate.weight` as Q8_0
+  `[3072 x 9216]`, proves the full mapped matrix span, writes a private
+  9216-f32 gate output buffer, and prints only
+  `token0_layer5_ffn_gate_matvec`.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for descriptor-only layer-5 FFN gate setup: `make all
-  check` and final `make clean all check` passed; `python3 -m py_compile
-  work/oracle/*.py` passed; `--help`
-  mentions the layer-5 FFN gate descriptor lookup; the real target reports
+- Latest verification for status-only layer-5 FFN gate matvec coverage: `make
+  all check` and final `make clean all check` passed; `python3 -m py_compile
+  work/oracle/*.py` passed; `--help` mentions layer-5 FFN gate descriptor
+  lookup/gate matvec status; the real target reports
   `layer5_ffn_gate_tensor_found: 1`, dimensions `3072` and `9216`, ggml type
-  `8`, and relative offset `1109803008`; no `token0_layer5_ffn_gate*` labels
-  appear; the layer-5 FFN norm oracle comparison matched all 64
-  oracle-covered labels; a 24-byte zero-count GGUF kept the new descriptor
-  fields and dependent layer-5 statuses at `0` and emitted no layer-5 FFN norm
-  exact-hex labels; `git diff --check`, static-link/no-dynamic-section/
-  no-interpreter/file, undefined-symbol, exported/local symbol, runtime
-  source/fragment extension, include dependency, tracked artifact, tracked
-  large-file, and line-count scans passed.
+  `8`, relative offset `1109803008`, and
+  `token0_layer5_ffn_gate_matvec: 1`; no
+  `token0_layer5_ffn_gate*_f32_hex` labels appear; the layer-5 FFN norm oracle
+  comparison matched all 65 oracle-covered exact-hex labels; a 24-byte
+  zero-count GGUF kept the descriptor fields and dependent layer-5 statuses at
+  `0`, including `token0_layer5_ffn_gate_matvec: 0`; `git diff --check`,
+  static-link/no-dynamic-section/no-interpreter/file, undefined-symbol,
+  exported/local symbol, runtime source/fragment extension, include dependency,
+  tracked artifact, tracked large-file, and line-count scans passed.
 
 ## Known Blockers
 
@@ -91,17 +98,19 @@ Do not publish gate exact-hex output labels yet.
 
 ## Last Verification
 
-Descriptor-only layer-5 FFN gate setup verification passed:
+Status-only layer-5 FFN gate matvec verification passed:
 
 - `make all check`; final `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 FFN gate descriptor lookup
+- `./mistral-asm --help` mentions the layer-5 FFN gate descriptor lookup/gate
+  matvec status
 - real-target descriptor summary for `blk.5.ffn_gate.weight`: Q8_0
   `[3072 x 9216]`, offset `1109803008`
-- no `token0_layer5_ffn_gate*` labels emitted
-- layer-5 FFN norm oracle comparison matched all 64 covered labels
-- 24-byte zero-count GGUF kept the new descriptor fields and dependent layer-5
-  statuses at `0`
+- real target reported `token0_layer5_ffn_gate_matvec: 1`
+- no `token0_layer5_ffn_gate*_f32_hex` labels emitted
+- layer-5 FFN norm oracle comparison matched all 65 covered exact-hex labels
+- 24-byte zero-count GGUF kept the descriptor fields and dependent layer-5
+  statuses at `0`, including `token0_layer5_ffn_gate_matvec: 0`
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, exported/local symbol check, runtime source/fragment
   extension scan, include dependency scan, tracked artifact scan, tracked
@@ -109,9 +118,8 @@ Descriptor-only layer-5 FFN gate setup verification passed:
 
 ## Next Exact Step
 
-Add status-only token-0 layer-5 FFN gate matvec coverage in
-`src/infer/token0_layer5_ffn.s`. Require `token0_layer5_ffn_norm_status`, the
-exported 3072-f32 FFN norm activation, and the retained `blk.5.ffn_gate.weight`
-Q8_0 `[3072 x 9216]` descriptor; prove the full matrix payload span, write a
-private 9216-f32 gate output buffer, print `token0_layer5_ffn_gate_matvec`, and
-do not emit gate exact-hex labels yet.
+Publish the guarded token-0 layer-5 FFN gate exact-hex output slice in
+`src/infer/token0_layer5_ffn.s`. Print the first four
+`token0_layer5_ffn_gate_output*_f32_hex` labels only when
+`token0_layer5_ffn_gate_matvec_status` is 1, extend or add an external oracle
+comparison for those words, and keep the gate output buffer private.

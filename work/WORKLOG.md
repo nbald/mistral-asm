@@ -3822,3 +3822,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   dependent layer-5 statuses at `0`; static, symbol, source/fragment,
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T06:13:39+02:00
+
+- Added status-only token-0 layer-5 FFN gate matvec coverage. The smoke consumes
+  the exported layer-5 FFN RMSNorm activation, proves the retained
+  `blk.5.ffn_gate.weight` Q8_0 `[3072 x 9216]` payload span, writes a private
+  gate output buffer, and deliberately publishes only
+  `token0_layer5_ffn_gate_matvec`.
+- Verification evidence: clean build/check, final clean rebuild/check, and
+  oracle compile passed; the real target reported
+  `token0_layer5_ffn_gate_matvec: 1`; the existing layer-5 FFN norm oracle
+  comparison matched all 65 covered exact-hex labels; no
+  `token0_layer5_ffn_gate*_f32_hex` labels were emitted; the 24-byte zero-count
+  GGUF kept the new gate matvec status at `0`; static, symbol, source/fragment,
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.

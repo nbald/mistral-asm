@@ -1,14 +1,22 @@
 .intel_syntax noprefix
 
 .equ GGML_TYPE_F32, 0
+.equ GGML_TYPE_Q8_0, 8
+.equ Q8_0_BLOCK_BYTES, 34
 .equ TOKEN0_LAYER5_FFN_NORM_VALUES, 3072
 .equ TOKEN0_LAYER5_FFN_NORM_BYTES, TOKEN0_LAYER5_FFN_NORM_VALUES * 4
+.equ TOKEN0_LAYER5_FFN_GATE_OUTPUT_VALUES, 9216
+.equ TOKEN0_LAYER5_FFN_GATE_OUTPUT_BYTES, TOKEN0_LAYER5_FFN_GATE_OUTPUT_VALUES * 4
 
 .section .rodata
 
 token0_layer5_ffn_norm_text:
 	.ascii "token0_layer5_ffn_norm: "
 token0_layer5_ffn_norm_text_end:
+
+token0_layer5_ffn_gate_matvec_text:
+	.ascii "token0_layer5_ffn_gate_matvec: "
+token0_layer5_ffn_gate_matvec_text_end:
 
 token0_layer5_ffn_norm0_f32_text:
 	.ascii "token0_layer5_ffn_norm0_f32_hex: "
@@ -41,6 +49,15 @@ token0_layer5_ffn_norm_status:
 .balign 4
 token0_layer5_ffn_norm_activation:
 	.skip TOKEN0_LAYER5_FFN_NORM_BYTES
+
+.global token0_layer5_ffn_gate_matvec_status
+.balign 8
+token0_layer5_ffn_gate_matvec_status:
+	.skip 8
+
+.balign 4
+token0_layer5_ffn_gate_output:
+	.skip TOKEN0_LAYER5_FFN_GATE_OUTPUT_BYTES
 
 .section .text
 
@@ -251,5 +268,142 @@ print_token0_layer5_ffn_norm_slice:
 	ret
 
 .size print_token0_layer5_ffn_norm_slice, . - print_token0_layer5_ffn_norm_slice
+
+.global run_token0_layer5_ffn_gate_matvec_status
+.type run_token0_layer5_ffn_gate_matvec_status, @function
+
+# Contract: run the token-0 layer-5 FFN gate matvec smoke and publish only its
+# status line.
+# Inputs: no register inputs. Reads the live mapping handoff slots, the
+# retained blk.5.ffn_gate.weight descriptor, token0_layer5_ffn_norm_status, and
+# the exported token0_layer5_ffn_norm_activation handoff buffer.
+# Outputs: writes token0_layer5_ffn_gate_matvec_status and, on success, fills
+# the private token0_layer5_ffn_gate_output buffer with 9216 f32 values. Always
+# prints exactly one status label/value/newline sequence to stdout and does not
+# print gate exact-hex output words in this milestone. The return register is
+# unspecified.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
+# smoke helper and summary writers. The matvec helper preserves any
+# callee-saved registers it uses internally.
+# Ownership/lifetime: borrows the model mmap and the exported layer-5 FFN
+# RMSNorm activation only during this call; owns the layer-5 FFN gate status and
+# private output storage. The mmap remains owned by _start and must be released
+# separately.
+# Error behavior: status is 1 only after a bounded Q8_0 matvec completes.
+# Otherwise status is 0, no layer-5 FFN gate matrix payload bytes are read, and
+# no output slice is printed. Output write failures remain diagnostic-only.
+run_token0_layer5_ffn_gate_matvec_status:
+	call token0_layer5_ffn_gate_matvec_smoke
+	mov qword ptr [rip + token0_layer5_ffn_gate_matvec_status], rax
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer5_ffn_gate_matvec_text]
+	mov rdx, token0_layer5_ffn_gate_matvec_text_end - token0_layer5_ffn_gate_matvec_text
+	call sys_write
+
+	mov rdi, 1
+	mov rsi, qword ptr [rip + token0_layer5_ffn_gate_matvec_status]
+	call write_u64_decimal
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	ret
+
+.size run_token0_layer5_ffn_gate_matvec_status, . - run_token0_layer5_ffn_gate_matvec_status
+
+.type token0_layer5_ffn_gate_matvec_smoke, @function
+
+# Contract: opportunistically project the token-0 layer-5 FFN-normalized
+# activation through blk.5.ffn_gate.weight.
+# Inputs: no register inputs. Reads the process-owned layer5_ffn_gate tensor
+# slot, live mapping descriptor, token0_layer5_ffn_norm_status, and
+# token0_layer5_ffn_norm_activation.
+# Outputs: rax = 1 when the layer-5 FFN-normalized activation is available and
+# blk.5.ffn_gate.weight is exactly a two-dimensional Q8_0 [3072 x 9216] matrix
+# whose complete payload span fits inside the mapping, after q8_0_matvec_f32
+# writes token0_layer5_ffn_gate_output; otherwise rax = 0 and no layer-5 FFN
+# gate matrix payload bytes are read.
+# Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags. The matvec
+# helper preserves any callee-saved registers it uses internally.
+# Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
+# q8_0_matvec_f32, reads the exported layer-5 FFN-normalized activation as the
+# shared f32 input vector, and writes exactly
+# TOKEN0_LAYER5_FFN_GATE_OUTPUT_BYTES into private module storage on success.
+# The mmap remains owned by _start and must be released separately.
+# Error behavior: this is a status-only smoke gate for the layer-5 FFN gate
+# projection, not final graph setup. Non-target synthetic GGUF fixtures and
+# shape or bounds mismatches are skipped with status 0.
+token0_layer5_ffn_gate_matvec_smoke:
+	xor eax, eax
+	cmp qword ptr [rip + token0_layer5_ffn_norm_status], 1
+	jne .Llayer5_ffn_gate_smoke_done
+	cmp qword ptr [rip + layer5_ffn_gate_tensor_found], 1
+	jne .Llayer5_ffn_gate_smoke_done
+	cmp qword ptr [rip + layer5_ffn_gate_tensor_n_dimensions], 2
+	jne .Llayer5_ffn_gate_smoke_done
+	cmp qword ptr [rip + layer5_ffn_gate_tensor_ggml_type], GGML_TYPE_Q8_0
+	jne .Llayer5_ffn_gate_smoke_done
+	cmp qword ptr [rip + layer5_ffn_gate_tensor_dim0], TOKEN0_LAYER5_FFN_NORM_VALUES
+	jne .Llayer5_ffn_gate_smoke_done
+	cmp qword ptr [rip + layer5_ffn_gate_tensor_dim1], TOKEN0_LAYER5_FFN_GATE_OUTPUT_VALUES
+	jne .Llayer5_ffn_gate_smoke_done
+
+	# Tensor offsets are relative to the aligned tensor-data base. Resolve the
+	# layer-5 FFN gate matrix start and prove the complete row-major Q8_0
+	# payload fits inside the live mapping before passing any mmap pointer to
+	# the shared matvec helper.
+	mov rax, qword ptr [rip + gguf_summary_tensor_data_offset]
+	test rax, rax
+	js .Llayer5_ffn_gate_smoke_skip
+	mov rdx, qword ptr [rip + layer5_ffn_gate_tensor_offset]
+	test rdx, rdx
+	js .Llayer5_ffn_gate_smoke_skip
+	add rax, rdx
+	jc .Llayer5_ffn_gate_smoke_skip
+
+	mov r10, qword ptr [rip + gguf_mapping_size]
+	cmp rax, r10
+	jae .Llayer5_ffn_gate_smoke_skip
+
+	mov r8, TOKEN0_LAYER5_FFN_NORM_VALUES
+	mov r9, r8
+	shr r9, 5
+	mov r11, r9
+	imul r11, r11, Q8_0_BLOCK_BYTES
+	jo .Llayer5_ffn_gate_smoke_skip
+	mov rcx, TOKEN0_LAYER5_FFN_GATE_OUTPUT_VALUES
+	mov rdx, rcx
+	imul rdx, r11
+	jo .Llayer5_ffn_gate_smoke_skip
+
+	mov r11, r10
+	sub r11, rax
+	cmp r11, rdx
+	jb .Llayer5_ffn_gate_smoke_skip
+
+	mov rdi, qword ptr [rip + gguf_mapping_base]
+	test rdi, rdi
+	jz .Llayer5_ffn_gate_smoke_skip
+	add rdi, rax
+	jc .Llayer5_ffn_gate_smoke_skip
+
+	lea rsi, [rip + token0_layer5_ffn_norm_activation]
+	lea rdx, [rip + token0_layer5_ffn_gate_output]
+	mov r8, r9
+	call q8_0_matvec_f32
+
+	mov eax, 1
+	ret
+
+.Llayer5_ffn_gate_smoke_skip:
+	xor eax, eax
+
+.Llayer5_ffn_gate_smoke_done:
+	ret
+
+.size token0_layer5_ffn_gate_matvec_smoke, . - token0_layer5_ffn_gate_matvec_smoke
 
 .section .note.GNU-stack,"",@progbits
