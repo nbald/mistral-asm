@@ -4041,3 +4041,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   zero-count fail-closed behavior, no-layer6-status/static source scan, static
   linkage, include dependency, symbol visibility, tracked-artifact,
   tracked-large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T08:09:16+02:00
+
+- Added status-only token-0 layer-6 attention RMSNorm coverage in a new focused
+  module. The smoke consumes the exported layer-5 post-FFN residual, proves the
+  retained `blk.6.attn_norm.weight` f32 `[3072]` payload span, and prints only
+  `token0_layer6_attn_norm`; the layer-6 activation buffer remains private and
+  no layer-6 exact-hex labels are emitted yet.
+- Verification evidence: clean build/check and oracle py-compile passed; help
+  text mentions the new layer-6 status smoke; the real target reported
+  `token0_layer6_attn_norm: 1` while the existing 85-label layer-5
+  post-FFN-residual oracle subset still matched exactly; a packed 24-byte
+  zero-count GGUF kept the new status at `0`; static linkage, source/fragment,
+  include-dependency, artifact, large-file, symbol-visibility, line-count, and
+  whitespace scans passed.

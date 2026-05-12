@@ -6,10 +6,8 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-6 attention RMSNorm coverage in a new focused
-module. Consume the exported layer-5 post-FFN residual handoff and retained
-`blk.6.attn_norm.weight` descriptor, prove the f32 payload span, and publish
-only `token0_layer6_attn_norm`; do not emit a layer-6 exact-hex slice yet.
+Publish a guarded exact-hex token-0 layer-6 attention RMSNorm slice from the
+new focused module and add an external oracle comparison for that slice.
 
 ## Completed Work
 
@@ -27,24 +25,26 @@ only `token0_layer6_attn_norm`; do not emit a layer-6 exact-hex slice yet.
   SwiGLU, down projection, and post-FFN residual. Public handoffs are the FFN
   norm activation, SwiGLU output, and post-FFN residual; gate/up/down projection
   buffers remain private.
-- Layer-6 attention coverage has descriptor-only setup for
-  `blk.6.attn_norm.weight`. The real target reports f32 `[3072]` at relative
-  offset `1173319680`; no layer-6 payload bytes are read and no layer-6 runtime
-  status or exact-hex labels exist yet.
+- Layer-6 attention coverage has descriptor setup and a status-only RMSNorm
+  smoke for `blk.6.attn_norm.weight`. The smoke consumes the exported layer-5
+  post-FFN residual handoff, proves the retained f32 `[3072]` payload span, and
+  publishes `token0_layer6_attn_norm`; the activation buffer remains private and
+  no layer-6 exact-hex labels are emitted yet.
 - The two-pass review gates for the completed layer-4 FFN chain, layer-5
   attention residual handoff chain, and layer-5 FFN chain completed cleanly under
   `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for descriptor-only layer-6 attention RMSNorm setup:
+- Latest verification for status-only layer-6 attention RMSNorm coverage:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; help text mentions the layer-6 descriptor lookup; the real target
-  reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`, ggml type `0`,
-  and offset `1173319680`; the focused layer-5 post-FFN residual oracle subset
-  still matched 85 exact values; a packed 24-byte zero-count GGUF kept the
-  layer-6 descriptor fields and layer-5 dependent statuses at `0`; no
-  `token0_layer6` status or exact-hex labels exist; static-link,
+  passed; help text mentions the layer-6 descriptor lookup/status smoke; the
+  real target reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`,
+  ggml type `0`, offset `1173319680`, and `token0_layer6_attn_norm: 1`; the
+  focused layer-5 post-FFN residual oracle subset still matched 85 exact values;
+  a packed 24-byte zero-count GGUF kept the layer-6 descriptor fields,
+  `token0_layer5_post_ffn_residual`, and `token0_layer6_attn_norm` at `0`; no
+  layer-6 exact-hex labels exist; static-link,
   no-dynamic-section/no-interpreter, undefined-symbol, runtime source extension,
   include-dependency, tracked artifact, tracked large-file, exported/local symbol,
   line-count, and whitespace scans passed.
@@ -93,25 +93,26 @@ only `token0_layer6_attn_norm`; do not emit a layer-6 exact-hex slice yet.
 - `src/entry/start/state/layer6_bss.inc`
 - `src/infer/token0_layer5_ffn.s`
 - `src/infer/token0_layer5_ffn_down.s`
+- `src/infer/token0_layer6_attn.s`
 - `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Descriptor-only layer-6 attention RMSNorm setup verification passed:
+Status-only layer-6 attention RMSNorm coverage verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
 - `./mistral-asm --help`
 - real target reported `blk.6.attn_norm.weight` as f32 `[3072]` at relative
-  offset `1173319680`
+  offset `1173319680` and `token0_layer6_attn_norm: 1`
 - real-target runtime/oracle subset still matched 85 exact values against
   `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
-- packed 24-byte zero-count GGUF kept layer-6 descriptor fields and layer-5
-  dependent statuses at `0`
-- static scan found no `token0_layer6`, layer-6 status, or layer-6 exact-hex
-  labels
+- packed 24-byte zero-count GGUF kept layer-6 descriptor fields,
+  `token0_layer5_post_ffn_residual`, and `token0_layer6_attn_norm` at `0`
+- static scan found no layer-6 exact-hex labels and kept the private
+  `token0_layer6_attn_norm_activation` symbol unexported
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter,
   undefined-symbol, runtime source extension, include dependency, tracked
   artifact, tracked large-file, exported/local symbol, and line-count scans
@@ -119,7 +120,5 @@ Descriptor-only layer-6 attention RMSNorm setup verification passed:
 
 ## Next Exact Step
 
-Add status-only token-0 layer-6 attention RMSNorm coverage in a new focused
-module, publishing `token0_layer6_attn_norm` only after proving the retained
-`blk.6.attn_norm.weight` f32 payload span and the layer-5 post-FFN residual
-handoff status.
+Publish a guarded exact-hex token-0 layer-6 attention RMSNorm slice from the
+new focused module and add an external oracle comparison for that slice.
