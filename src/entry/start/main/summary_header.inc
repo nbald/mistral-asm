@@ -189,3 +189,4 @@
 	call print_layer5_attn_norm_lookup_summary
 	call print_layer5_attn_q_lookup_summary
 	call print_layer5_attn_k_lookup_summary
+	call print_layer5_attn_v_lookup_summary

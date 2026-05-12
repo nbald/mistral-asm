@@ -15,3 +15,9 @@
 .global layer5_attn_k_tensor_dim1
 .global layer5_attn_k_tensor_ggml_type
 .global layer5_attn_k_tensor_offset
+.global layer5_attn_v_tensor_found
+.global layer5_attn_v_tensor_n_dimensions
+.global layer5_attn_v_tensor_dim0
+.global layer5_attn_v_tensor_dim1
+.global layer5_attn_v_tensor_ggml_type
+.global layer5_attn_v_tensor_offset

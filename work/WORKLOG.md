@@ -3565,3 +3565,14 @@ redundant entries. Do not treat it as the primary continuation source; use
   48 public exact-hex labels covered by the new oracle. The 24-byte zero-count
   GGUF kept layer-5 descriptors and dependent statuses at `0` and emitted no
   guarded layer-5 exact-hex labels.
+
+## 2026-05-12T03:01:11+02:00
+
+- Added descriptor-only layer-5 attention value coverage. The runtime now
+  retains and prints `blk.5.attn_v.weight` as Q8_0 `[3072 x 1024]` at relative
+  offset `1076379648` on the local target GGUF.
+- Verification evidence: clean and incremental rebuild/check passed; the
+  focused layer-5 key oracle subset still matched; the real-target output
+  emitted no layer-5 value status or value output labels; and a corrected
+  24-byte zero-count GGUF kept the new value descriptor fields and existing
+  layer-5 statuses at `0`.

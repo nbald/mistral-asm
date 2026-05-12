@@ -6,9 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add descriptor-only layer-5 attention value setup for `blk.5.attn_v.weight`,
-retaining and printing its expected Q8_0 `[3072 x 1024]` descriptor without
-reading value payload bytes or publishing a value matvec status.
+Add status-only token-0 layer-5 attention value matvec coverage for
+`blk.5.attn_v.weight`, guarded by `token0_layer5_attn_norm`, the retained
+Q8_0 `[3072 x 1024]` descriptor shape, and a live-mapping payload span proof;
+publish status only, without exact-hex value output labels.
 
 ## Completed Work
 
@@ -113,6 +114,11 @@ reading value payload bytes or publishing a value matvec status.
   published. It prints only when `token0_layer5_attn_k_matvec` is 1 and the
   first four key output words match the focused external oracle:
   `0xbce30a54`, `0x3b2c5263`, `0x3ceab318`, and `0x3c848c77`.
+- Descriptor-only layer-5 attention value setup is complete for
+  `blk.5.attn_v.weight`. The retained real-target descriptor is Q8_0
+  `[3072 x 1024]` at relative offset `1076379648`. This step added only
+  lookup, retained summary fields, summary printing, and help/contract text; it
+  does not read value Q8_0 payload bytes or publish a value matvec status.
 
 ## Known Blockers
 
@@ -171,32 +177,31 @@ reading value payload bytes or publishing a value matvec status.
 
 ## Last Verification
 
-Layer-5 attention key exact-hex slice verification passed:
+Layer-5 attention value descriptor verification passed:
 
 - `make clean all check`
 - `make all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 attention key descriptor lookup
-  and matvec output slice
-- real-target output reported `layer5_attn_k_tensor_found: 1`, dimensions
-  `3072` and `1024`, ggml type `8`, and relative offset `1046286336`
-- real-target output reported `token0_layer5_attn_norm: 1`,
-  `token0_layer5_attn_q_matvec: 1`, and `token0_layer5_attn_k_matvec: 1`
-- real-target output emitted `token0_layer5_attn_k_output0..3_f32_hex` as
-  `0xbce30a54`, `0x3b2c5263`, `0x3ceab318`, and `0x3c848c77`
-- the filtered real-target runtime/oracle diff was empty for the 48 exact-hex
+- `./mistral-asm --help` mentions the layer-5 attention value descriptor lookup
+- real-target output reported `layer5_attn_v_tensor_found: 1`, dimensions
+  `3072` and `1024`, ggml type `8`, and relative offset `1076379648`
+- real-target output still reported `token0_layer5_attn_norm: 1`,
+  `token0_layer5_attn_q_matvec: 1`, and `token0_layer5_attn_k_matvec: 1`, with
+  no `token0_layer5_attn_v*` status or output labels emitted
+- the filtered real-target runtime/oracle diff was empty for the 49 `_f32_hex`
   labels covered by `work/oracle/token0_layer5_attn_k_oracle.py`
-- a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key
+- a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key/value
   descriptor fields, `token0_layer5_attn_norm`,
   `token0_layer5_attn_q_matvec`, and `token0_layer5_attn_k_matvec` at `0`, and
   emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
-  scan, tracked artifact scan, tracked large-file scan, and line-count check
-  passed
+  scan, tracked artifact scan, tracked large-file scan, and line-count review
+  passed; edited files remain below the 1000-line split threshold
 
 ## Next Exact Step
 
-Add descriptor-only layer-5 attention value setup for `blk.5.attn_v.weight`,
-retaining and printing its expected Q8_0 `[3072 x 1024]` descriptor without
-reading value payload bytes or publishing a value matvec status.
+Add status-only token-0 layer-5 attention value matvec coverage for
+`blk.5.attn_v.weight`, guarded by `token0_layer5_attn_norm`, the retained
+Q8_0 `[3072 x 1024]` descriptor shape, and a live-mapping payload span proof;
+publish status only, without exact-hex value output labels.
