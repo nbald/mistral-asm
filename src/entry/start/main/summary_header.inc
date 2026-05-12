@@ -196,3 +196,4 @@
 	call print_layer5_ffn_up_lookup_summary
 	call print_layer5_ffn_down_lookup_summary
 	call print_layer6_attn_norm_lookup_summary
+	call print_layer6_attn_q_lookup_summary

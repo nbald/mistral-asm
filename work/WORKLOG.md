@@ -4071,3 +4071,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-6 path fail-closed and emitted no layer-6 exact-hex labels; static
   linkage, symbol visibility, source/include-dependency, artifact, large-file,
   line-count, and whitespace scans passed.
+
+## 2026-05-12T08:26:09+02:00
+
+- Added descriptor-only layer-6 attention query setup for
+  `blk.6.attn_q.weight`. The real target reports Q8_0 dimensions
+  `3072 x 4096` at relative offset `1186701312`; this step deliberately prints
+  only retained descriptor metadata and leaves query matrix payload reads for
+  the next guarded matvec smoke.
+- Verification evidence: clean rebuild/check, oracle py-compile, and help
+  output passed; the existing layer-6 RMSNorm oracle comparison still matched
+  all 89 exact values; a 24-byte zero-count GGUF kept the layer-6 norm/query
+  descriptor fields and dependent statuses at `0` with no layer-6 exact-hex
+  labels; static linkage, symbol visibility, source/include-dependency,
+  artifact, large-file, line-count, and whitespace scans passed.
