@@ -3881,3 +3881,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   GGUF kept the new up matvec status at `0`; static, symbol, source/fragment,
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T06:44:30+02:00
+
+- Published the guarded token-0 layer-5 FFN up output slice while keeping the
+  9216-f32 up output buffer private. The first four words are `0x3d47d833`,
+  `0x3dc191f5`, `0x3da1c6a8`, and `0xbccb2d50`.
+- Added a focused layer-5 FFN up oracle that reuses the full layer-5 FFN
+  RMSNorm activation and independently dots the first four rows of
+  `blk.5.ffn_up.weight`.
+- Verification evidence: clean rebuild/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched all 72 oracle-covered exact-hex
+  labels; the 24-byte zero-count GGUF kept the layer-5 FFN up path fail-closed
+  and emitted no up output exact-hex labels; static linkage, symbol visibility,
+  include dependency, artifact, large-file, line-count, and whitespace scans
+  passed.

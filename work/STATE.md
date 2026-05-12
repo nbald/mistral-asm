@@ -6,10 +6,12 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Publish the guarded token-0 layer-5 FFN up output exact-hex slice. Extend the
-external layer-5 FFN oracle to dot the first four rows of
-`blk.5.ffn_up.weight`, then print `token0_layer5_ffn_up_output[0-3]_f32_hex`
-only when `token0_layer5_ffn_up_matvec_status` is 1.
+Add status-only token-0 layer-5 FFN SwiGLU coverage. Consume the private
+layer-5 FFN gate/up output buffers only when
+`token0_layer5_ffn_gate_matvec_status` and
+`token0_layer5_ffn_up_matvec_status` are both 1, fill a private 9216-f32
+SwiGLU buffer, and publish only `token0_layer5_ffn_swiglu` with no SwiGLU
+exact-hex labels yet.
 
 ## Completed Work
 
@@ -54,27 +56,30 @@ only when `token0_layer5_ffn_up_matvec_status` is 1.
   `token0_layer5_ffn_norm_status` and the exported 3072-f32 FFN norm
   activation, requires retained `blk.5.ffn_up.weight` as Q8_0
   `[3072 x 9216]`, proves the full mapped matrix span, fills a private
-  9216-f32 up output buffer, and publishes only
-  `token0_layer5_ffn_up_matvec` with no up output exact-hex labels yet.
+  9216-f32 up output buffer, and publishes
+  `token0_layer5_ffn_up_matvec`.
+- Token-0 layer-5 FFN up matvec exact-hex slice coverage is complete in
+  `src/infer/token0_layer5_ffn.s`. It keeps the 9216-f32 up output buffer
+  private and publishes the first four output words only when
+  `token0_layer5_ffn_up_matvec_status` is 1: `0x3d47d833`, `0x3dc191f5`,
+  `0x3da1c6a8`, and `0xbccb2d50`.
 - The two-pass review gates for the completed layer-4 FFN chain and the layer-5
   attention residual handoff chain completed cleanly under `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for status-only layer-5 FFN up matvec coverage: `make
-  clean all check` passed; `python3 -m py_compile work/oracle/*.py` passed;
-  `--help` mentions FFN up descriptor lookup/up matvec status; the real target
-  reports `layer5_ffn_up_tensor_found: 1`, Q8_0 `[3072 x 9216]`, offset
-  `1139896320`, and `token0_layer5_ffn_up_matvec: 1`; no
-  `token0_layer5_ffn_up*_f32_hex` labels are emitted yet; the layer-5 FFN gate
-  oracle comparison still matched all 69 oracle-covered exact-hex labels; a
-  24-byte zero-count GGUF kept the new up descriptor fields and
-  `token0_layer5_ffn_norm`, `token0_layer5_ffn_gate_matvec`, and
-  `token0_layer5_ffn_up_matvec` at `0`; `git diff --check`,
+- Latest verification for guarded layer-5 FFN up output slice coverage: `make
+  clean all check` passed; `python3 -m py_compile work/oracle/*.py` passed; the
+  real target reports `layer5_ffn_up_tensor_found: 1`, Q8_0 `[3072 x 9216]`,
+  offset `1139896320`, `token0_layer5_ffn_up_matvec: 1`, and the four new up
+  output exact-hex labels; the new layer-5 FFN up oracle comparison matched all
+  72 oracle-covered exact-hex labels; a 24-byte zero-count GGUF kept
+  `layer5_ffn_up_tensor_found`, `token0_layer5_ffn_norm`,
+  `token0_layer5_ffn_gate_matvec`, and `token0_layer5_ffn_up_matvec` at `0`
+  and emitted no layer-5 FFN up output exact-hex labels; `git diff --check`,
   static-link/no-dynamic-section/no-interpreter/file, undefined-symbol,
   exported/local symbol, runtime source/fragment extension, include dependency,
-  tracked artifact, tracked large-file, no-up-exact-hex-label, and line-count
-  scans passed.
+  tracked artifact, tracked large-file, and line-count scans passed.
 
 ## Known Blockers
 
@@ -107,33 +112,34 @@ only when `token0_layer5_ffn_up_matvec_status` is 1.
 - `src/infer/token0_layer5_ffn.s`
 - `work/oracle/token0_layer5_ffn_norm_oracle.py`
 - `work/oracle/token0_layer5_ffn_gate_oracle.py`
+- `work/oracle/token0_layer5_ffn_up_oracle.py`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Status-only layer-5 FFN up matvec verification passed:
+Guarded layer-5 FFN up output slice verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions FFN up descriptor lookup/up matvec status
 - real-target descriptor summary for `blk.5.ffn_up.weight`: Q8_0
   `[3072 x 9216]`, offset `1139896320`
 - real-target runtime output reports `token0_layer5_ffn_up_matvec: 1`
-- real-target runtime output contains no `token0_layer5_ffn_up*_f32_hex` labels
-- layer-5 FFN gate oracle comparison still matched all 69 covered exact-hex
-  labels
-- 24-byte zero-count GGUF kept the new up descriptor fields and dependent
-  layer-5 FFN statuses, including `token0_layer5_ffn_up_matvec`, at `0`
+- real-target runtime output prints `token0_layer5_ffn_up_output0_f32_hex`
+  through `token0_layer5_ffn_up_output3_f32_hex`
+- layer-5 FFN up oracle comparison matched all 72 covered exact-hex labels
+- 24-byte zero-count GGUF kept the layer-5 FFN up path fail-closed and emitted
+  no layer-5 FFN up output exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter/file check,
   undefined-symbol check, exported/local symbol check, runtime source/fragment
   extension scan, include dependency scan, tracked artifact scan, tracked
-  large-file scan, no-up-exact-hex-label scan, and line-count review passed
+  large-file scan, and line-count review passed
 
 ## Next Exact Step
 
-Publish the guarded token-0 layer-5 FFN up output exact-hex slice. Add a focused
-external oracle for the first four rows of `blk.5.ffn_up.weight`, then print
-`token0_layer5_ffn_up_output0_f32_hex` through
-`token0_layer5_ffn_up_output3_f32_hex` only when
-`token0_layer5_ffn_up_matvec_status` is 1.
+Add status-only token-0 layer-5 FFN SwiGLU coverage. Consume the private
+layer-5 FFN gate/up output buffers only when
+`token0_layer5_ffn_gate_matvec_status` and
+`token0_layer5_ffn_up_matvec_status` are both 1, fill a private 9216-f32
+SwiGLU buffer, and publish only `token0_layer5_ffn_swiglu` with no SwiGLU
+exact-hex labels yet.
