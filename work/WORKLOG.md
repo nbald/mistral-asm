@@ -3616,3 +3616,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   the 24-byte zero-count GGUF kept layer-5 descriptors/statuses at `0` with no
   guarded layer-5 exact-hex labels, and static/source/include/artifact/line
   scans passed.
+
+## 2026-05-12T03:25:48+02:00
+
+- Review gate pass 2 over the completed layer-5 attention norm/query/key/value
+  chain found no blocking runtime issues. This pass focused on linkage and
+  ownership boundaries: the public layer-5 status/descriptor symbols are
+  exported, while the Q/K/V output buffers remain private, so later context work
+  needs an explicit handoff before another object consumes them.
+- Verification evidence: clean rebuild/check passed, the post-documentation
+  harness rerun passed, oracle scripts compiled, the real-target covered-label
+  comparison matched all 53 labels through layer-5 value, the 24-byte zero-count
+  GGUF kept the reviewed layer-5 descriptors/statuses at `0` with no layer-5
+  exact-hex labels, and static/source/include/artifact/line scans passed.

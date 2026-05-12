@@ -6,8 +6,9 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Run review gate pass 2 for the completed layer-5 attention
-norm/query/key/value chain before adding context or output-projection scope.
+Add descriptor-only layer-5 attention output-projection setup for
+`blk.5.attn_output.weight`: retain and print its tensor descriptor, update help
+text, and do not read output-projection payload bytes or add context/math yet.
 
 ## Completed Work
 
@@ -131,8 +132,13 @@ norm/query/key/value chain before adding context or output-projection scope.
 - Review gate pass 1 for the completed layer-5 attention norm/query/key/value
   chain completed cleanly under
   `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`. No blocking runtime
-  findings were recorded. The second review pass is still required before
-  feature work resumes.
+  findings were recorded.
+- Review gate pass 2 for the completed layer-5 attention norm/query/key/value
+  chain completed cleanly under
+  `work/reviews/2026-05-12-layer5-attn-qkv-review-2.md`. No blocking runtime
+  findings were recorded. The next feature step can resume, but should start
+  with descriptor-only layer-5 attention output setup and keep context work out
+  of `src/infer/token0_layer5_attn.s`.
 
 ## Known Blockers
 
@@ -145,6 +151,9 @@ norm/query/key/value chain before adding context or output-projection scope.
 - `src/infer/token0_layer5_attn.s` is 989 lines after the layer-5 value slice.
   Do not add context or output-projection feature code there before splitting
   or moving the new work into focused Makefile-tracked modules/fragments.
+  Future layer-5 context work must also introduce an explicit Q/K/V output
+  handoff before another object consumes the currently private projection
+  buffers.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -189,6 +198,7 @@ norm/query/key/value chain before adding context or output-projection scope.
 - `work/oracle/token0_layer5_attn_k_oracle.py`
 - `work/oracle/token0_layer5_attn_v_oracle.py`
 - `work/reviews/2026-05-12-layer5-attn-qkv-review-1.md`
+- `work/reviews/2026-05-12-layer5-attn-qkv-review-2.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-1.md`
 - `work/reviews/2026-05-12-layer4-ffn-chain-review-2.md`
 - `work/STATE.md`
@@ -196,20 +206,17 @@ norm/query/key/value chain before adding context or output-projection scope.
 
 ## Last Verification
 
-Layer-5 attention norm/query/key/value review pass 1 verification passed:
+Layer-5 attention norm/query/key/value review pass 2 verification passed:
 
 - `make clean all check`
 - post-documentation `make all check`
 - `python3 -m py_compile work/oracle/*.py`
 - `./mistral-asm --help` mentions layer-5 attention RMSNorm, query, key, and
   value descriptor/matvec output-slice coverage
-- real-target covered-label runtime/oracle diff was empty for the 53 labels
-  covered by `work/oracle/token0_layer5_attn_v_oracle.py`, including epsilon
-  and all public exact-hex slices through layer-5 attention value
-- a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key/value
-  descriptor fields and `token0_layer5_attn_norm`,
-  `token0_layer5_attn_q_matvec`, `token0_layer5_attn_k_matvec`, and
-  `token0_layer5_attn_v_matvec` at `0`, and emitted no layer-5 exact-hex labels
+- real-target covered-label runtime/oracle comparison matched all 53 labels
+  covered by `work/oracle/token0_layer5_attn_v_oracle.py`
+- a corrected 24-byte zero-count GGUF kept the 27 reviewed layer-5 descriptor
+  and status labels at `0`, and emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
   scan, exported-symbol inspection, tracked artifact scan, tracked large-file
@@ -219,5 +226,6 @@ Layer-5 attention norm/query/key/value review pass 1 verification passed:
 
 ## Next Exact Step
 
-Run review gate pass 2 for the completed layer-5 attention
-norm/query/key/value chain before adding context or output-projection scope.
+Add descriptor-only layer-5 attention output-projection setup for
+`blk.5.attn_output.weight`: retain and print its tensor descriptor, update help
+text, and do not read output-projection payload bytes or add context/math yet.
