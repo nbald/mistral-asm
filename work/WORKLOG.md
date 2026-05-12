@@ -4015,3 +4015,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   fail-closed and emitted no guarded layer-5 FFN exact-hex labels; static,
   symbol, source/fragment, include-dependency, artifact, large-file, line-count,
   and whitespace scans passed.
+
+## 2026-05-12T07:50:36+02:00
+
+- Completed layer-5 FFN chain review gate pass 2 with no blocking findings and
+  no runtime source edits. This closes the required two-pass review gate before
+  moving from layer-5 FFN/post-residual coverage to the next feature scope.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target layer-5 post-FFN residual oracle comparison matched 85 exact
+  values; an explicitly packed 24-byte zero-count GGUF kept the reviewed
+  descriptor flags and dependent statuses fail-closed and emitted no guarded
+  layer-5 FFN exact-hex labels; static linkage, symbol visibility, source and
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.
