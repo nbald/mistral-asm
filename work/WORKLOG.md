@@ -3955,3 +3955,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   exact-hex labels were emitted; the 24-byte zero-count GGUF kept the new down
   status at `0`; static linkage, symbol visibility, include dependency,
   artifact, large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T07:23:40+02:00
+
+- Published the guarded token-0 layer-5 FFN down output slice while keeping the
+  3072-f32 down output buffer private. The first four words are `0x3e0063f9`,
+  `0xbd3afd80`, `0x3d82966f`, and `0x3c0f583e`.
+- Added a focused layer-5 FFN down oracle that recomputes the full layer-5
+  gate/up/SwiGLU activation before independently dotting the first rows of
+  `blk.5.ffn_down.weight`.
+- Verification evidence: clean rebuild/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched all 81 covered exact-hex labels;
+  the 24-byte zero-count GGUF kept the layer-5 FFN down path fail-closed and
+  emitted no down output exact-hex labels; static linkage, symbol visibility,
+  include dependency, artifact, large-file, line-count, and whitespace scans
+  passed.
