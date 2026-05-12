@@ -3640,3 +3640,18 @@ redundant entries. Do not treat it as the primary continuation source; use
   comparison still matched all 53 covered labels; the 24-byte zero-count GGUF
   kept all layer-5 descriptor and status labels at `0` and emitted no layer-5
   exact-hex labels.
+
+## 2026-05-12T03:44:59+02:00
+
+- Added the explicit layer-5 Q/K/V projection handoff boundary. The Q/K/V
+  projection buffers are exported for future focused context work, but the
+  durable contract is to consume `token0_layer5_attn_qkv_handoff_status`; the
+  handoff validates prerequisite statuses and descriptor shapes only, and
+  intentionally does not read projection buffers, compute context, or read
+  `blk.5.attn_output.weight` payload bytes.
+- Verification evidence: clean build/check and oracle compile passed; the real
+  target reported handoff status `1` while the existing 53 covered exact-hex
+  labels still matched the layer-5 value oracle; the zero-count GGUF kept the
+  handoff at `0` with no layer-5 exact-hex output; static purity/linkage/symbol
+  scans passed. `src/infer/token0_layer5_attn.s` is now 996 lines, so further
+  layer-5 attention feature work should stay in focused modules.

@@ -6,10 +6,12 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add an explicit layer-5 Q/K/V projection handoff for future focused context
-work: keep context math and `blk.5.attn_output.weight` payload reads out of the
-step, and do not grow `src/infer/token0_layer5_attn.s` with substantial new
-feature code.
+Add a focused token-0 layer-5 single-token attention context status smoke in a
+new Makefile-tracked module: consume the explicit layer-5 Q/K/V projection
+handoff and exported layer-5 value projection buffer, use retained Q/K/V and
+output-projection descriptors only as shape guards, keep
+`blk.5.attn_output.weight` payload reads out of the step, and do not touch
+`src/infer/token0_layer5_attn.s`.
 
 ## Completed Work
 
@@ -146,6 +148,15 @@ feature code.
   retained summary fields, summary printing, and help text; it does not read
   output-projection Q8_0 payload bytes or publish context/output-projection
   status labels.
+- Explicit layer-5 Q/K/V projection handoff coverage is complete in the focused
+  `src/infer/token0_layer5_attn_qkv_handoff.s` module. The layer-5 query, key,
+  and value projection buffers are now exported from
+  `src/infer/token0_layer5_attn.s`, but consumers must gate reads through
+  `token0_layer5_attn_qkv_handoff_status`. The handoff status validates the
+  three projection statuses and retained Q/K/V descriptor shapes, prints
+  `token0_layer5_attn_qkv_handoff`, and deliberately does not read projection
+  buffer bytes, derive context values, or read `blk.5.attn_output.weight`
+  payload bytes.
 
 ## Known Blockers
 
@@ -155,12 +166,12 @@ feature code.
   focused module for down-matvec or residual work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
-- `src/infer/token0_layer5_attn.s` is 989 lines after the layer-5 value slice
-  and was not touched by descriptor-only output setup. Do not add context or
-  output-projection feature code there before splitting or moving the new work
-  into focused Makefile-tracked modules/fragments. Future layer-5 context work
-  must first introduce an explicit Q/K/V output handoff before another object
-  consumes the currently private projection buffers.
+- `src/infer/token0_layer5_attn.s` is 996 lines after the minimal Q/K/V buffer
+  export and handoff-comment updates. Do not add further layer-5 attention
+  feature code there before splitting or moving work into focused
+  Makefile-tracked modules/fragments. The explicit Q/K/V handoff now exists;
+  future layer-5 context work should consume its status instead of reading the
+  exported projection buffers directly.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -193,6 +204,7 @@ feature code.
 - `src/infer/token0_layer4_ffn.s`
 - `src/infer/token0_layer4_ffn_down.s`
 - `src/infer/token0_layer5_attn.s`
+- `src/infer/token0_layer5_attn_qkv_handoff.s`
 - `work/oracle/token0_layer4_post_attn_residual_oracle.py`
 - `work/oracle/token0_layer4_ffn_norm_oracle.py`
 - `work/oracle/token0_layer4_ffn_gate_oracle.py`
@@ -213,29 +225,35 @@ feature code.
 
 ## Last Verification
 
-Layer-5 attention output-projection descriptor verification passed:
+Layer-5 Q/K/V projection handoff verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions layer-5 output projection descriptor lookup
-- real-target descriptor output reported `layer5_attn_output_tensor_found: 1`,
-  dimensions `4096 x 3072`, ggml type `8`, and relative offset `1049640960`
+- `./mistral-asm --help` mentions the layer-5 Q/K/V projection handoff status
+- real-target runtime output reported `token0_layer5_attn_qkv_handoff: 1`
+  after layer-5 query/key/value matvec statuses were `1`; retained layer-5
+  Q/K/V descriptors remained Q8_0 `[3072 x 4096]`, `[3072 x 1024]`, and
+  `[3072 x 1024]`, and the output-projection descriptor remained Q8_0
+  `[4096 x 3072]` at relative offset `1049640960`
 - real-target covered-label runtime/oracle comparison still matched all 53
   labels covered by `work/oracle/token0_layer5_attn_v_oracle.py`, including the
   non-oracle-prefixed epsilon line
-- a corrected 24-byte zero-count GGUF kept all 33 layer-5 descriptor and status
-  labels at `0`, including the new output-projection descriptor fields, and
-  emitted no layer-5 exact-hex labels
+- a corrected 24-byte zero-count GGUF kept the checked layer-5 descriptor and
+  status labels at `0`, including the new handoff status, and emitted no
+  layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
   scan, exported-symbol inspection, tracked artifact scan, tracked large-file
-  scan, and line-count review passed; `src/infer/token0_layer5_attn.s` remains
-  989 lines and must be split or avoided before further layer-5 attention
-  feature expansion
+  scan, and line-count review passed; exported-symbol inspection confirmed the
+  handoff runner, handoff status, and exported layer-5 Q/K/V buffers;
+  `src/infer/token0_layer5_attn.s` is 996 lines and must be avoided before
+  further layer-5 attention feature expansion
 
 ## Next Exact Step
 
-Add an explicit layer-5 Q/K/V projection handoff for future focused context
-work: keep context math and `blk.5.attn_output.weight` payload reads out of the
-step, and do not grow `src/infer/token0_layer5_attn.s` with substantial new
-feature code.
+Add a focused token-0 layer-5 single-token attention context status smoke in a
+new Makefile-tracked module: consume the explicit layer-5 Q/K/V projection
+handoff and exported layer-5 value projection buffer, use retained Q/K/V and
+output-projection descriptors only as shape guards, keep
+`blk.5.attn_output.weight` payload reads out of the step, and do not touch
+`src/infer/token0_layer5_attn.s`.

@@ -53,15 +53,13 @@
 # `blk.4.ffn_up.weight`, and `blk.4.ffn_down.weight`, and layer-5 attention
 # RMSNorm/query/key/value setup for `blk.5.attn_norm.weight`,
 # `blk.5.attn_q.weight`, `blk.5.attn_k.weight`, and
-# `blk.5.attn_v.weight`, with guarded layer-5 query/key matvec status and
-# output slices, value descriptor publication, and
-# query/key/value matvec output slices for the layer-4 query, key, and value
-# descriptors, into separate process-owned scratch slots before the token-0
-# math path. The first layer-5 RMSNorm smoke consumes the deliberately exported
-# layer-4 post-FFN residual handoff after proving the f32 weight span and emits
-# a guarded exact-hex slice; the layer-5 query smoke consumes that private
-# RMSNorm activation only after proving the Q8_0 matrix span; the layer-5 key
-# smoke consumes the same activation only after proving its Q8_0 matrix span.
+# `blk.5.attn_v.weight`, with guarded layer-5 query/key/value matvec statuses
+# and output slices plus an explicit Q/K/V projection handoff before any
+# focused context code consumes those exported buffers. The first layer-5
+# RMSNorm smoke consumes the deliberately exported layer-4 post-FFN residual
+# handoff after proving the f32 weight span and emits a guarded exact-hex slice;
+# the layer-5 query/key/value smokes consume that private RMSNorm activation
+# only after proving their Q8_0 matrix spans.
 # The layer-1 FFN,
 # layer-2
 # attention/FFN, and layer-3 attention/FFN descriptors and retained activation
@@ -83,15 +81,17 @@
 # attention/FFN, layer-3 attention/FFN, layer-4 attention
 # RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
 # RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention
-# RMSNorm/query/key/value descriptors. The layer-5 RMSNorm descriptor is
+# RMSNorm/query/key/value/output descriptors. The layer-5 RMSNorm descriptor is
 # consumed by a guarded status smoke after the layer-4 post-FFN residual handoff
 # exists and the f32 payload span is proven inside the live mapping; the
 # layer-5 query descriptor is consumed only after that RMSNorm activation exists
 # and the full Q8_0 matrix span is proven inside the live mapping. The layer-5
 # key descriptor is consumed by the analogous matvec smoke after proving the
 # retained Q8_0 [3072 x 1024] payload span and publishes the guarded
-# first-four-word exact-hex slice. The layer-5 value descriptor is retained and
-# printed only; no value payload bytes are read in this descriptor setup step.
+# first-four-word exact-hex slice. The layer-5 value descriptor is consumed by
+# the analogous value matvec smoke; the layer-5 output descriptor is retained
+# and printed only, with no output-projection payload bytes read in this setup
+# and handoff step.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,

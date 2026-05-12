@@ -114,6 +114,7 @@ token0_layer5_attn_norm_activation:
 token0_layer5_attn_q_matvec_status:
 	.skip 8
 
+.global token0_layer5_attn_q_output
 .balign 4
 token0_layer5_attn_q_output:
 	.skip TOKEN0_LAYER5_ATTN_Q_OUTPUT_BYTES
@@ -123,6 +124,7 @@ token0_layer5_attn_q_output:
 token0_layer5_attn_k_matvec_status:
 	.skip 8
 
+.global token0_layer5_attn_k_output
 .balign 4
 token0_layer5_attn_k_output:
 	.skip TOKEN0_LAYER5_ATTN_K_OUTPUT_BYTES
@@ -132,6 +134,7 @@ token0_layer5_attn_k_output:
 token0_layer5_attn_v_matvec_status:
 	.skip 8
 
+.global token0_layer5_attn_v_output
 .balign 4
 token0_layer5_attn_v_output:
 	.skip TOKEN0_LAYER5_ATTN_V_OUTPUT_BYTES
@@ -194,17 +197,18 @@ run_token0_layer5_attn_norm_status:
 # blk.5.attn_q.weight descriptor, token0_layer5_attn_norm_status, and the
 # private token0_layer5_attn_norm_activation buffer owned by this module.
 # Outputs: writes token0_layer5_attn_q_matvec_status and, on success, fills the
-# private token0_layer5_attn_q_output buffer. Always prints exactly one status
-# label/value/newline sequence to stdout and prints the first four exact-hex
-# query output words only when the status is 1. The return register is
+# exported token0_layer5_attn_q_output handoff buffer. Always prints exactly
+# one status label/value/newline sequence to stdout and prints the first four
+# exact-hex query output words only when the status is 1. The return register is
 # unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the
 # callee-saved registers it uses internally.
 # Ownership/lifetime: borrows the model mmap and the layer-5 attention RMSNorm
-# activation only during this call; owns the query status and private output
+# activation only during this call; owns the query status and exported output
 # storage in this module. The mmap remains owned by _start and must be released
-# separately.
+# separately. Future consumers must gate reads through the explicit Q/K/V
+# handoff status, not through these storage symbols alone.
 # Error behavior: status is 1 only after a bounded Q8_0 matvec completes;
 # otherwise status is 0 and no layer-5 query matrix payload bytes are read.
 # Output write failures are diagnostic-only in the current milestone.
@@ -240,16 +244,18 @@ run_token0_layer5_attn_q_matvec_status:
 # blk.5.attn_k.weight descriptor, token0_layer5_attn_norm_status, and the
 # private token0_layer5_attn_norm_activation buffer owned by this module.
 # Outputs: writes token0_layer5_attn_k_matvec_status and, on success, fills the
-# private token0_layer5_attn_k_output buffer. Always prints exactly one status
-# label/value/newline sequence to stdout and prints the first four exact-hex key
-# output words only when the status is 1. The return register is unspecified.
+# exported token0_layer5_attn_k_output handoff buffer. Always prints exactly
+# one status label/value/newline sequence to stdout and prints the first four
+# exact-hex key output words only when the status is 1. The return register is
+# unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the
 # callee-saved registers it uses internally.
 # Ownership/lifetime: borrows the model mmap and the layer-5 attention RMSNorm
-# activation only during this call; owns the key status and private output
+# activation only during this call; owns the key status and exported output
 # storage in this module. The mmap remains owned by _start and must be released
-# separately.
+# separately. Future consumers must gate reads through the explicit Q/K/V
+# handoff status, not through these storage symbols alone.
 # Error behavior: status is 1 only after a bounded Q8_0 matvec completes;
 # otherwise status is 0 and no layer-5 key matrix payload bytes are read.
 # Output write failures are diagnostic-only in the current milestone.
@@ -285,17 +291,18 @@ run_token0_layer5_attn_k_matvec_status:
 # blk.5.attn_v.weight descriptor, token0_layer5_attn_norm_status, and the
 # private token0_layer5_attn_norm_activation buffer owned by this module.
 # Outputs: writes token0_layer5_attn_v_matvec_status and, on success, fills the
-# private token0_layer5_attn_v_output buffer. Always prints exactly one status
-# label/value/newline sequence to stdout and prints the first four exact-hex
-# value output words only when the status is 1. The return register is
+# exported token0_layer5_attn_v_output handoff buffer. Always prints exactly
+# one status label/value/newline sequence to stdout and prints the first four
+# exact-hex value output words only when the status is 1. The return register is
 # unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1, xmm2 and flags through the
 # smoke helper and summary writers. The matvec helper preserves the
 # callee-saved registers it uses internally.
 # Ownership/lifetime: borrows the model mmap and the layer-5 attention RMSNorm
-# activation only during this call; owns the value status and private output
+# activation only during this call; owns the value status and exported output
 # storage in this module. The mmap remains owned by _start and must be released
-# separately.
+# separately. Future consumers must gate reads through the explicit Q/K/V
+# handoff status, not through these storage symbols alone.
 # Error behavior: status is 1 only after a bounded Q8_0 matvec completes;
 # otherwise status is 0 and no layer-5 value matrix payload bytes are read.
 # Output write failures are diagnostic-only in the current milestone.
@@ -411,7 +418,7 @@ print_token0_layer5_attn_norm_slice:
 # token0_layer5_attn_q_matvec_status is 1; writes nothing otherwise.
 # Clobbers: caller-saved registers and flags through sys_write and
 # write_u32_hex.
-# Ownership/lifetime: reads private module-owned layer-5 query projection
+# Ownership/lifetime: reads exported module-owned layer-5 query projection
 # storage only during this call and does not retain pointers.
 # Error behavior: this is summary output for oracle comparison; write failures
 # are intentionally not surfaced separately.
@@ -490,7 +497,7 @@ print_token0_layer5_attn_q_output_slice:
 # token0_layer5_attn_k_matvec_status is 1; writes nothing otherwise.
 # Clobbers: caller-saved registers and flags through sys_write and
 # write_u32_hex.
-# Ownership/lifetime: reads private module-owned layer-5 key projection storage
+# Ownership/lifetime: reads exported module-owned layer-5 key projection storage
 # only during this call and does not retain pointers.
 # Error behavior: this is summary output for oracle comparison; write failures
 # are intentionally not surfaced separately.
@@ -569,7 +576,7 @@ print_token0_layer5_attn_k_output_slice:
 # token0_layer5_attn_v_matvec_status is 1; writes nothing otherwise.
 # Clobbers: caller-saved registers and flags through sys_write and
 # write_u32_hex.
-# Ownership/lifetime: reads private module-owned layer-5 value projection
+# Ownership/lifetime: reads exported module-owned layer-5 value projection
 # storage only during this call and does not retain pointers.
 # Error behavior: this is summary output for oracle comparison; write failures
 # are intentionally not surfaced separately.
@@ -728,7 +735,7 @@ token0_layer5_attn_norm_smoke:
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
 # q8_0_matvec_f32, reads the private layer-5 attention RMSNorm activation as
 # the shared f32 input vector, and writes exactly
-# TOKEN0_LAYER5_ATTN_Q_OUTPUT_BYTES into private module storage on success.
+# TOKEN0_LAYER5_ATTN_Q_OUTPUT_BYTES into exported module storage on success.
 # The mmap remains owned by _start and must be released separately.
 # Error behavior: this is a status-only smoke gate for the layer-5 query
 # projection, not final graph setup. Non-target synthetic GGUF fixtures and
@@ -820,7 +827,7 @@ token0_layer5_attn_q_matvec_smoke:
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
 # q8_0_matvec_f32, reads the private layer-5 attention RMSNorm activation as
 # the shared f32 input vector, and writes exactly
-# TOKEN0_LAYER5_ATTN_K_OUTPUT_BYTES into private module storage on success.
+# TOKEN0_LAYER5_ATTN_K_OUTPUT_BYTES into exported module storage on success.
 # The mmap remains owned by _start and must be released separately.
 # Error behavior: this is a status-only smoke gate for the layer-5 key
 # projection, not final graph setup. Non-target synthetic GGUF fixtures and
@@ -912,7 +919,7 @@ token0_layer5_attn_k_matvec_smoke:
 # Ownership/lifetime: reads mapped Q8_0 matrix bytes only during
 # q8_0_matvec_f32, reads the private layer-5 attention RMSNorm activation as
 # the shared f32 input vector, and writes exactly
-# TOKEN0_LAYER5_ATTN_V_OUTPUT_BYTES into private module storage on success.
+# TOKEN0_LAYER5_ATTN_V_OUTPUT_BYTES into exported module storage on success.
 # The mmap remains owned by _start and must be released separately.
 # Error behavior: this is a status-only smoke gate for the layer-5 value
 # projection, not final graph setup. Non-target synthetic GGUF fixtures and
