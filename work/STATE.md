@@ -6,11 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Start layer-6 attention coverage with a descriptor-only
-`blk.6.attn_norm.weight` lookup/setup step. Add focused layer-6 state,
-rodata/summary labels, lookup summary, bootstrap wiring, help/contract text, and
-Makefile include dependencies only; do not read tensor payload bytes or publish a
-layer-6 attention norm status in that step.
+Add status-only token-0 layer-6 attention RMSNorm coverage in a new focused
+module. Consume the exported layer-5 post-FFN residual handoff and retained
+`blk.6.attn_norm.weight` descriptor, prove the f32 payload span, and publish
+only `token0_layer6_attn_norm`; do not emit a layer-6 exact-hex slice yet.
 
 ## Completed Work
 
@@ -28,22 +27,27 @@ layer-6 attention norm status in that step.
   SwiGLU, down projection, and post-FFN residual. Public handoffs are the FFN
   norm activation, SwiGLU output, and post-FFN residual; gate/up/down projection
   buffers remain private.
+- Layer-6 attention coverage has descriptor-only setup for
+  `blk.6.attn_norm.weight`. The real target reports f32 `[3072]` at relative
+  offset `1173319680`; no layer-6 payload bytes are read and no layer-6 runtime
+  status or exact-hex labels exist yet.
 - The two-pass review gates for the completed layer-4 FFN chain, layer-5
   attention residual handoff chain, and layer-5 FFN chain completed cleanly under
   `work/reviews/`.
 
 ## Verification Status
 
-- Latest verification for layer-5 FFN chain review gate pass 2:
+- Latest verification for descriptor-only layer-6 attention RMSNorm setup:
   `make clean all check` passed; `python3 -m py_compile work/oracle/*.py`
-  passed; the real target reported the reviewed layer-5 FFN descriptors and
-  statuses as expected; the focused layer-5 post-FFN residual oracle comparison
-  matched 85 exact values; a packed 24-byte zero-count GGUF kept reviewed
-  descriptor flags and dependent statuses fail-closed with no guarded layer-5
-  FFN exact-hex output; static-link/no-dynamic-section/no-interpreter,
-  undefined-symbol, runtime source extension, include dependency, tracked
-  artifact, tracked large-file, exported/local symbol, line-count, and
-  whitespace scans passed.
+  passed; help text mentions the layer-6 descriptor lookup; the real target
+  reports `layer6_attn_norm_tensor_found: 1`, dimensions `3072`, ggml type `0`,
+  and offset `1173319680`; the focused layer-5 post-FFN residual oracle subset
+  still matched 85 exact values; a packed 24-byte zero-count GGUF kept the
+  layer-6 descriptor fields and layer-5 dependent statuses at `0`; no
+  `token0_layer6` status or exact-hex labels exist; static-link,
+  no-dynamic-section/no-interpreter, undefined-symbol, runtime source extension,
+  include-dependency, tracked artifact, tracked large-file, exported/local symbol,
+  line-count, and whitespace scans passed.
 
 ## Known Blockers
 
@@ -58,8 +62,8 @@ layer-6 attention norm status in that step.
   `src/infer/token0_layer2_ffn.s` at 943 lines,
   `src/infer/token0_layer3_ffn.s` at 942 lines,
   `src/infer/token0_layer1_ffn.s` at 929 lines,
-  `src/entry/start/lookup_summary/layer5.inc` at 898 lines, and
-  `src/entry/start/lookup_summary.inc` at 903 lines.
+  `src/entry/start/lookup_summary.inc` at 904 lines, and
+  `src/entry/start/lookup_summary/layer5.inc` at 898 lines.
 - `src/gguf/load_header/tensor_infos.inc` remains over 1000 lines, but it is a
   coherent tensor-directory walker. Reduce it only when changing that logic.
 
@@ -67,33 +71,47 @@ layer-6 attention norm status in that step.
 
 - `Makefile`
 - `src/entry/_start.s`
+- `src/entry/start/constants.inc`
+- `src/entry/start/rodata.inc`
+- `src/entry/start/state.inc`
 - `src/entry/start/main/bootstrap.inc`
 - `src/entry/start/main/bootstrap/layer5.inc`
+- `src/entry/start/main/bootstrap/layer6.inc`
+- `src/entry/start/main/summary_header.inc`
 - `src/entry/start/main/smoke_orchestration.inc`
+- `src/entry/start/lookup_summary.inc`
 - `src/entry/start/lookup_summary/layer5.inc`
+- `src/entry/start/lookup_summary/layer6.inc`
+- `src/entry/start/rodata/cli_requests.inc`
 - `src/entry/start/rodata/layer5_cli_requests.inc`
 - `src/entry/start/rodata/layer5_summary_labels.inc`
+- `src/entry/start/rodata/layer6_cli_requests.inc`
+- `src/entry/start/rodata/layer6_summary_labels.inc`
 - `src/entry/start/state/layer5_globals.inc`
 - `src/entry/start/state/layer5_bss.inc`
+- `src/entry/start/state/layer6_globals.inc`
+- `src/entry/start/state/layer6_bss.inc`
 - `src/infer/token0_layer5_ffn.s`
 - `src/infer/token0_layer5_ffn_down.s`
 - `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
-- `work/reviews/2026-05-12-layer5-ffn-chain-review-1.md`
-- `work/reviews/2026-05-12-layer5-ffn-chain-review-2.md`
 - `work/STATE.md`
 - `work/WORKLOG.md`
 
 ## Last Verification
 
-Layer-5 FFN chain review gate pass 2 verification passed:
+Descriptor-only layer-6 attention RMSNorm setup verification passed:
 
 - `make clean all check`
 - `python3 -m py_compile work/oracle/*.py`
-- real-target runtime/oracle comparison matched 85 exact values against
+- `./mistral-asm --help`
+- real target reported `blk.6.attn_norm.weight` as f32 `[3072]` at relative
+  offset `1173319680`
+- real-target runtime/oracle subset still matched 85 exact values against
   `work/oracle/token0_layer5_post_ffn_residual_oracle.py`
-- packed 24-byte zero-count GGUF kept reviewed layer-5 FFN descriptor found
-  flags and dependent statuses at `0` and emitted no guarded layer-5 FFN or
-  post-FFN residual exact-hex labels
+- packed 24-byte zero-count GGUF kept layer-6 descriptor fields and layer-5
+  dependent statuses at `0`
+- static scan found no `token0_layer6`, layer-6 status, or layer-6 exact-hex
+  labels
 - `git diff --check`, static-link/no-dynamic-section/no-interpreter,
   undefined-symbol, runtime source extension, include dependency, tracked
   artifact, tracked large-file, exported/local symbol, and line-count scans
@@ -101,6 +119,7 @@ Layer-5 FFN chain review gate pass 2 verification passed:
 
 ## Next Exact Step
 
-Start layer-6 attention coverage with descriptor-only `blk.6.attn_norm.weight`
-lookup/setup, keeping the step limited to retained descriptor metadata and
-summary output with no tensor payload read or layer-6 attention norm status.
+Add status-only token-0 layer-6 attention RMSNorm coverage in a new focused
+module, publishing `token0_layer6_attn_norm` only after proving the retained
+`blk.6.attn_norm.weight` f32 payload span and the layer-5 post-FFN residual
+handoff status.

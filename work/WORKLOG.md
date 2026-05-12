@@ -4028,3 +4028,16 @@ redundant entries. Do not treat it as the primary continuation source; use
   layer-5 FFN exact-hex labels; static linkage, symbol visibility, source and
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T08:01:34+02:00
+
+- Added descriptor-only layer-6 attention RMSNorm setup for
+  `blk.6.attn_norm.weight`. The real target reports it as f32 `[3072]` at
+  relative offset `1173319680`. This intentionally stops at lookup, retained
+  summary fields, summary printing, and help/contract text; it does not read
+  layer-6 payload bytes or publish any `token0_layer6` runtime labels.
+- Verification evidence: clean build/check, oracle py-compile, help, real-target
+  descriptor summary, layer-5 post-FFN residual 85-label oracle subset,
+  zero-count fail-closed behavior, no-layer6-status/static source scan, static
+  linkage, include dependency, symbol visibility, tracked-artifact,
+  tracked-large-file, line-count, and whitespace scans passed.

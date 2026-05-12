@@ -83,6 +83,7 @@
 .include "src/entry/start/state/layer3_globals.inc"
 .include "src/entry/start/state/layer4_globals.inc"
 .include "src/entry/start/state/layer5_globals.inc"
+.include "src/entry/start/state/layer6_globals.inc"
 .global token0_layer1_post_attn_residual_status
 .global token0_layer1_post_attn_residual
 .global token0_layer1_ffn_norm_status
@@ -698,6 +699,7 @@ layer2_ffn_down_tensor_offset:
 .include "src/entry/start/state/layer3_bss.inc"
 .include "src/entry/start/state/layer4_bss.inc"
 .include "src/entry/start/state/layer5_bss.inc"
+.include "src/entry/start/state/layer6_bss.inc"
 
 .balign 8
 token0_embedding_dequant_status:

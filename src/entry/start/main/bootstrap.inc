@@ -59,8 +59,9 @@
 # output-projection matvec status, post-attention residual handoff, and
 # FFN RMSNorm setup for `blk.5.ffn_norm.weight`, guarded FFN gate/up matvec
 # coverage through `blk.5.ffn_gate.weight` and `blk.5.ffn_up.weight`,
-# guarded FFN SwiGLU coverage, and descriptor-only FFN down setup for
-# `blk.5.ffn_down.weight`.
+# guarded FFN SwiGLU coverage, FFN down matvec output slice, post-FFN residual
+# handoff, and descriptor-only layer-6 attention RMSNorm setup for
+# `blk.6.attn_norm.weight`.
 # The first layer-5 RMSNorm smoke consumes the deliberately exported layer-4
 # post-FFN residual handoff after proving the f32 weight span and emits a
 # guarded exact-hex slice; the layer-5 query/key/value smokes consume that
@@ -93,7 +94,7 @@
 # RMSNorm/query/key/value/output setup descriptors, and layer-4 FFN
 # RMSNorm/gate/up/down setup descriptors, plus the layer-5 attention
 # RMSNorm/query/key/value/output descriptors and layer-5 FFN RMSNorm/gate/up/down
-# descriptors.
+# descriptors, plus the layer-6 attention RMSNorm descriptor.
 # The layer-5 attention RMSNorm descriptor is
 # consumed by a guarded status smoke after the layer-4 post-FFN residual handoff
 # exists and the f32 payload span is proven inside the live mapping; the
@@ -111,8 +112,12 @@
 # mapping. The layer-5 FFN gate descriptor is consumed only after that FFN
 # RMSNorm activation exists and its full Q8_0 payload span is proven; the
 # layer-5 FFN up descriptor is consumed by the analogous matvec smoke after
-# proving its full Q8_0 payload span. The layer-5 FFN down descriptor is only
-# retained and printed in this step; no down Q8_0 payload bytes are read yet.
+# proving its full Q8_0 payload span. The layer-5 FFN down descriptor is
+# consumed only after the private SwiGLU activation exists and the full Q8_0
+# payload span is proven, then the post-FFN residual smoke adds that down output
+# to the layer-5 post-attention residual handoff. The layer-6 attention RMSNorm
+# descriptor is only retained and printed in this step; no layer-6 f32 payload
+# bytes are read yet.
 # The layer-4 attention RMSNorm descriptor is consumed by a guarded status
 # smoke after the layer-3 post-FFN residual exists;
 # the query,
@@ -643,6 +648,7 @@ _start:
 .include "src/entry/start/main/bootstrap/layer3.inc"
 .include "src/entry/start/main/bootstrap/layer4.inc"
 .include "src/entry/start/main/bootstrap/layer5.inc"
+.include "src/entry/start/main/bootstrap/layer6.inc"
 
 .Llookup_tensor_alignment_error:
 	lea rdi, [rip + gguf_mapping]
