@@ -6,10 +6,10 @@ Milestone 9: one-token forward from token IDs.
 
 ## Current Exact Task
 
-Add status-only token-0 layer-5 attention value matvec coverage for
-`blk.5.attn_v.weight`, guarded by `token0_layer5_attn_norm`, the retained
-Q8_0 `[3072 x 1024]` descriptor shape, and a live-mapping payload span proof;
-publish status only, without exact-hex value output labels.
+Publish the first guarded token-0 layer-5 attention value exact-hex slice from
+the private value projection buffer, add a focused external oracle for the
+first four `blk.5.attn_v.weight` rows, and keep the 24-byte zero-count GGUF
+silent.
 
 ## Completed Work
 
@@ -119,6 +119,13 @@ publish status only, without exact-hex value output labels.
   `[3072 x 1024]` at relative offset `1076379648`. This step added only
   lookup, retained summary fields, summary printing, and help/contract text; it
   does not read value Q8_0 payload bytes or publish a value matvec status.
+- Status-only token-0 layer-5 attention value matvec coverage is complete in
+  `src/infer/token0_layer5_attn.s`. The smoke requires
+  `token0_layer5_attn_norm` status, the retained `blk.5.attn_v.weight`
+  descriptor as Q8_0 `[3072 x 1024]`, and a proven full matrix payload span
+  inside the live mapping before reading value bytes. It writes a private
+  1024-f32 value output buffer and publishes `token0_layer5_attn_v_matvec`,
+  without adding value exact-hex output labels.
 
 ## Known Blockers
 
@@ -128,6 +135,10 @@ publish status only, without exact-hex value output labels.
   focused module for down-matvec or residual work.
 - `src/infer/token0_layer4_attn.s` is 945 lines and should only receive minimal
   wiring.
+- `src/infer/token0_layer5_attn.s` is 899 lines after the layer-5 value
+  status step. The next value-slice step can fit if kept narrow, but context or
+  output-projection work after that should split or move into focused modules
+  before adding substantial code.
 - `src/infer/token0_layer3_ffn.s` is 942 lines,
   `src/infer/token0_layer2_ffn.s` is 943 lines, and
   `src/infer/token0_layer2_attn.s` is 997 lines. Do not add substantial new
@@ -177,23 +188,23 @@ publish status only, without exact-hex value output labels.
 
 ## Last Verification
 
-Layer-5 attention value descriptor verification passed:
+Layer-5 attention value matvec status verification passed:
 
 - `make clean all check`
 - `make all check`
 - `python3 -m py_compile work/oracle/*.py`
-- `./mistral-asm --help` mentions the layer-5 attention value descriptor lookup
+- `./mistral-asm --help` mentions layer-5 attention value descriptor
+  lookup/matvec status
 - real-target output reported `layer5_attn_v_tensor_found: 1`, dimensions
-  `3072` and `1024`, ggml type `8`, and relative offset `1076379648`
-- real-target output still reported `token0_layer5_attn_norm: 1`,
-  `token0_layer5_attn_q_matvec: 1`, and `token0_layer5_attn_k_matvec: 1`, with
-  no `token0_layer5_attn_v*` status or output labels emitted
-- the filtered real-target runtime/oracle diff was empty for the 49 `_f32_hex`
+  `3072` and `1024`, ggml type `8`, relative offset `1076379648`, and
+  `token0_layer5_attn_v_matvec: 1`
+- real-target output emitted no `token0_layer5_attn_v_*_f32_hex` labels
+- the filtered real-target runtime/oracle diff was empty for the `_f32_hex`
   labels covered by `work/oracle/token0_layer5_attn_k_oracle.py`
 - a corrected 24-byte zero-count GGUF kept all layer-5 norm/query/key/value
-  descriptor fields, `token0_layer5_attn_norm`,
-  `token0_layer5_attn_q_matvec`, and `token0_layer5_attn_k_matvec` at `0`, and
-  emitted no layer-5 exact-hex labels
+  descriptor fields and `token0_layer5_attn_norm`,
+  `token0_layer5_attn_q_matvec`, `token0_layer5_attn_k_matvec`, and
+  `token0_layer5_attn_v_matvec` at `0`, and emitted no layer-5 exact-hex labels
 - `git diff --check`, static-link/no-dynamic-section/file check,
   undefined-symbol check, runtime source extension scan, include dependency
   scan, tracked artifact scan, tracked large-file scan, and line-count review
@@ -201,7 +212,7 @@ Layer-5 attention value descriptor verification passed:
 
 ## Next Exact Step
 
-Add status-only token-0 layer-5 attention value matvec coverage for
-`blk.5.attn_v.weight`, guarded by `token0_layer5_attn_norm`, the retained
-Q8_0 `[3072 x 1024]` descriptor shape, and a live-mapping payload span proof;
-publish status only, without exact-hex value output labels.
+Publish the first guarded token-0 layer-5 attention value exact-hex slice from
+the private value projection buffer, add a focused external oracle for the
+first four `blk.5.attn_v.weight` rows, and keep the 24-byte zero-count GGUF
+silent.

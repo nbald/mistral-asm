@@ -3576,3 +3576,15 @@ redundant entries. Do not treat it as the primary continuation source; use
   emitted no layer-5 value status or value output labels; and a corrected
   24-byte zero-count GGUF kept the new value descriptor fields and existing
   layer-5 statuses at `0`.
+
+## 2026-05-12T03:07:48+02:00
+
+- Added status-only layer-5 attention value matvec coverage. The smoke consumes
+  the private layer-5 RMSNorm activation only after its status is `1`, proves
+  the retained `blk.5.attn_v.weight` Q8_0 `[3072 x 1024]` payload span, writes
+  a private 1024-f32 value output buffer, and intentionally publishes no value
+  exact-hex labels yet.
+- Verification evidence: the real target reported
+  `token0_layer5_attn_v_matvec: 1`, the existing public exact-hex labels still
+  matched the layer-5 key oracle subset, and a corrected 24-byte zero-count
+  GGUF kept the new value status at `0` with no layer-5 exact-hex labels.
