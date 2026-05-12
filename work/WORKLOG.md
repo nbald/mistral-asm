@@ -3838,3 +3838,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   GGUF kept the new gate matvec status at `0`; static, symbol, source/fragment,
   include-dependency, artifact, large-file, line-count, and whitespace scans
   passed.
+
+## 2026-05-12T06:23:13+02:00
+
+- Published the guarded token-0 layer-5 FFN gate output slice while keeping the
+  9216-f32 gate output buffer private. The first four words are `0x3e9c4027`,
+  `0xbc08dfb9`, `0x3f25e360`, and `0x3ef1f366`.
+- Added a focused layer-5 FFN gate oracle that reuses the full layer-5 FFN
+  RMSNorm activation and independently dots the first four rows of
+  `blk.5.ffn_gate.weight`.
+- Verification evidence: clean rebuild/check and oracle compile passed; the
+  final clean-built binary matched all 69 oracle-covered exact-hex labels; the
+  24-byte zero-count GGUF kept the layer-5 FFN gate path fail-closed and emitted
+  no gate output exact-hex labels; static linkage, symbol visibility, include
+  dependency, artifact, large-file, line-count, and whitespace scans passed.
