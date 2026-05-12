@@ -193,3 +193,4 @@
 	call print_layer5_attn_output_lookup_summary
 	call print_layer5_ffn_norm_lookup_summary
 	call print_layer5_ffn_gate_lookup_summary
+	call print_layer5_ffn_up_lookup_summary

@@ -3852,3 +3852,17 @@ redundant entries. Do not treat it as the primary continuation source; use
   24-byte zero-count GGUF kept the layer-5 FFN gate path fail-closed and emitted
   no gate output exact-hex labels; static linkage, symbol visibility, include
   dependency, artifact, large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T06:31:00+02:00
+
+- Added descriptor-only layer-5 FFN up setup for `blk.5.ffn_up.weight`. The
+  real target reports it as Q8_0 `[3072 x 9216]` at relative offset
+  `1139896320`. This step intentionally stops at lookup, retained summary
+  fields, summary printing, and help/contract text; it does not read up payload
+  bytes or publish any `token0_layer5_ffn_up*` runtime labels.
+- Verification evidence: clean build/check and oracle compile passed; help text
+  mentions descriptor-only FFN up lookup; the layer-5 FFN gate oracle subset
+  still matched all 69 covered exact-hex labels; the 24-byte zero-count GGUF kept
+  the new up descriptor fields and dependent layer-5 FFN statuses fail-closed;
+  static, symbol, source/fragment, include-dependency, artifact, large-file,
+  line-count, and whitespace scans passed.

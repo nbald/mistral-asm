@@ -27,3 +27,7 @@ layer5_ffn_norm_tensor_request_end:
 layer5_ffn_gate_tensor_request:
 	.ascii "blk.5.ffn_gate.weight"
 layer5_ffn_gate_tensor_request_end:
+
+layer5_ffn_up_tensor_request:
+	.ascii "blk.5.ffn_up.weight"
+layer5_ffn_up_tensor_request_end:
