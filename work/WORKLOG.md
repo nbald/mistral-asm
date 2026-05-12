@@ -4132,3 +4132,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   labels; static linkage, symbol visibility, no-layer6-key-runtime-path,
   source/include-dependency, artifact, large-file, line-count, and whitespace
   scans passed.
+
+## 2026-05-12T09:03:45+02:00
+
+- Added status-only token-0 layer-6 attention key projection coverage for
+  `blk.6.attn_k.weight`. The smoke consumes the private layer-6 attention
+  RMSNorm activation, proves the retained Q8_0 `[3072 x 1024]` payload span,
+  fills a private key output buffer, and publishes only
+  `token0_layer6_attn_k_matvec`.
+- Verification evidence: clean build/check and oracle py-compile passed; help
+  text mentions the new key status smoke; the real target reported
+  `token0_layer6_attn_k_matvec: 1` and emitted no layer-6 key output labels;
+  the existing layer-6 query oracle comparison still matched all 94 covered
+  values; a packed 24-byte zero-count GGUF kept the new key status at `0` with
+  no guarded layer-6 labels; static linkage, undefined-symbol,
+  symbol-visibility, source/include-dependency, artifact, large-file,
+  line-count, and whitespace scans passed.
