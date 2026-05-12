@@ -18,6 +18,22 @@ token0_layer5_post_ffn_residual_text:
 	.ascii "token0_layer5_post_ffn_residual: "
 token0_layer5_post_ffn_residual_text_end:
 
+token0_layer5_post_ffn_residual0_f32_text:
+	.ascii "token0_layer5_post_ffn_residual0_f32_hex: "
+token0_layer5_post_ffn_residual0_f32_text_end:
+
+token0_layer5_post_ffn_residual1_f32_text:
+	.ascii "token0_layer5_post_ffn_residual1_f32_hex: "
+token0_layer5_post_ffn_residual1_f32_text_end:
+
+token0_layer5_post_ffn_residual2_f32_text:
+	.ascii "token0_layer5_post_ffn_residual2_f32_hex: "
+token0_layer5_post_ffn_residual2_f32_text_end:
+
+token0_layer5_post_ffn_residual3_f32_text:
+	.ascii "token0_layer5_post_ffn_residual3_f32_hex: "
+token0_layer5_post_ffn_residual3_f32_text_end:
+
 token0_layer5_ffn_down_output0_f32_text:
 	.ascii "token0_layer5_ffn_down_output0_f32_hex: "
 token0_layer5_ffn_down_output0_f32_text_end:
@@ -111,16 +127,16 @@ run_token0_layer5_ffn_down_matvec_status:
 .global run_token0_layer5_post_ffn_residual_status
 .type run_token0_layer5_post_ffn_residual_status, @function
 
-# Contract: run the token-0 layer-5 post-FFN residual smoke and publish only
-# its status line.
+# Contract: run the token-0 layer-5 post-FFN residual smoke and publish its
+# status line plus the fixed exact-hex oracle slice on success.
 # Inputs: no register inputs. Reads token0_layer5_post_attn_residual_status,
 # token0_layer5_ffn_down_matvec_status, layer5_ffn_down_tensor_dim1, the
 # exported token0_layer5_post_attn_residual handoff buffer, and this module's
 # private token0_layer5_ffn_down_output buffer.
 # Outputs: writes token0_layer5_post_ffn_residual_status and, on success, fills
 # exported token0_layer5_post_ffn_residual storage with 3072 f32 residual sums.
-# Always prints exactly one status label/value/newline sequence to stdout. This
-# status-only step deliberately prints no layer-5 post-FFN exact-hex words. The
+# Always prints exactly one status label/value/newline sequence to stdout and
+# prints the first four exact-hex residual words only when the status is 1. The
 # return register is unspecified.
 # Clobbers: caller-saved registers, xmm0, xmm1 and flags through the smoke
 # helper and status writers.
@@ -130,8 +146,8 @@ run_token0_layer5_ffn_down_matvec_status:
 # mapped tensor payload bytes.
 # Error behavior: status is 1 only after both prerequisite statuses are present
 # and the retained down descriptor still proves a 3072-wide output row.
-# Otherwise status is 0 and no residual bytes are written. Output write
-# failures remain diagnostic-only.
+# Otherwise status is 0 and no residual bytes are written or printed. Output
+# write failures remain diagnostic-only.
 run_token0_layer5_post_ffn_residual_status:
 	call token0_layer5_post_ffn_residual_smoke
 	mov qword ptr [rip + token0_layer5_post_ffn_residual_status], rax
@@ -149,6 +165,8 @@ run_token0_layer5_post_ffn_residual_status:
 	lea rsi, [rip + newline_text]
 	mov rdx, newline_text_end - newline_text
 	call sys_write
+
+	call print_token0_layer5_post_ffn_residual_slice
 	ret
 
 .size run_token0_layer5_post_ffn_residual_status, . - run_token0_layer5_post_ffn_residual_status
@@ -204,6 +222,85 @@ token0_layer5_post_ffn_residual_smoke:
 	ret
 
 .size token0_layer5_post_ffn_residual_smoke, . - token0_layer5_post_ffn_residual_smoke
+
+.type print_token0_layer5_post_ffn_residual_slice, @function
+
+# Contract: print a fixed exact-hex slice from the token-0 layer-5 post-FFN
+# residual when that smoke path succeeded.
+# Inputs: no register inputs. Reads token0_layer5_post_ffn_residual_status and
+# the first four f32 words of token0_layer5_post_ffn_residual.
+# Outputs: writes four labeled raw f32 bit patterns to stdout when
+# token0_layer5_post_ffn_residual_status is 1; writes nothing otherwise.
+# Clobbers: caller-saved registers and flags through sys_write and
+# write_u32_hex.
+# Ownership/lifetime: reads module-owned layer-5 post-FFN residual handoff
+# storage only during this call and does not retain pointers.
+# Error behavior: this is summary output for oracle comparison; write failures
+# are intentionally not surfaced separately.
+print_token0_layer5_post_ffn_residual_slice:
+	cmp qword ptr [rip + token0_layer5_post_ffn_residual_status], 1
+	jne .Lprint_layer5_post_ffn_residual_slice_done
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer5_post_ffn_residual0_f32_text]
+	mov rdx, token0_layer5_post_ffn_residual0_f32_text_end - token0_layer5_post_ffn_residual0_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer5_post_ffn_residual]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer5_post_ffn_residual1_f32_text]
+	mov rdx, token0_layer5_post_ffn_residual1_f32_text_end - token0_layer5_post_ffn_residual1_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer5_post_ffn_residual + 4]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer5_post_ffn_residual2_f32_text]
+	mov rdx, token0_layer5_post_ffn_residual2_f32_text_end - token0_layer5_post_ffn_residual2_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer5_post_ffn_residual + 8]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+	mov rdi, 1
+	lea rsi, [rip + token0_layer5_post_ffn_residual3_f32_text]
+	mov rdx, token0_layer5_post_ffn_residual3_f32_text_end - token0_layer5_post_ffn_residual3_f32_text
+	call sys_write
+
+	mov rdi, 1
+	mov esi, dword ptr [rip + token0_layer5_post_ffn_residual + 12]
+	call write_u32_hex
+
+	mov rdi, 1
+	lea rsi, [rip + newline_text]
+	mov rdx, newline_text_end - newline_text
+	call sys_write
+
+.Lprint_layer5_post_ffn_residual_slice_done:
+	ret
+
+.size print_token0_layer5_post_ffn_residual_slice, . - print_token0_layer5_post_ffn_residual_slice
 
 .type print_token0_layer5_ffn_down_output_slice, @function
 

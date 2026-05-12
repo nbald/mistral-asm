@@ -3985,3 +3985,19 @@ redundant entries. Do not treat it as the primary continuation source; use
   GGUF kept the new status at `0` and emitted no layer-5 down or post-FFN
   exact-hex labels; static, symbol, source/fragment, include-dependency,
   artifact, large-file, line-count, and whitespace scans passed.
+
+## 2026-05-12T07:38:11+02:00
+
+- Published the guarded token-0 layer-5 post-FFN residual slice while keeping
+  the 3072-f32 buffer exported as the next-layer handoff. The first four words
+  are `0x440c3ce5`, `0xc1fd49b3`, `0xc2a998e5`, and `0xc1616193`.
+- Added a focused layer-5 post-FFN residual oracle that reuses the full layer-5
+  FFN down oracle chain and performs the scalar f32 residual add against the
+  layer-5 post-attention residual.
+- Verification evidence: clean build/check and oracle compile passed; the
+  real-target runtime/oracle comparison matched all 85 covered exact-hex labels
+  including epsilon; the 24-byte zero-count GGUF kept the layer-5 FFN down and
+  post-FFN paths fail-closed and emitted no layer-5 down or post-FFN exact-hex
+  labels; static linkage, symbol visibility, source/fragment,
+  include-dependency, artifact, large-file, line-count, and whitespace scans
+  passed.
